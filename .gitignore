@@ -1,0 +1,27 @@
+CLAUDE.md
+
+# Node
+node_modules/
+.npm
+
+# React Native
+.expo/
+*.orig.*
+web-build/
+android/
+ios/
+
+# Tauri
+src-tauri/target/
+
+# Build
+dist/
+build/
+
+# Variables de entorno
+.env
+.env.local
+
+# IDEs
+.idea/
+.vscode/
