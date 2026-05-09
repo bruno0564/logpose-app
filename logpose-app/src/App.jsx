@@ -1,8 +1,12 @@
 import { useState } from 'react'
+import Home from './Home.jsx'
 import BodyWeight from './BodyWeight.jsx'
+import Gym from './Gym.jsx'
 
 const NAV = [
-  { id: 'body-weight', label: 'Body Weight' },
+  { id: 'home',         label: 'Inicio' },
+  { id: 'body-weight',  label: 'Peso' },
+  { id: 'gym',          label: 'Gym' },
 ]
 
 function Sidebar({ active, onNav }) {
@@ -28,13 +32,15 @@ function Sidebar({ active, onNav }) {
 }
 
 function App() {
-  const [page, setPage] = useState('body-weight')
+  const [page, setPage] = useState('home')
 
   return (
     <div className="layout">
       <Sidebar active={page} onNav={setPage} />
       <main className="main">
+        {page === 'home'        && <Home />}
         {page === 'body-weight' && <BodyWeight />}
+        {page === 'gym'         && <Gym />}
       </main>
     </div>
   )

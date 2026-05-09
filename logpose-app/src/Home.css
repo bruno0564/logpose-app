@@ -1,0 +1,154 @@
+.home-page {
+  max-width: 680px;
+}
+
+.home-header {
+  margin-bottom: 2rem;
+}
+
+.home-greeting {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.3rem;
+}
+
+.home-date {
+  font-size: 0.825rem;
+  color: #3a3a3a;
+}
+
+.home-stat-card {
+  background: #0d0d0d;
+  border: 1px solid #181818;
+  border-left: 3px solid #7c3aed;
+  border-radius: 10px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.home-stat-label {
+  font-size: 0.7rem;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.home-stat-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.home-stat-sub {
+  font-size: 0.75rem;
+  color: #333;
+  margin-top: 0.15rem;
+}
+
+.home-quote-card {
+  background: #0d0d0d;
+  border: 1px solid #181818;
+  border-radius: 10px;
+  padding: 1.75rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  position: relative;
+  min-height: 80px;
+}
+
+.home-quote-card:hover {
+  border-color: #222;
+}
+
+.home-quote-text {
+  font-size: 1.1rem;
+  color: #ccc;
+  font-style: italic;
+  line-height: 1.65;
+}
+
+.home-quote-pager {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.25rem;
+  font-size: 0.7rem;
+  color: #2a2a2a;
+}
+
+.home-hint {
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.home-manage-btn {
+  background: none;
+  border: none;
+  color: #7c3aed;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  margin-bottom: 1.25rem;
+}
+
+.home-manage-btn:hover {
+  color: #9f67ff;
+}
+
+.home-manage-card {
+  max-width: 480px;
+}
+
+.home-add-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.home-add-form input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 7px;
+  color: #e0e0e0;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.home-add-form input:focus {
+  border-color: #7c3aed;
+}
+
+.home-add-form input::placeholder {
+  color: #333;
+}
+
+.home-quote-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home-quote-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #111;
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+}
+
+.home-quote-item:last-child {
+  border-bottom: none;
+}
