@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 
 const API = 'http://archlinux.local:8000'
 
+function today() { return new Date().toISOString().split('T')[0] }
+function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
+
 function StatCard({ label, value }) {
   return (
     <div className="stat-card">
@@ -14,16 +17,13 @@ function StatCard({ label, value }) {
 function BodyWeight() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({
-    weight: '',
-    date: new Date().toISOString().split('T')[0],
-    note: '',
-  })
+  const [form, setForm] = useState({ weight: '', date: today(), note: '' })
+  const [filterFrom, setFilterFrom] = useState(daysAgo(30))
+  const [filterTo, setFilterTo] = useState(today())
 
   async function fetchEntries() {
     const res = await fetch(`${API}/body-weight/`)
-    const data = await res.json()
-    setEntries(data)
+    setEntries(await res.json())
     setLoading(false)
   }
 
@@ -34,13 +34,9 @@ function BodyWeight() {
     await fetch(`${API}/body-weight/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        weight: parseFloat(form.weight),
-        note: form.note || null,
-      }),
+      body: JSON.stringify({ ...form, weight: parseFloat(form.weight), note: form.note || null }),
     })
-    setForm({ weight: '', date: new Date().toISOString().split('T')[0], note: '' })
+    setForm({ weight: '', date: today(), note: '' })
     fetchEntries()
   }
 
@@ -49,9 +45,15 @@ function BodyWeight() {
     fetchEntries()
   }
 
+  const displayed = entries.filter(e => {
+    if (filterFrom && e.date < filterFrom) return false
+    if (filterTo && e.date > filterTo) return false
+    return true
+  })
+
   const latest = entries[0]?.weight
   const avg = entries.length
-    ? (entries.reduce((sum, e) => sum + e.weight, 0) / entries.length).toFixed(1)
+    ? (entries.reduce((s, e) => s + e.weight, 0) / entries.length).toFixed(1)
     : null
 
   return (
@@ -72,32 +74,18 @@ function BodyWeight() {
         <form onSubmit={handleSubmit} className="form">
           <div className="field">
             <label>Peso (kg)</label>
-            <input
-              type="number"
-              step="0.1"
-              placeholder="75.5"
-              value={form.weight}
-              onChange={e => setForm(f => ({ ...f, weight: e.target.value }))}
-              required
-            />
+            <input type="number" step="0.1" placeholder="75.5" value={form.weight}
+              onChange={e => setForm(f => ({ ...f, weight: e.target.value }))} required />
           </div>
           <div className="field">
             <label>Fecha</label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-              required
-            />
+            <input type="date" value={form.date}
+              onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
           </div>
           <div className="field">
             <label>Nota (opcional)</label>
-            <input
-              type="text"
-              placeholder="Ej: después de entrenar"
-              value={form.note}
-              onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-            />
+            <input type="text" placeholder="Ej: después de entrenar" value={form.note}
+              onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
           </div>
           <div className="field field--action">
             <button type="submit" className="btn-primary">Añadir</button>
@@ -107,10 +95,25 @@ function BodyWeight() {
 
       <div className="card">
         <h2 className="card-title">Historial</h2>
+
+        <div className="bw-filter-row">
+          <div className="field">
+            <label>Desde</label>
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Hasta</label>
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+          </div>
+          <button className="bw-filter-reset" onClick={() => { setFilterFrom(daysAgo(30)); setFilterTo(today()) }}>
+            Últimos 30 días
+          </button>
+        </div>
+
         {loading ? (
           <p className="hint">Cargando...</p>
-        ) : entries.length === 0 ? (
-          <p className="hint">Sin registros todavía. Añade el primero arriba.</p>
+        ) : displayed.length === 0 ? (
+          <p className="hint">Sin registros en ese rango.</p>
         ) : (
           <table className="table">
             <thead>
@@ -122,7 +125,7 @@ function BodyWeight() {
               </tr>
             </thead>
             <tbody>
-              {entries.map(entry => (
+              {displayed.map(entry => (
                 <tr key={entry.id}>
                   <td>{entry.date}</td>
                   <td className="weight-cell">{entry.weight} kg</td>
@@ -134,6 +137,9 @@ function BodyWeight() {
               ))}
             </tbody>
           </table>
+        )}
+        {!loading && (filterFrom || filterTo) && displayed.length > 0 && (
+          <p className="hint" style={{ marginTop: '0.75rem' }}>{displayed.length} registro{displayed.length !== 1 ? 's' : ''} en el rango</p>
         )}
       </div>
     </div>

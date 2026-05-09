@@ -23,8 +23,8 @@ export default function BodyWeightScreen() {
   const [weight, setWeight] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
-  const [filterFrom, setFilterFrom] = useState('')
-  const [filterTo, setFilterTo] = useState('')
+  const [filterFrom, setFilterFrom] = useState(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0])
+  const [filterTo, setFilterTo] = useState(new Date().toISOString().split('T')[0])
   const [showFromPicker, setShowFromPicker] = useState(false)
   const [showToPicker, setShowToPicker] = useState(false)
   const [showAddPicker, setShowAddPicker] = useState(false)
@@ -185,11 +185,12 @@ export default function BodyWeightScreen() {
             <Text style={s.filterLabel}>Hasta</Text>
             <Text style={s.filterValue}>{filterTo || '—'}</Text>
           </TouchableOpacity>
-          {(filterFrom || filterTo) && (
-            <TouchableOpacity onPress={() => { setFilterFrom(''); setFilterTo('') }} style={s.clearBtn}>
-              <Text style={s.clearBtnText}>✕</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={() => {
+            setFilterFrom(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0])
+            setFilterTo(new Date().toISOString().split('T')[0])
+          }} style={s.clearBtn}>
+            <Text style={s.clearBtnText}>↺</Text>
+          </TouchableOpacity>
         </View>
 
         {showFromPicker && (
