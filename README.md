@@ -20,29 +20,47 @@ logpose-app/     — app de escritorio (React + Tauri)
 logpose-mobile/  — app móvil (React Native + Expo)
 ```
 
-## Módulos implementados
+## Pantallas
 
-| Módulo | Desktop | Móvil |
-|---|---|---|
-| Peso corporal | ✅ Stats + formulario + historial | ✅ Stats + formulario + historial + modo offline |
+### Desktop
+| Pantalla | Contenido |
+|---|---|
+| Inicio | Saludo, fecha, último peso, frases motivacionales |
+| Peso | Stats, formulario, filtro por fechas, gráfica, historial |
+| Gym | Lista de ejercicios agrupados por músculo, CRUD completo |
 
-## Características del móvil
+### Móvil (bottom tabs)
+| Pestaña | Contenido |
+|---|---|
+| Peso | Stats, formulario con date picker, filtro fechas, gráfica, historial |
+| Inicio | Saludo, fecha, último peso, frase motivacional secuencial |
+| Gym | Lista de ejercicios, CRUD completo |
 
-La app móvil funciona con arquitectura **local-first**: los datos se guardan inmediatamente en SQLite local y se sincronizan con el servidor en segundo plano cuando hay conexión. Si el servidor no está disponible, la app sigue funcionando offline y sincroniza en cuanto vuelve la conexión.
+## Características destacadas
 
-## Descubrimiento de servidor
+**Móvil — modo local-first:** los datos de peso se guardan inmediatamente en SQLite local y se sincronizan con el servidor en segundo plano. Si el servidor no está disponible, la app sigue funcionando offline.
 
-Ambas apps localizan el servidor automáticamente via mDNS (`archlinux.local`) gracias a Avahi. No es necesario configurar IPs manualmente.
+**Indicador de conexión:** visible en todas las pantallas, se refresca automáticamente cada 30 segundos.
+
+**Descubrimiento de servidor:** el móvil localiza el servidor vía mDNS (`archlinux.local`). El desktop usa `localhost` al estar en el mismo equipo.
 
 ## Cómo arrancar (desarrollo)
 
 ```bash
 # Desktop
 cd logpose-app && npm run dev
+# → http://localhost:5173
 
 # Móvil
 cd logpose-mobile && npx expo start
 # Escanear QR con Expo Go (Android)
 ```
 
-Requiere `logpose-api` corriendo en la misma red.
+Requiere `logpose-api` corriendo en la misma red con `--host 0.0.0.0`.
+
+## Compilar desktop (Tauri)
+
+```bash
+cd logpose-app && npx tauri build
+# Binario en: src-tauri/target/release/app
+```
