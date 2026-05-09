@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const API = 'http://localhost:8000'
+const API = 'http://192.168.5.248:8000'
 
 function StatCard({ label, value }) {
   return (
