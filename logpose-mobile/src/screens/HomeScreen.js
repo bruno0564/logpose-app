@@ -24,7 +24,7 @@ function formatDate() {
 
 export default function HomeScreen() {
   const [quotes, setQuotes] = useState([])
-  const [current, setCurrent] = useState(null)
+  const [index, setIndex] = useState(0)
   const [latest, setLatest] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
   const [newQuote, setNewQuote] = useState('')
@@ -33,16 +33,15 @@ export default function HomeScreen() {
     const [qs, lw] = await Promise.all([getQuotes(), getLatestWeight()])
     setQuotes(qs)
     setLatest(lw)
-    if (qs.length > 0) setCurrent(qs[Math.floor(Math.random() * qs.length)])
   }, [])
 
   useEffect(() => { load() }, [])
 
+  const current = quotes[index] ?? null
+
   function nextQuote() {
     if (quotes.length < 2) return
-    let next
-    do { next = quotes[Math.floor(Math.random() * quotes.length)] } while (next.id === current?.id)
-    setCurrent(next)
+    setIndex(i => (i + 1) % quotes.length)
   }
 
   async function handleAdd() {
@@ -81,33 +80,23 @@ export default function HomeScreen() {
       )}
 
       {/* Frase motivacional */}
-      <View style={s.quoteCard}>
-        <View style={s.quoteHeader}>
-          <Ionicons name="chatbubble-ellipses-outline" color="#7c3aed" size={18} />
-          <Text style={s.quoteTitle}>Frase del día</Text>
-        </View>
+      <TouchableOpacity style={s.quoteCard} onPress={nextQuote} activeOpacity={0.8}>
         {current ? (
-          <Text style={s.quoteText}>"{current.text}"</Text>
+          <>
+            <Text style={s.quoteText}>"{current.text}"</Text>
+            {quotes.length > 1 && (
+              <Text style={s.quotePager}>{index + 1} / {quotes.length}</Text>
+            )}
+          </>
         ) : (
-          <Text style={s.hint}>Añade tu primera frase abajo.</Text>
+          <Text style={s.hint}>Añade tu primera frase.</Text>
         )}
-        <View style={s.quoteActions}>
-          {quotes.length > 1 && (
-            <TouchableOpacity onPress={nextQuote} style={s.quoteBtn}>
-              <Ionicons name="shuffle-outline" color="#7c3aed" size={18} />
-              <Text style={s.quoteBtnText}>Otra</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={s.quoteBtn}>
-            <Ionicons name="add-circle-outline" color="#7c3aed" size={18} />
-            <Text style={s.quoteBtnText}>Añadir</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={s.quoteBtn}>
-            <Ionicons name="list-outline" color="#555" size={18} />
-            <Text style={[s.quoteBtnText, { color: '#555' }]}>Ver todas</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={s.addQuoteBtn} onPress={() => setModalVisible(true)}>
+        <Ionicons name="add-circle-outline" color="#7c3aed" size={16} />
+        <Text style={s.addQuoteBtnText}>Gestionar frases</Text>
+      </TouchableOpacity>
 
       {/* Modal gestión de frases */}
       <Modal visible={modalVisible} transparent animationType="slide">
@@ -164,14 +153,12 @@ const s = StyleSheet.create({
   statLabel:      { color: '#555', fontSize: 12, marginBottom: 6 },
   statValue:      { color: '#fff', fontSize: 36, fontWeight: '800' },
   statSub:        { color: '#444', fontSize: 12, marginTop: 4 },
-  quoteCard:      { backgroundColor: '#1a1a1a', borderRadius: 16, padding: 20, marginBottom: 20 },
-  quoteHeader:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  quoteTitle:     { color: '#7c3aed', fontSize: 13, fontWeight: '600' },
-  quoteText:      { color: '#ccc', fontSize: 16, fontStyle: 'italic', lineHeight: 24, marginBottom: 16 },
-  hint:           { color: '#444', fontSize: 14, marginBottom: 16 },
-  quoteActions:   { flexDirection: 'row', gap: 16 },
-  quoteBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  quoteBtnText:   { color: '#7c3aed', fontSize: 13 },
+  quoteCard:      { backgroundColor: '#1a1a1a', borderRadius: 16, padding: 24, marginBottom: 12 },
+  quoteText:      { color: '#ddd', fontSize: 18, fontStyle: 'italic', lineHeight: 28 },
+  quotePager:     { color: '#333', fontSize: 12, marginTop: 14, textAlign: 'right' },
+  hint:           { color: '#444', fontSize: 14 },
+  addQuoteBtn:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20, paddingHorizontal: 4 },
+  addQuoteBtnText:{ color: '#7c3aed', fontSize: 13 },
   modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modal:          { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '75%' },
   modalHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

@@ -8,6 +8,7 @@ const DEFAULT_QUOTES = [
   'Cada registro cuenta.',
   'Lo que se mide, mejora.',
   'Constancia sobre intensidad.',
+  'As long as I live, there are infinite chances.',
 ]
 
 export async function openDB() {
@@ -28,11 +29,9 @@ export async function openDB() {
       text TEXT NOT NULL
     );
   `)
-  const count = await db.getFirstAsync('SELECT COUNT(*) as n FROM quotes')
-  if (count.n === 0) {
-    for (const text of DEFAULT_QUOTES) {
-      await db.runAsync('INSERT INTO quotes (text) VALUES (?)', [text])
-    }
+  for (const text of DEFAULT_QUOTES) {
+    const exists = await db.getFirstAsync('SELECT id FROM quotes WHERE text = ?', [text])
+    if (!exists) await db.runAsync('INSERT INTO quotes (text) VALUES (?)', [text])
   }
   return db
 }
