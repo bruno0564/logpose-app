@@ -3,12 +3,15 @@ import * as SQLite from 'expo-sqlite'
 let db
 
 const DEFAULT_QUOTES = [
+  'As long as I live, there are infinite chances.',
+]
+
+const REMOVED_QUOTES = [
   'El progreso, no la perfección.',
   'Un día a la vez.',
   'Cada registro cuenta.',
   'Lo que se mide, mejora.',
   'Constancia sobre intensidad.',
-  'As long as I live, there are infinite chances.',
 ]
 
 export async function openDB() {
@@ -29,6 +32,9 @@ export async function openDB() {
       text TEXT NOT NULL
     );
   `)
+  for (const text of REMOVED_QUOTES) {
+    await db.runAsync('DELETE FROM quotes WHERE text = ?', [text])
+  }
   for (const text of DEFAULT_QUOTES) {
     const exists = await db.getFirstAsync('SELECT id FROM quotes WHERE text = ?', [text])
     if (!exists) await db.runAsync('INSERT INTO quotes (text) VALUES (?)', [text])
