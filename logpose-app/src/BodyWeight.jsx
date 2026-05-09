@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
-const API = 'http://archlinux.local:8000'
+const API = 'http://localhost:8000'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }

@@ -3,7 +3,7 @@ import Home from './Home.jsx'
 import BodyWeight from './BodyWeight.jsx'
 import Gym from './Gym.jsx'
 
-const API = 'http://archlinux.local:8000'
+const API = 'http://localhost:8000'
 
 const NAV = [
   { id: 'home',         label: 'Inicio' },

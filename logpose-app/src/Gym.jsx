@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Gym.css'
 
-const API = 'http://archlinux.local:8000'
+const API = 'http://localhost:8000'
 
 const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Piernas', 'Core', 'Otro']
 

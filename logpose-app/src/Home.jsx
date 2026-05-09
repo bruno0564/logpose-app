@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Home.css'
 
-const API = 'http://archlinux.local:8000'
+const API = 'http://localhost:8000'
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
