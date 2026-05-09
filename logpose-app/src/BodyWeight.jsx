@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 const API = 'http://archlinux.local:8000'
 
@@ -109,6 +110,30 @@ function BodyWeight() {
             Últimos 30 días
           </button>
         </div>
+
+        {!loading && displayed.length >= 2 && (() => {
+          const chartData = [...displayed].reverse()
+          const multiYear = chartData[0].date.slice(0,4) !== chartData[chartData.length-1].date.slice(0,4)
+          const fmt = d => multiYear ? d.slice(0,7) : d.slice(5)
+          return (
+            <div className="bw-chart">
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid stroke="#181818" vertical={false} />
+                  <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: '#444', fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#444', fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: '#888' }}
+                    itemStyle={{ color: '#fff' }}
+                    formatter={v => [`${v} kg`]}
+                  />
+                  <Line type="monotone" dataKey="weight" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3, fill: '#7c3aed' }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )
+        })()}
 
         {loading ? (
           <p className="hint">Cargando...</p>
