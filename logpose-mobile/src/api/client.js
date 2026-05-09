@@ -1,4 +1,4 @@
-const SERVER = 'http://192.168.5.248:8000'
+const SERVER = 'http://archlinux.local:8000'
 const TIMEOUT_MS = 3000
 
 async function fetchWithTimeout(url, options = {}) {
