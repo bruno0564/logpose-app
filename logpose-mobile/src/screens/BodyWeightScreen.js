@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert
+  StyleSheet, ActivityIndicator, ScrollView,
 } from 'react-native'
 import {
   getLocalEntries, insertLocalEntry, markSynced,
@@ -20,6 +20,8 @@ export default function BodyWeightScreen() {
   const [weight, setWeight] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
 
   const loadLocal = useCallback(async () => {
     const rows = await getLocalEntries()
@@ -79,13 +81,20 @@ export default function BodyWeightScreen() {
     await sync()
   }
 
+  const filtered = entries.filter(e => {
+    if (filterFrom && e.date < filterFrom) return false
+    if (filterTo && e.date > filterTo) return false
+    return true
+  })
+
+  const displayEntries = filtered.length > 0 || filterFrom || filterTo ? filtered : entries
   const latest = entries[0]?.weight
   const avg = entries.length
-    ? (entries.reduce((s, e) => s + e.weight, 0) / entries.length).toFixed(1)
+    ? (entries.reduce((sum, e) => sum + e.weight, 0) / entries.length).toFixed(1)
     : null
 
   return (
-    <View style={s.container}>
+    <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>Body Weight</Text>
 
       <View style={s.statusRow}>
@@ -111,50 +120,103 @@ export default function BodyWeightScreen() {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <ActivityIndicator color="#7c3aed" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={entries}
-          keyExtractor={item => String(item.id)}
-          style={s.list}
-          renderItem={({ item }) => (
-            <View style={s.row}>
-              <Text style={s.rowDate}>{item.date}</Text>
-              <Text style={s.rowWeight}>{item.weight} kg</Text>
-              <Text style={s.rowNote}>{item.note ?? '—'}</Text>
-              <TouchableOpacity onPress={() => handleDelete(item)}>
-                <Text style={s.del}>✕</Text>
-              </TouchableOpacity>
-            </View>
+      <View style={s.card}>
+        <Text style={s.cardTitle}>Historial</Text>
+
+        <View style={s.filterRow}>
+          <View style={s.filterField}>
+            <Text style={s.filterLabel}>Desde</Text>
+            <TextInput
+              style={s.filterInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#444"
+              value={filterFrom}
+              onChangeText={setFilterFrom}
+            />
+          </View>
+          <View style={s.filterField}>
+            <Text style={s.filterLabel}>Hasta</Text>
+            <TextInput
+              style={s.filterInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#444"
+              value={filterTo}
+              onChangeText={setFilterTo}
+            />
+          </View>
+          {(filterFrom || filterTo) && (
+            <TouchableOpacity onPress={() => { setFilterFrom(''); setFilterTo('') }} style={s.clearBtn}>
+              <Text style={s.clearBtnText}>✕</Text>
+            </TouchableOpacity>
           )}
-        />
-      )}
-    </View>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator color="#7c3aed" style={{ marginTop: 16 }} />
+        ) : displayEntries.length === 0 ? (
+          <Text style={s.hint}>Sin registros en ese rango.</Text>
+        ) : (
+          <>
+            <View style={s.tableHeader}>
+              <Text style={[s.col, s.colDate, s.headerText]}>Fecha</Text>
+              <Text style={[s.col, s.colWeight, s.headerText]}>Peso</Text>
+              <Text style={[s.col, s.colNote, s.headerText]}>Nota</Text>
+              <Text style={s.colAction} />
+            </View>
+            {displayEntries.map(item => (
+              <View key={item.id} style={s.row}>
+                <Text style={[s.col, s.colDate]}>{item.date}</Text>
+                <Text style={[s.col, s.colWeight, s.weightText]}>{item.weight} kg</Text>
+                <Text style={[s.col, s.colNote, s.noteText]}>{item.note ?? '—'}</Text>
+                <TouchableOpacity onPress={() => handleDelete(item)} style={s.colAction}>
+                  <Text style={s.del}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {(filterFrom || filterTo) && (
+              <Text style={s.hint}>{displayEntries.length} registro{displayEntries.length !== 1 ? 's' : ''} en el rango</Text>
+            )}
+          </>
+        )}
+      </View>
+    </ScrollView>
   )
 }
 
 const s = StyleSheet.create({
-  container:  { flex: 1, backgroundColor: '#0f0f0f', padding: 16, paddingTop: 56 },
-  title:      { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  statusRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  dot:        { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  dotOnline:  { backgroundColor: '#22c55e' },
-  dotOffline: { backgroundColor: '#ef4444' },
-  statusText: { color: '#888', fontSize: 12 },
-  statsRow:   { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  stat:       { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 10, padding: 12, alignItems: 'center' },
-  statVal:    { color: '#fff', fontSize: 18, fontWeight: '700' },
-  statLbl:    { color: '#888', fontSize: 11, marginTop: 2 },
-  card:       { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 16, marginBottom: 16 },
-  cardTitle:  { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 12 },
-  input:      { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 8, padding: 10, marginBottom: 8 },
-  btn:        { backgroundColor: '#7c3aed', borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
-  btnText:    { color: '#fff', fontWeight: '600' },
-  list:       { flex: 1 },
-  row:        { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1f1f1f' },
-  rowDate:    { color: '#aaa', width: 90, fontSize: 13 },
-  rowWeight:  { color: '#fff', width: 70, fontWeight: '600' },
-  rowNote:    { color: '#666', flex: 1, fontSize: 12 },
-  del:        { color: '#ef4444', fontSize: 16, paddingHorizontal: 8 },
+  container:   { flex: 1, backgroundColor: '#0f0f0f' },
+  content:     { padding: 16, paddingTop: 56, paddingBottom: 32 },
+  title:       { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
+  statusRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  dot:         { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  dotOnline:   { backgroundColor: '#22c55e' },
+  dotOffline:  { backgroundColor: '#ef4444' },
+  statusText:  { color: '#888', fontSize: 12 },
+  statsRow:    { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  stat:        { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 10, padding: 12, alignItems: 'center' },
+  statVal:     { color: '#fff', fontSize: 18, fontWeight: '700' },
+  statLbl:     { color: '#888', fontSize: 11, marginTop: 2 },
+  card:        { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 16, marginBottom: 16 },
+  cardTitle:   { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 12 },
+  input:       { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 8, padding: 10, marginBottom: 8 },
+  btn:         { backgroundColor: '#7c3aed', borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
+  btnText:     { color: '#fff', fontWeight: '600' },
+  filterRow:   { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 12 },
+  filterField: { flex: 1 },
+  filterLabel: { color: '#555', fontSize: 11, marginBottom: 4 },
+  filterInput: { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 8, padding: 8, fontSize: 13 },
+  clearBtn:    { paddingHorizontal: 8, paddingBottom: 8 },
+  clearBtnText:{ color: '#555', fontSize: 16 },
+  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#2a2a2a', paddingBottom: 6, marginBottom: 4 },
+  headerText:  { color: '#555', fontSize: 11, fontWeight: '600' },
+  row:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1f1f1f' },
+  col:         { color: '#aaa', fontSize: 13 },
+  colDate:     { width: 95 },
+  colWeight:   { width: 65 },
+  colNote:     { flex: 1 },
+  colAction:   { width: 32, alignItems: 'center' },
+  weightText:  { color: '#fff', fontWeight: '600' },
+  noteText:    { color: '#666', fontSize: 12 },
+  del:         { color: '#ef4444', fontSize: 16 },
+  hint:        { color: '#555', fontSize: 13, marginTop: 8, textAlign: 'center' },
 })
