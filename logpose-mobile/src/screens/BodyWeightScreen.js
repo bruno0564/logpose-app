@@ -96,13 +96,30 @@ export default function BodyWeightScreen() {
     ? (entries.reduce((s, e) => s + e.weight, 0) / entries.length).toFixed(1)
     : null
 
-  // Chart: chronological order, max 30 points to avoid label clutter
-  const chartSource = [...displayed].reverse().slice(-30)
+  // Chart
+  const chartSource = [...displayed].reverse().slice(-60)
   const hasChart = chartSource.length >= 2
-  const step = Math.ceil(chartSource.length / 6)
-  const chartLabels = chartSource.map((e, i) =>
-    i % step === 0 ? e.date.slice(5) : ''
-  )
+
+  const multiYear = hasChart &&
+    chartSource[0].date.slice(0, 4) !== chartSource[chartSource.length - 1].date.slice(0, 4)
+
+  const MAX_LABELS = 5
+  const labelIndices = new Set()
+  if (chartSource.length <= MAX_LABELS) {
+    chartSource.forEach((_, i) => labelIndices.add(i))
+  } else {
+    for (let i = 0; i < MAX_LABELS; i++) {
+      labelIndices.add(Math.round(i * (chartSource.length - 1) / (MAX_LABELS - 1)))
+    }
+  }
+
+  const chartLabels = chartSource.map((e, i) => {
+    if (!labelIndices.has(i)) return ''
+    // Multi-year: show MM/YY — same year: show DD/MM
+    if (multiYear) return `${e.date.slice(5, 7)}/${e.date.slice(2, 4)}`
+    return `${e.date.slice(8)}/${e.date.slice(5, 7)}`
+  })
+
   const chartData = {
     labels: chartLabels,
     datasets: [{ data: chartSource.map(e => e.weight) }],
@@ -229,6 +246,8 @@ export default function BodyWeightScreen() {
               bezier
               withInnerLines={true}
               withOuterLines={false}
+              horizontalLabelRotation={-30}
+              xLabelsOffset={-4}
               style={{ borderRadius: 8 }}
             />
           </View>
