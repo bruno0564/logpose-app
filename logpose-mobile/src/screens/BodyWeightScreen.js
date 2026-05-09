@@ -20,7 +20,6 @@ export default function BodyWeightScreen() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [online, setOnline] = useState(false)
   const [weight, setWeight] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
@@ -39,7 +38,6 @@ export default function BodyWeightScreen() {
     setSyncing(true)
     try {
       const reachable = await isServerReachable()
-      setOnline(reachable)
       if (!reachable) return
       const unsynced = await getUnsyncedEntries()
       for (const entry of unsynced) {
@@ -128,13 +126,6 @@ export default function BodyWeightScreen() {
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>Body Weight</Text>
-
-      <View style={s.statusRow}>
-        <View style={[s.dot, online ? s.dotOnline : s.dotOffline]} />
-        <Text style={s.statusText}>
-          {syncing ? 'Sincronizando...' : online ? 'Servidor conectado' : 'Sin servidor — modo local'}
-        </Text>
-      </View>
 
       <View style={s.statsRow}>
         <View style={s.stat}><Text style={s.statVal}>{latest ? `${latest} kg` : '—'}</Text><Text style={s.statLbl}>Último</Text></View>
@@ -290,11 +281,6 @@ const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: '#0f0f0f' },
   content:      { padding: 16, paddingTop: 56, paddingBottom: 32 },
   title:        { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  statusRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  dot:          { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  dotOnline:    { backgroundColor: '#22c55e' },
-  dotOffline:   { backgroundColor: '#ef4444' },
-  statusText:   { color: '#888', fontSize: 12 },
   statsRow:     { flexDirection: 'row', gap: 12, marginBottom: 16 },
   stat:         { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 10, padding: 12, alignItems: 'center' },
   statVal:      { color: '#fff', fontSize: 18, fontWeight: '700' },
