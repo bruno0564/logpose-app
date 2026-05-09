@@ -27,7 +27,7 @@ export default function App() {
           options={{
             title: 'Peso',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="barbell-outline" color={color} size={size} />
+              <Ionicons name="person-outline" color={color} size={size} />
             ),
           }}
         />
