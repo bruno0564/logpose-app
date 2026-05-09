@@ -31,6 +31,21 @@ export async function openDB() {
       id   INTEGER PRIMARY KEY AUTOINCREMENT,
       text TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS exercises (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      name         TEXT NOT NULL,
+      muscle_group TEXT,
+      notes        TEXT,
+      position     INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS workout_sets (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+      date        TEXT NOT NULL,
+      set_number  INTEGER NOT NULL,
+      weight      REAL NOT NULL,
+      reps        INTEGER NOT NULL
+    );
   `)
   for (const text of REMOVED_QUOTES) {
     await db.runAsync('DELETE FROM quotes WHERE text = ?', [text])
@@ -128,4 +143,34 @@ export async function getUnsyncedEntries() {
 export async function getPendingDeletes() {
   const db = await openDB()
   return db.getAllAsync('SELECT * FROM body_weight WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+// ── Exercises ─────────────────────────────────────────────────────────────────
+
+export async function getExercises() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM exercises ORDER BY position ASC, id ASC')
+}
+
+export async function addExercise(name, muscle_group, notes) {
+  const db = await openDB()
+  const max = await db.getFirstAsync('SELECT MAX(position) as p FROM exercises')
+  await db.runAsync(
+    'INSERT INTO exercises (name, muscle_group, notes, position) VALUES (?, ?, ?, ?)',
+    [name.trim(), muscle_group?.trim() || null, notes?.trim() || null, (max.p ?? 0) + 1]
+  )
+}
+
+export async function updateExercise(id, name, muscle_group, notes) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE exercises SET name = ?, muscle_group = ?, notes = ? WHERE id = ?',
+    [name.trim(), muscle_group?.trim() || null, notes?.trim() || null, id]
+  )
+}
+
+export async function deleteExercise(id) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM workout_sets WHERE exercise_id = ?', [id])
+  await db.runAsync('DELETE FROM exercises WHERE id = ?', [id])
 }
