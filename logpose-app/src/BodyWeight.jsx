@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-
-const API = 'http://localhost:8000'
+import {
+  getLocalEntries, insertLocalEntry, markSynced, markPendingDelete,
+  deleteLocalEntry, upsertFromServer, getUnsyncedEntries, getPendingDeletes,
+} from './db/database'
+import { isServerReachable, fetchAllFromServer, postToServer, deleteFromServer } from './api/client'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -22,28 +25,50 @@ function BodyWeight() {
   const [filterFrom, setFilterFrom] = useState(daysAgo(30))
   const [filterTo, setFilterTo] = useState(today())
 
-  async function fetchEntries() {
-    const res = await fetch(`${API}/body-weight/`)
-    setEntries(await res.json())
-    setLoading(false)
-  }
+  const loadLocal = useCallback(async () => {
+    setEntries(await getLocalEntries())
+  }, [])
 
-  useEffect(() => { fetchEntries() }, [])
+  const sync = useCallback(async () => {
+    try {
+      if (!await isServerReachable()) return
+      for (const entry of await getUnsyncedEntries()) {
+        const created = await postToServer(entry)
+        await markSynced(entry.id, created.id)
+      }
+      for (const entry of await getPendingDeletes()) {
+        await deleteFromServer(entry.server_id)
+        await deleteLocalEntry(entry.id)
+      }
+      for (const entry of await fetchAllFromServer()) {
+        await upsertFromServer(entry)
+      }
+    } catch { /* sin conexión */ } finally {
+      await loadLocal()
+    }
+  }, [loadLocal])
+
+  useEffect(() => {
+    async function init() {
+      await loadLocal()
+      setLoading(false)
+      sync()
+    }
+    init()
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
-    await fetch(`${API}/body-weight/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, weight: parseFloat(form.weight), note: form.note || null }),
-    })
+    await insertLocalEntry(parseFloat(form.weight), form.date, form.note || null)
     setForm({ weight: '', date: today(), note: '' })
-    fetchEntries()
+    await loadLocal()
+    sync()
   }
 
-  async function handleDelete(id) {
-    await fetch(`${API}/body-weight/${id}`, { method: 'DELETE' })
-    fetchEntries()
+  async function handleDelete(entry) {
+    await markPendingDelete(entry.id)
+    await loadLocal()
+    sync()
   }
 
   const displayed = entries.filter(e => {
@@ -113,8 +138,8 @@ function BodyWeight() {
 
         {!loading && displayed.length >= 2 && (() => {
           const chartData = [...displayed].reverse()
-          const multiYear = chartData[0].date.slice(0,4) !== chartData[chartData.length-1].date.slice(0,4)
-          const fmt = d => multiYear ? d.slice(0,7) : d.slice(5)
+          const multiYear = chartData[0].date.slice(0, 4) !== chartData[chartData.length - 1].date.slice(0, 4)
+          const fmt = d => multiYear ? d.slice(0, 7) : d.slice(5)
           return (
             <div className="bw-chart">
               <ResponsiveContainer width="100%" height={180}>
@@ -156,7 +181,7 @@ function BodyWeight() {
                   <td className="weight-cell">{entry.weight} kg</td>
                   <td className="note-cell">{entry.note ?? '—'}</td>
                   <td>
-                    <button className="btn-delete" onClick={() => handleDelete(entry.id)}>×</button>
+                    <button className="btn-delete" onClick={() => handleDelete(entry)}>×</button>
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import './Home.css'
-
-const API = 'http://localhost:8000'
+import { getLatestWeight } from './db/database'
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -35,10 +34,7 @@ export default function Home() {
   const [managing, setManaging] = useState(false)
 
   useEffect(() => {
-    fetch(`${API}/body-weight/`)
-      .then(r => r.json())
-      .then(data => setLatest(data[0] ?? null))
-      .catch(() => {})
+    getLatestWeight().then(setLatest).catch(() => {})
   }, [])
 
   // Seed default quote if empty

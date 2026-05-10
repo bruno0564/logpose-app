@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './Gym.css'
-
-const API = 'http://localhost:8000'
+import {
+  getExercises, addExercise, updateExercise, deleteExercise,
+  getUnsyncedExercises, getPendingDeleteExercises,
+  markExerciseSynced, deleteLocalExercise, upsertExerciseFromServer,
+} from './db/database'
+import {
+  isServerReachable,
+  fetchAllExercisesFromServer, postExerciseToServer, putExerciseToServer, deleteExerciseFromServer,
+} from './api/client'
 
 const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Piernas', 'Core', 'Otro']
 
@@ -26,38 +33,24 @@ function ExerciseModal({ exercise, onClose, onSave }) {
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Nombre *</label>
-            <input
-              autoFocus
-              type="text"
-              placeholder="Ej: Press banca"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-            />
+            <input autoFocus type="text" placeholder="Ej: Press banca" value={name}
+              onChange={e => setName(e.target.value)} required />
           </div>
           <div className="field">
             <label>Grupo muscular</label>
             <div className="gym-chips">
               {MUSCLE_GROUPS.map(g => (
-                <button
-                  key={g}
-                  type="button"
+                <button key={g} type="button"
                   className={`gym-chip ${muscle === g ? 'gym-chip--active' : ''}`}
                   onClick={() => setMuscle(muscle === g ? '' : g)}
-                >
-                  {g}
-                </button>
+                >{g}</button>
               ))}
             </div>
           </div>
           <div className="field">
             <label>Notas</label>
-            <input
-              type="text"
-              placeholder="Ej: Agarre ancho"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-            />
+            <input type="text" placeholder="Ej: Agarre ancho" value={notes}
+              onChange={e => setNotes(e.target.value)} />
           </div>
           <div className="field field--action" style={{ marginTop: '1rem' }}>
             <button type="submit" className="btn-primary">Guardar</button>
@@ -71,38 +64,61 @@ function ExerciseModal({ exercise, onClose, onSave }) {
 export default function Gym() {
   const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // null | 'new' | exercise object
+  const [modal, setModal] = useState(null)
 
-  async function fetchExercises() {
-    const res = await fetch(`${API}/exercises/`)
-    setExercises(await res.json())
-    setLoading(false)
-  }
+  const load = useCallback(async () => {
+    setExercises(await getExercises())
+  }, [])
 
-  useEffect(() => { fetchExercises() }, [])
+  const sync = useCallback(async () => {
+    try {
+      if (!await isServerReachable()) return
+      for (const ex of await getUnsyncedExercises()) {
+        if (ex.server_id) {
+          await putExerciseToServer(ex.server_id, ex)
+          await markExerciseSynced(ex.id, ex.server_id)
+        } else {
+          const created = await postExerciseToServer(ex)
+          await markExerciseSynced(ex.id, created.id)
+        }
+      }
+      for (const ex of await getPendingDeleteExercises()) {
+        await deleteExerciseFromServer(ex.server_id)
+        await deleteLocalExercise(ex.id)
+      }
+      for (const ex of await fetchAllExercisesFromServer()) {
+        await upsertExerciseFromServer(ex)
+      }
+    } catch { /* sin conexión */ } finally {
+      await load()
+    }
+  }, [load])
+
+  useEffect(() => {
+    async function init() {
+      await load()
+      setLoading(false)
+      sync()
+    }
+    init()
+  }, [])
 
   async function handleSave({ name, muscle_group, notes }) {
     if (modal && modal !== 'new') {
-      await fetch(`${API}/exercises/${modal.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, muscle_group, notes }),
-      })
+      await updateExercise(modal.id, name, muscle_group, notes)
     } else {
-      await fetch(`${API}/exercises/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, muscle_group, notes, position: exercises.length }),
-      })
+      await addExercise(name, muscle_group, notes)
     }
     setModal(null)
-    fetchExercises()
+    await load()
+    sync()
   }
 
   async function handleDelete(ex) {
     if (!confirm(`¿Eliminar "${ex.name}"?`)) return
-    await fetch(`${API}/exercises/${ex.id}`, { method: 'DELETE' })
-    fetchExercises()
+    await deleteExercise(ex.id)
+    await load()
+    sync()
   }
 
   const grouped = exercises.reduce((acc, ex) => {
