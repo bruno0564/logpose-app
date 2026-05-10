@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons'
 import BodyWeightScreen from './src/screens/BodyWeightScreen'
 import HomeScreen from './src/screens/HomeScreen'
 import GymScreen from './src/screens/GymScreen'
+import CalendarScreen from './src/screens/CalendarScreen'
+import TodoScreen from './src/screens/TodoScreen'
 import { isServerReachable } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
@@ -62,6 +64,16 @@ export default function App() {
             }}
           />
           <Tab.Screen
+            name="Gym"
+            component={GymScreen}
+            options={{
+              title: 'Gym',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="barbell-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Tab.Screen
             name="Home"
             component={HomeScreen}
             options={{
@@ -72,12 +84,22 @@ export default function App() {
             }}
           />
           <Tab.Screen
-            name="Gym"
-            component={GymScreen}
+            name="Calendar"
+            component={CalendarScreen}
             options={{
-              title: 'Gym',
+              title: 'Calendario',
               tabBarIcon: ({ color, size }) => (
-                <Ionicons name="barbell-outline" color={color} size={size} />
+                <Ionicons name="calendar-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Todo"
+            component={TodoScreen}
+            options={{
+              title: 'To-Do',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="checkmark-done-outline" color={color} size={size} />
               ),
             }}
           />

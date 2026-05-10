@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import Home from './Home.jsx'
 import BodyWeight from './BodyWeight.jsx'
 import Gym from './Gym.jsx'
+import Calendar from './Calendar.jsx'
+import Todo from './Todo.jsx'
 
 const API = 'http://localhost:8000'
 
@@ -9,6 +11,8 @@ const NAV = [
   { id: 'home',         label: 'Inicio' },
   { id: 'body-weight',  label: 'Peso' },
   { id: 'gym',          label: 'Gym' },
+  { id: 'calendar',     label: 'Calendario' },
+  { id: 'todo',         label: 'To-Do' },
 ]
 
 function Sidebar({ active, onNav, online }) {
@@ -61,6 +65,8 @@ function App() {
         {page === 'home'        && <Home />}
         {page === 'body-weight' && <BodyWeight />}
         {page === 'gym'         && <Gym />}
+        {page === 'calendar'    && <Calendar />}
+        {page === 'todo'        && <Todo />}
       </main>
     </div>
   )

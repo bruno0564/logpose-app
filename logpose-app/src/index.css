@@ -351,3 +351,70 @@ body {
   font-size: 0.85rem;
   color: #333;
 }
+
+/* ── Calendario ─────────────────────────────────── */
+
+.cal-month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.cal-arrow {
+  background: none;
+  border: none;
+  color: #7c3aed;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.cal-arrow:hover { color: #a78bfa; }
+
+.cal-month-label {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px 0;
+}
+
+.cal-day-name {
+  text-align: center;
+  color: #444;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding-bottom: 0.5rem;
+}
+
+.cal-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.cal-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  color: #666;
+  cursor: default;
+}
+
+.cal-day--today {
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 700;
+}
