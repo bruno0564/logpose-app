@@ -21,6 +21,7 @@ function StatCard({ label, value }) {
 function BodyWeight() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
+  const [dbError, setDbError] = useState(null)
   const [form, setForm] = useState({ weight: '', date: today(), note: '' })
   const [filterFrom, setFilterFrom] = useState(daysAgo(30))
   const [filterTo, setFilterTo] = useState(today())
@@ -50,8 +51,14 @@ function BodyWeight() {
 
   useEffect(() => {
     async function init() {
-      await loadLocal()
-      setLoading(false)
+      try {
+        await loadLocal()
+      } catch (e) {
+        console.error('BodyWeight: error cargando datos locales', e)
+        setDbError(String(e))
+      } finally {
+        setLoading(false)
+      }
       sync()
     }
     init()
@@ -88,6 +95,12 @@ function BodyWeight() {
         <h1 className="page-title">Body Weight</h1>
         <p className="page-subtitle">Registro diario de peso corporal</p>
       </div>
+
+      {dbError && (
+        <div style={{ background: '#3b0000', border: '1px solid #7f1d1d', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem', color: '#fca5a5', fontSize: '0.8rem', wordBreak: 'break-all' }}>
+          <strong>Error DB:</strong> {dbError}
+        </div>
+      )}
 
       <div className="stats-row">
         <StatCard label="Último registro" value={latest ? `${latest} kg` : '—'} />

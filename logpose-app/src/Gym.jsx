@@ -96,8 +96,13 @@ export default function Gym() {
 
   useEffect(() => {
     async function init() {
-      await load()
-      setLoading(false)
+      try {
+        await load()
+      } catch (e) {
+        console.error('Gym: error cargando datos locales', e)
+      } finally {
+        setLoading(false)
+      }
       sync()
     }
     init()

@@ -4,9 +4,9 @@ let db
 
 export async function openDB() {
   if (db) return db
-  db = await Database.load('sqlite:logpose.db')
+  const instance = await Database.load('sqlite:logpose.db')
 
-  await db.execute(`CREATE TABLE IF NOT EXISTS body_weight (
+  await instance.execute(`CREATE TABLE IF NOT EXISTS body_weight (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
     weight         REAL    NOT NULL,
@@ -16,7 +16,7 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
-  await db.execute(`CREATE TABLE IF NOT EXISTS exercises (
+  await instance.execute(`CREATE TABLE IF NOT EXISTS exercises (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
     name           TEXT    NOT NULL,
@@ -27,7 +27,7 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
-  await db.execute(`CREATE TABLE IF NOT EXISTS todo_lists (
+  await instance.execute(`CREATE TABLE IF NOT EXISTS todo_lists (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
     name           TEXT    NOT NULL,
@@ -35,7 +35,7 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
-  await db.execute(`CREATE TABLE IF NOT EXISTS todo_items (
+  await instance.execute(`CREATE TABLE IF NOT EXISTS todo_items (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
     local_list_id  INTEGER NOT NULL REFERENCES todo_lists(id),
@@ -45,6 +45,7 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
+  db = instance
   return db
 }
 
