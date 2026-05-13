@@ -1,190 +1,473 @@
 import { useState, useEffect, useCallback } from 'react'
-import './Gym.css'
 import {
-  getExercises, addExercise, updateExercise, deleteExercise,
-  getUnsyncedExercises, getPendingDeleteExercises,
-  markExerciseSynced, deleteLocalExercise, upsertExerciseFromServer,
+  getRoutines, insertLocalRoutine, deleteLocalRoutine,
+  getUnsyncedRoutines, getPendingDeleteRoutines,
+  markRoutineSynced, upsertRoutineFromServer,
+  getExercises, insertLocalExercise,
+  getAllRoutineExercises,
+  insertRoutineExercise, deleteRoutineExercise,
+  insertWorkoutSession, insertWorkoutSet,
 } from './db/database'
 import {
   isServerReachable,
-  fetchAllExercisesFromServer, postExerciseToServer, putExerciseToServer, deleteExerciseFromServer,
+  fetchAllRoutinesFromServer, postRoutineToServer, deleteRoutineFromServer,
 } from './api/client'
 
-const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Piernas', 'Core', 'Otro']
+const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-function ExerciseModal({ exercise, onClose, onSave }) {
-  const [name, setName] = useState(exercise?.name ?? '')
-  const [muscle, setMuscle] = useState(exercise?.muscle_group ?? '')
-  const [notes, setNotes] = useState(exercise?.notes ?? '')
+export default function Gym() {
+  const [view, setView] = useState('routines')
+  const [routines, setRoutines] = useState([])
+  const [selectedRoutine, setSelectedRoutine] = useState(null)
+  const [selectedDay, setSelectedDay] = useState(null)
+  const [routineExercises, setRoutineExercises] = useState([])
+  const [exercises, setExercises] = useState([])
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
 
-  function handleSubmit(e) {
+  const loadRoutines = useCallback(async () => {
+    setRoutines(await getRoutines())
+  }, [])
+
+  const loadExercises = useCallback(async () => {
+    setExercises(await getExercises())
+  }, [])
+
+  const loadRoutineExercises = useCallback(async (routine) => {
+    if (!routine) return
+    setRoutineExercises(await getAllRoutineExercises(routine.id))
+  }, [])
+
+  const syncRoutines = useCallback(async () => {
+    try {
+      if (!await isServerReachable()) return
+      for (const r of await getUnsyncedRoutines()) {
+        const created = await postRoutineToServer(r)
+        await markRoutineSynced(r.id, created.id)
+      }
+      for (const r of await getPendingDeleteRoutines()) {
+        await deleteRoutineFromServer(r.server_id)
+        await deleteLocalRoutine(r.id)
+      }
+      for (const r of await fetchAllRoutinesFromServer()) {
+        await upsertRoutineFromServer(r)
+      }
+    } catch { /* offline */ } finally {
+      await loadRoutines()
+    }
+  }, [loadRoutines])
+
+  useEffect(() => {
+    loadRoutines().then(() => syncRoutines())
+    loadExercises()
+  }, [])
+
+  async function handleAdd(e) {
     e.preventDefault()
-    if (!name.trim()) return
-    onSave({ name: name.trim(), muscle_group: muscle || null, notes: notes.trim() || null })
+    if (!newName.trim()) return
+    await insertLocalRoutine(newName.trim())
+    setNewName('')
+    setAdding(false)
+    await loadRoutines()
+    syncRoutines()
+  }
+
+  async function handleDelete(r) {
+    if (!confirm(`¿Eliminar la rutina "${r.name}"?`)) return
+    await deleteLocalRoutine(r.id)
+    await loadRoutines()
+    syncRoutines()
+  }
+
+  function openRoutine(routine) {
+    setSelectedRoutine(routine)
+    loadRoutineExercises(routine)
+    setView('routine-detail')
+  }
+
+  if (view === 'train') {
+    const dayExercises = routineExercises.filter(re => re.day_of_week === selectedDay)
+    return (
+      <TrainView
+        routine={selectedRoutine}
+        day={selectedDay}
+        dayExercises={dayExercises}
+        onBack={() => setView('routine-detail')}
+      />
+    )
+  }
+
+  if (view === 'routine-detail') {
+    return (
+      <RoutineDetailView
+        routine={selectedRoutine}
+        routineExercises={routineExercises}
+        exercises={exercises}
+        onBack={() => { setView('routines'); setSelectedRoutine(null) }}
+        onTrain={(day) => { setSelectedDay(day); setView('train') }}
+        onExercisesChange={() => loadRoutineExercises(selectedRoutine)}
+        onExercisesListChange={loadExercises}
+      />
+    )
   }
 
   return (
-    <div className="gym-overlay" onClick={onClose}>
-      <div className="gym-modal" onClick={e => e.stopPropagation()}>
-        <div className="gym-modal-header">
-          <h3>{exercise ? 'Editar ejercicio' : 'Nuevo ejercicio'}</h3>
-          <button className="btn-delete" onClick={onClose}>×</button>
+    <div className="page">
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h1 className="page-title">Gym</h1>
+          <button className="btn-primary" onClick={() => setAdding(a => !a)}>+ Rutina</button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Nombre *</label>
-            <input autoFocus type="text" placeholder="Ej: Press banca" value={name}
-              onChange={e => setName(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label>Grupo muscular</label>
-            <div className="gym-chips">
-              {MUSCLE_GROUPS.map(g => (
-                <button key={g} type="button"
-                  className={`gym-chip ${muscle === g ? 'gym-chip--active' : ''}`}
-                  onClick={() => setMuscle(muscle === g ? '' : g)}
-                >{g}</button>
-              ))}
+        <p className="page-subtitle">Tus rutinas de entrenamiento</p>
+      </div>
+
+      {adding && (
+        <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 400 }}>
+          <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Nombre de la rutina..."
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              style={{
+                flex: 1, padding: '0.5rem 0.75rem',
+                background: 'var(--surface-2)', border: '1px solid var(--border-2)',
+                borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+                fontSize: '0.85rem', outline: 'none',
+              }}
+            />
+            <button type="submit" className="btn-primary">Crear</button>
+            <button type="button" className="btn-cancel" onClick={() => { setAdding(false); setNewName('') }}>
+              Cancelar
+            </button>
+          </form>
+        </div>
+      )}
+
+      {routines.length === 0 ? (
+        <p className="hint">Sin rutinas todavía. Crea la primera arriba.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 480 }}>
+          {routines.map(r => (
+            <div
+              key={r.id}
+              className="card"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '1rem 1.25rem', cursor: 'pointer' }}
+              onClick={() => openRoutine(r)}
+            >
+              <span style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 500 }}>{r.name}</span>
+              <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}>×</button>
             </div>
-          </div>
-          <div className="field">
-            <label>Notas</label>
-            <input type="text" placeholder="Ej: Agarre ancho" value={notes}
-              onChange={e => setNotes(e.target.value)} />
-          </div>
-          <div className="field field--action" style={{ marginTop: '1rem' }}>
-            <button type="submit" className="btn-primary">Guardar</button>
-          </div>
-        </form>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Routine Detail ────────────────────────────────────────────────────────────
+
+function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange }) {
+  const [pickerDay, setPickerDay] = useState(null)
+
+  return (
+    <div className="page">
+      {pickerDay !== null && (
+        <ExercisePickerModal
+          day={pickerDay}
+          routine={routine}
+          exercises={exercises}
+          routineExercises={routineExercises}
+          onClose={() => setPickerDay(null)}
+          onAdded={() => { onExercisesChange(); onExercisesListChange() }}
+        />
+      )}
+
+      <div className="page-header">
+        <button
+          onClick={onBack}
+          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+        >
+          ← Volver
+        </button>
+        <h1 className="page-title">{routine.name}</h1>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 480 }}>
+        {DAYS.map((dayName, idx) => {
+          const dayExs = routineExercises.filter(re => re.day_of_week === idx)
+          return (
+            <div key={idx} className="card" style={{ marginBottom: 0, padding: '1rem 1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dayExs.length > 0 ? '0.6rem' : 0 }}>
+                <span style={{ color: 'var(--text)', fontSize: '0.88rem', fontWeight: 600 }}>{dayName}</span>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  {dayExs.length > 0 && (
+                    <button
+                      className="btn-primary"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                      onClick={() => onTrain(idx)}
+                    >
+                      Entrenar
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setPickerDay(idx)}
+                    style={{ background: 'none', border: '1px solid var(--border-2)', color: 'var(--text-2)', borderRadius: 'var(--radius-sm)', padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1 }}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {dayExs.length === 0 ? (
+                <span style={{ color: 'var(--text-3)', fontSize: '0.78rem' }}>Descanso</span>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {dayExs.map(re => (
+                    <div key={re.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-2)', fontSize: '0.82rem' }}>
+                        {re.muscle_group && (
+                          <span style={{ color: 'var(--text-3)', fontSize: '0.72rem', marginRight: '0.35rem' }}>[{re.muscle_group}]</span>
+                        )}
+                        {re.exercise_name}
+                      </span>
+                      <button
+                        onClick={async () => { await deleteRoutineExercise(re.id); onExercisesChange() }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '1rem', padding: '0 0.2rem', lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-export default function Gym() {
-  const [exercises, setExercises] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null)
+// ── Exercise Picker Modal ────────────────────────────────────────────────────
 
-  const load = useCallback(async () => {
-    setExercises(await getExercises())
-  }, [])
+function ExercisePickerModal({ day, routine, exercises, routineExercises, onClose, onAdded }) {
+  const [newName, setNewName] = useState('')
+  const [newMuscle, setNewMuscle] = useState('')
 
-  const sync = useCallback(async () => {
-    try {
-      if (!await isServerReachable()) return
-      for (const ex of await getUnsyncedExercises()) {
-        if (ex.server_id) {
-          await putExerciseToServer(ex.server_id, ex)
-          await markExerciseSynced(ex.id, ex.server_id)
-        } else {
-          const created = await postExerciseToServer(ex)
-          await markExerciseSynced(ex.id, created.id)
-        }
-      }
-      for (const ex of await getPendingDeleteExercises()) {
-        await deleteExerciseFromServer(ex.server_id)
-        await deleteLocalExercise(ex.id)
-      }
-      for (const ex of await fetchAllExercisesFromServer()) {
-        await upsertExerciseFromServer(ex)
-      }
-    } catch { /* sin conexión */ } finally {
-      await load()
-    }
-  }, [load])
-
-  useEffect(() => {
-    async function init() {
-      try {
-        await load()
-      } catch (e) {
-        console.error('Gym: error cargando datos locales', e)
-      } finally {
-        setLoading(false)
-      }
-      sync()
-    }
-    init()
-  }, [])
-
-  async function handleSave({ name, muscle_group, notes }) {
-    if (modal && modal !== 'new') {
-      await updateExercise(modal.id, name, muscle_group, notes)
-    } else {
-      await addExercise(name, muscle_group, notes)
-    }
-    setModal(null)
-    await load()
-    sync()
-  }
-
-  async function handleDelete(ex) {
-    if (!confirm(`¿Eliminar "${ex.name}"?`)) return
-    await deleteExercise(ex.id)
-    await load()
-    sync()
-  }
+  const alreadyAdded = new Set(
+    routineExercises.filter(re => re.day_of_week === day).map(re => re.local_exercise_id)
+  )
 
   const grouped = exercises.reduce((acc, ex) => {
-    const key = ex.muscle_group || 'Sin grupo'
-    if (!acc[key]) acc[key] = []
-    acc[key].push(ex)
+    const g = ex.muscle_group || 'Sin grupo'
+    if (!acc[g]) acc[g] = []
+    acc[g].push(ex)
     return acc
   }, {})
+
+  async function handleAdd(exercise) {
+    const pos = routineExercises.filter(re => re.day_of_week === day).length
+    await insertRoutineExercise(routine.id, exercise.id, day, pos)
+    onAdded()
+  }
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    if (!newName.trim()) return
+    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null)
+    const pos = routineExercises.filter(re => re.day_of_week === day).length
+    await insertRoutineExercise(routine.id, id, day, pos)
+    setNewName('')
+    setNewMuscle('')
+    onAdded()
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal"
+        style={{ maxWidth: 380, maxHeight: '75vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <span>Añadir — {DAYS[day]}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ padding: '1rem' }}>
+          {Object.keys(grouped).sort().map(group => (
+            <div key={group} style={{ marginBottom: '1rem' }}>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.35rem' }}>{group}</p>
+              {grouped[group].map(ex => (
+                <div key={ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.3rem 0' }}>
+                  <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{ex.name}</span>
+                  {alreadyAdded.has(ex.id) ? (
+                    <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>✓</span>
+                  ) : (
+                    <button
+                      className="btn-primary"
+                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
+                      onClick={() => handleAdd(ex)}
+                    >
+                      Añadir
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+
+          {exercises.length === 0 && (
+            <p style={{ color: 'var(--text-3)', fontSize: '0.83rem', marginBottom: '1rem' }}>Sin ejercicios todavía.</p>
+          )}
+
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.85rem', marginTop: '0.25rem' }}>
+            <p style={{ color: 'var(--text-2)', fontSize: '0.78rem', marginBottom: '0.5rem' }}>Nuevo ejercicio</p>
+            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                style={{ padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
+              />
+              <input
+                type="text"
+                placeholder="Músculo (opcional)"
+                value={newMuscle}
+                onChange={e => setNewMuscle(e.target.value)}
+                style={{ padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
+              />
+              <button type="submit" className="btn-primary" style={{ marginTop: '0.1rem' }}>Crear y añadir</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Train View ────────────────────────────────────────────────────────────────
+
+function TrainView({ routine, day, dayExercises, onBack }) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [sets, setSets] = useState(() => {
+    const init = {}
+    dayExercises.forEach(ex => {
+      init[ex.local_exercise_id] = [
+        { weight: '', reps: '' },
+        { weight: '', reps: '' },
+        { weight: '', reps: '' },
+      ]
+    })
+    return init
+  })
+  const [saving, setSaving] = useState(false)
+
+  function updateSet(exerciseId, setIdx, field, value) {
+    setSets(prev => ({
+      ...prev,
+      [exerciseId]: prev[exerciseId].map((s, i) => i === setIdx ? { ...s, [field]: value } : s),
+    }))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const sessionId = await insertWorkoutSession(routine.id, day, date, null)
+      for (const ex of dayExercises) {
+        const exSets = sets[ex.local_exercise_id] || []
+        for (let i = 0; i < exSets.length; i++) {
+          const s = exSets[i]
+          if (s.weight && s.reps) {
+            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(s.weight), parseInt(s.reps), null)
+          }
+        }
+      }
+      onBack()
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="page">
       <div className="page-header">
-        <div className="gym-page-title-row">
-          <h1 className="page-title">Gym</h1>
-          <button className="btn-primary" onClick={() => setModal('new')}>+ Ejercicio</button>
-        </div>
-        <p className="page-subtitle">Gestión de ejercicios</p>
+        <button
+          onClick={onBack}
+          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+        >
+          ← Volver
+        </button>
+        <h1 className="page-title">{DAYS[day]}</h1>
+        <p className="page-subtitle">{routine.name}</p>
       </div>
 
-      {loading ? (
-        <p className="hint">Cargando...</p>
-      ) : exercises.length === 0 ? (
-        <p className="hint">Sin ejercicios todavía. Añade el primero arriba.</p>
-      ) : (
-        Object.entries(grouped).map(([group, exs]) => (
-          <div key={group} className="gym-group">
-            <p className="gym-group-label">{group}</p>
-            <div className="card" style={{ padding: 0 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Ejercicio</th>
-                    <th>Notas</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {exs.map(ex => (
-                    <tr key={ex.id}>
-                      <td style={{ color: '#e8e8e8', fontWeight: 500 }}>{ex.name}</td>
-                      <td className="note-cell">{ex.notes ?? '—'}</td>
-                      <td style={{ width: 80 }}>
-                        <button className="btn-icon" onClick={() => setModal(ex)} title="Editar">✎</button>
-                        <button className="btn-delete" onClick={() => handleDelete(ex)}>×</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))
-      )}
+      <div style={{ maxWidth: 480 }}>
+        <div className="card" style={{ marginBottom: '1rem', padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span style={{ color: 'var(--text-2)', fontSize: '0.85rem', minWidth: 'fit-content' }}>Fecha</span>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0.3rem 0.5rem', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+          />
+        </div>
 
-      {modal && (
-        <ExerciseModal
-          exercise={modal === 'new' ? null : modal}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-        />
-      )}
+        {dayExercises.map(ex => (
+          <div key={ex.local_exercise_id} className="card" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
+            <p style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.75rem' }}>
+              {ex.muscle_group && (
+                <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: '0.72rem', marginRight: '0.4rem' }}>[{ex.muscle_group}]</span>
+              )}
+              {ex.exercise_name}
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem' }}>
+              <span />
+              <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reps</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kg</span>
+            </div>
+
+            {(sets[ex.local_exercise_id] || []).map((s, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Serie {i + 1}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="—"
+                  value={s.reps}
+                  onChange={e => updateSet(ex.local_exercise_id, i, 'reps', e.target.value)}
+                  style={{ padding: '0.35rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="—"
+                  value={s.weight}
+                  onChange={e => updateSet(ex.local_exercise_id, i, 'weight', e.target.value)}
+                  style={{ padding: '0.35rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+
+        {dayExercises.length === 0 && (
+          <p className="hint">Sin ejercicios en este día.</p>
+        )}
+
+        <button
+          className="btn-primary"
+          style={{ width: '100%', padding: '0.7rem', fontSize: '0.88rem' }}
+          onClick={handleSave}
+          disabled={saving || dayExercises.length === 0}
+        >
+          {saving ? 'Guardando...' : 'Guardar sesión'}
+        </button>
+      </div>
     </div>
   )
 }

@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, ScrollView, Dimensions,
+  StyleSheet, ActivityIndicator, ScrollView, Dimensions, Modal,
 } from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { LineChart } from 'react-native-chart-kit'
 import {
-  getLocalEntries, insertLocalEntry, markSynced,
+  getLocalEntries, insertLocalEntry, updateLocalEntry, markSynced,
   markPendingDelete, deleteLocalEntry,
   upsertFromServer, getUnsyncedEntries, getPendingDeletes,
 } from '../db/database'
 import {
-  isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, deleteBodyWeightFromServer,
+  isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer,
 } from '../api/client'
 
 const SCREEN_W = Dimensions.get('window').width
@@ -28,6 +28,8 @@ export default function BodyWeightScreen() {
   const [showFromPicker, setShowFromPicker] = useState(false)
   const [showToPicker, setShowToPicker] = useState(false)
   const [showAddPicker, setShowAddPicker] = useState(false)
+  const [editEntry, setEditEntry] = useState(null)
+  const [showEditPicker, setShowEditPicker] = useState(false)
 
   const loadLocal = useCallback(async () => {
     const rows = await getLocalEntries()
@@ -41,8 +43,13 @@ export default function BodyWeightScreen() {
       if (!reachable) return
       const unsynced = await getUnsyncedEntries()
       for (const entry of unsynced) {
-        const created = await postBodyWeightToServer(entry)
-        await markSynced(entry.id, created.id)
+        if (entry.server_id) {
+          await putBodyWeightToServer(entry.server_id, entry)
+          await markSynced(entry.id, entry.server_id)
+        } else {
+          const created = await postBodyWeightToServer(entry)
+          await markSynced(entry.id, created.id)
+        }
       }
       const pendingDeletes = await getPendingDeletes()
       for (const entry of pendingDeletes) {
@@ -79,6 +86,14 @@ export default function BodyWeightScreen() {
 
   async function handleDelete(entry) {
     await markPendingDelete(entry.id)
+    await loadLocal()
+    await sync()
+  }
+
+  async function handleEditSave() {
+    if (!editEntry?.weight || !editEntry?.date) return
+    await updateLocalEntry(editEntry.id, parseFloat(editEntry.weight), editEntry.date, editEntry.note || null)
+    setEditEntry(null)
     await loadLocal()
     await sync()
   }
@@ -263,9 +278,14 @@ export default function BodyWeightScreen() {
                 <Text style={[s.col, s.colDate]}>{item.date}</Text>
                 <Text style={[s.col, s.colWeight, s.weightText]}>{item.weight} kg</Text>
                 <Text style={[s.col, s.colNote, s.noteText]}>{item.note ?? '—'}</Text>
-                <TouchableOpacity onPress={() => handleDelete(item)} style={s.colAction}>
-                  <Text style={s.del}>✕</Text>
-                </TouchableOpacity>
+                <View style={[s.colAction, { flexDirection: 'row', gap: 4 }]}>
+                  <TouchableOpacity onPress={() => setEditEntry({ ...item, weight: String(item.weight) })}>
+                    <Text style={s.editBtn}>✎</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item)}>
+                    <Text style={s.del}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
             {(filterFrom || filterTo) && (
@@ -274,6 +294,53 @@ export default function BodyWeightScreen() {
           </>
         )}
       </View>
+    </ScrollView>
+
+      <Modal visible={!!editEntry} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <Text style={s.modalTitle}>Editar registro</Text>
+            <TextInput
+              style={s.input}
+              placeholder="Peso (kg)"
+              placeholderTextColor="#666"
+              keyboardType="decimal-pad"
+              value={editEntry?.weight ?? ''}
+              onChangeText={v => setEditEntry(e => ({ ...e, weight: v }))}
+            />
+            <TouchableOpacity style={s.datePicker} onPress={() => setShowEditPicker(true)}>
+              <Text style={s.datePickerText}>{editEntry?.date ?? ''}</Text>
+              <Text style={s.datePickerIcon}>📅</Text>
+            </TouchableOpacity>
+            {showEditPicker && (
+              <DateTimePicker
+                value={new Date((editEntry?.date ?? new Date().toISOString().split('T')[0]) + 'T12:00:00')}
+                mode="date"
+                display="calendar"
+                onChange={(_, selected) => {
+                  setShowEditPicker(false)
+                  if (selected) setEditEntry(e => ({ ...e, date: selected.toISOString().split('T')[0] }))
+                }}
+              />
+            )}
+            <TextInput
+              style={s.input}
+              placeholder="Nota (opcional)"
+              placeholderTextColor="#666"
+              value={editEntry?.note ?? ''}
+              onChangeText={v => setEditEntry(e => ({ ...e, note: v }))}
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <TouchableOpacity style={[s.btn, { flex: 1, backgroundColor: '#2a2a2a' }]} onPress={() => setEditEntry(null)}>
+                <Text style={[s.btnText, { color: '#888' }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.btn, { flex: 1 }]} onPress={handleEditSave}>
+                <Text style={s.btnText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -311,6 +378,10 @@ const s = StyleSheet.create({
   colAction:    { width: 32, alignItems: 'center' },
   weightText:   { color: '#fff', fontWeight: '600' },
   noteText:     { color: '#666', fontSize: 12 },
-  del:          { color: '#ef4444', fontSize: 16 },
+  del:          { color: '#ef4444', fontSize: 14 },
+  editBtn:      { color: '#555', fontSize: 14 },
   hint:         { color: '#555', fontSize: 13, marginTop: 8, textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modal:        { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, gap: 10 },
+  modalTitle:   { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 4 },
 })

@@ -1,5 +1,7 @@
+@import './theme.css';
+
 .home-page {
-  max-width: 680px;
+  max-width: 620px;
 }
 
 .home-header {
@@ -9,140 +11,35 @@
 .home-greeting {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #fff;
-  margin-bottom: 0.3rem;
+  color: var(--text);
+  margin-bottom: 0.25rem;
 }
 
 .home-date {
-  font-size: 0.825rem;
-  color: #3a3a3a;
-}
-
-.home-stat-card {
-  background: #0d0d0d;
-  border: 1px solid #181818;
-  border-left: 3px solid #7c3aed;
-  border-radius: 10px;
-  padding: 1.5rem 1.75rem;
-  margin-bottom: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.home-stat-label {
-  font-size: 0.7rem;
-  color: #444;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.home-stat-value {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.home-stat-sub {
-  font-size: 0.75rem;
-  color: #333;
-  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--text-3);
 }
 
 .home-quote-card {
-  background: #0d0d0d;
-  border: 1px solid #181818;
-  border-radius: 10px;
-  padding: 1.75rem;
-  margin-bottom: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
   display: inline-block;
   width: fit-content;
   max-width: 100%;
 }
 
 .home-quote-text {
-  font-size: 1.1rem;
-  color: #ccc;
+  font-size: 1rem;
+  color: var(--text-2);
   font-style: italic;
-  line-height: 1.65;
+  line-height: 1.7;
 }
 
 .home-quote-author {
-  font-size: 0.75rem;
-  color: #444;
+  font-size: 0.72rem;
+  color: var(--text-3);
   text-align: right;
   margin-top: 0.75rem;
-}
-
-.home-hint {
-  font-size: 0.85rem;
-  color: #333;
-}
-
-.home-manage-btn {
-  background: none;
-  border: none;
-  color: #7c3aed;
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 0.25rem 0;
-  margin-bottom: 1.25rem;
-}
-
-.home-manage-btn:hover {
-  color: #9f67ff;
-}
-
-.home-manage-card {
-  max-width: 480px;
-}
-
-.home-add-form {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-}
-
-.home-add-form input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 7px;
-  color: #e0e0e0;
-  font-size: 0.875rem;
-  outline: none;
-}
-
-.home-add-form input:focus {
-  border-color: #7c3aed;
-}
-
-.home-add-form input::placeholder {
-  color: #333;
-}
-
-.home-quote-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.home-quote-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid #111;
-  font-size: 0.85rem;
-  color: #555;
-  font-style: italic;
-}
-
-.home-quote-item:last-child {
-  border-bottom: none;
 }

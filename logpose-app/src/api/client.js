@@ -36,6 +36,15 @@ export async function postBodyWeightToServer(entry) {
   return res.json()
 }
 
+export async function putBodyWeightToServer(serverId, entry) {
+  const res = await fetchWithTimeout(`${SERVER}/body-weight/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ weight: entry.weight, date: entry.date, note: entry.note || null }),
+  })
+  return res.json()
+}
+
 export async function deleteBodyWeightFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/body-weight/${serverId}`, { method: 'DELETE' })
 }
@@ -60,33 +69,76 @@ export async function deleteQuoteFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/quotes/${serverId}`, { method: 'DELETE' })
 }
 
-// ── Exercises ──────────────────────────────────────────────────────────────────
+// ── Routines ──────────────────────────────────────────────────────────────────
+
+export async function fetchAllRoutinesFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/routines/`)
+  return res.json()
+}
+
+export async function postRoutineToServer(routine) {
+  const res = await fetchWithTimeout(`${SERVER}/routines/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: routine.name }),
+  })
+  return res.json()
+}
+
+export async function deleteRoutineFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/routines/${serverId}`, { method: 'DELETE' })
+}
+
+// ── Exercises ─────────────────────────────────────────────────────────────────
 
 export async function fetchAllExercisesFromServer() {
   const res = await fetchWithTimeout(`${SERVER}/exercises/`)
   return res.json()
 }
 
-export async function postExerciseToServer(ex) {
+export async function postExerciseToServer(exercise) {
   const res = await fetchWithTimeout(`${SERVER}/exercises/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: ex.name, muscle_group: ex.muscle_group || null, notes: ex.notes || null, position: ex.position ?? 0 }),
-  })
-  return res.json()
-}
-
-export async function putExerciseToServer(serverId, ex) {
-  const res = await fetchWithTimeout(`${SERVER}/exercises/${serverId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: ex.name, muscle_group: ex.muscle_group || null, notes: ex.notes || null }),
+    body: JSON.stringify({ name: exercise.name, muscle_group: exercise.muscle_group || null }),
   })
   return res.json()
 }
 
 export async function deleteExerciseFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/exercises/${serverId}`, { method: 'DELETE' })
+}
+
+// ── Gym (sessions + sets) ────────────────────────────────────────────────────
+
+export async function postSessionToServer(session) {
+  const res = await fetchWithTimeout(`${SERVER}/gym/sessions/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      routine_id: session.server_routine_id || null,
+      day_of_week: session.day_of_week ?? null,
+      date: session.date,
+      note: session.note || null,
+    }),
+  })
+  return res.json()
+}
+
+export async function postSetToServer(set) {
+  const res = await fetchWithTimeout(`${SERVER}/gym/sets/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: set.server_session_id,
+      exercise_id: set.server_exercise_id,
+      set_number: set.set_number,
+      weight: set.weight,
+      reps: set.reps,
+      note: set.note || null,
+    }),
+  })
+  return res.json()
 }
 
 // ── To-Do Lists ────────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import {
-  getLocalEntries, insertLocalEntry, markSynced, markPendingDelete,
+  getLocalEntries, insertLocalEntry, updateLocalEntry, markSynced, markPendingDelete,
   deleteLocalEntry, upsertFromServer, getUnsyncedEntries, getPendingDeletes,
 } from './db/database'
-import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
+import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -23,6 +23,7 @@ function BodyWeight() {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState(null)
   const [form, setForm] = useState({ weight: '', date: today(), note: '' })
+  const [editEntry, setEditEntry] = useState(null)
   const [filterFrom, setFilterFrom] = useState(daysAgo(30))
   const [filterTo, setFilterTo] = useState(today())
 
@@ -34,8 +35,13 @@ function BodyWeight() {
     try {
       if (!await isServerReachable()) return
       for (const entry of await getUnsyncedEntries()) {
-        const created = await postBodyWeightToServer(entry)
-        await markSynced(entry.id, created.id)
+        if (entry.server_id) {
+          await putBodyWeightToServer(entry.server_id, entry)
+          await markSynced(entry.id, entry.server_id)
+        } else {
+          const created = await postBodyWeightToServer(entry)
+          await markSynced(entry.id, created.id)
+        }
       }
       for (const entry of await getPendingDeletes()) {
         await deleteBodyWeightFromServer(entry.server_id)
@@ -78,6 +84,14 @@ function BodyWeight() {
     sync()
   }
 
+  async function handleEdit(e) {
+    e.preventDefault()
+    await updateLocalEntry(editEntry.id, parseFloat(editEntry.weight), editEntry.date, editEntry.note || null)
+    setEditEntry(null)
+    await loadLocal()
+    sync()
+  }
+
   const displayed = entries.filter(e => {
     if (filterFrom && e.date < filterFrom) return false
     if (filterTo && e.date > filterTo) return false
@@ -90,6 +104,7 @@ function BodyWeight() {
     : null
 
   return (
+    <>
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Body Weight</h1>
@@ -194,6 +209,7 @@ function BodyWeight() {
                   <td className="weight-cell">{entry.weight} kg</td>
                   <td className="note-cell">{entry.note ?? '—'}</td>
                   <td>
+                    <button className="btn-icon" onClick={() => setEditEntry({ ...entry })} title="Editar">✎</button>
                     <button className="btn-delete" onClick={() => handleDelete(entry)}>×</button>
                   </td>
                 </tr>
@@ -206,6 +222,36 @@ function BodyWeight() {
         )}
       </div>
     </div>
+
+      {editEntry && (
+        <div className="modal-overlay" onClick={() => setEditEntry(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Editar registro</h3>
+              <button className="btn-delete" onClick={() => setEditEntry(null)}>×</button>
+            </div>
+            <form onSubmit={handleEdit} className="form" style={{ flexDirection: 'column' }}>
+              <div className="field">
+                <label>Peso (kg)</label>
+                <input type="number" step="0.1" value={editEntry.weight}
+                  onChange={e => setEditEntry(v => ({ ...v, weight: e.target.value }))} required />
+              </div>
+              <div className="field">
+                <label>Fecha</label>
+                <input type="date" value={editEntry.date}
+                  onChange={e => setEditEntry(v => ({ ...v, date: e.target.value }))} required />
+              </div>
+              <div className="field">
+                <label>Nota (opcional)</label>
+                <input type="text" value={editEntry.note ?? ''}
+                  onChange={e => setEditEntry(v => ({ ...v, note: e.target.value }))} />
+              </div>
+              <button type="submit" className="btn-primary">Guardar</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

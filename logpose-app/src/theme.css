@@ -1,0 +1,29 @@
+:root {
+  /* Fondos */
+  --bg:        #0a0a0a;
+  --surface:   #111111;
+  --surface-2: #181818;
+
+  /* Bordes */
+  --border:    #1e1e1e;
+  --border-2:  #2a2a2a;
+
+  /* Accent — cambia esto y cambia todo */
+  --accent:       #818cf8;
+  --accent-hover: #6366f1;
+
+  /* Texto */
+  --text:   #f0f0f0;
+  --text-2: #888;
+  --text-3: #444;
+  --text-4: #2e2e2e;
+
+  /* Estados */
+  --danger:  #ef4444;
+  --success: #22c55e;
+
+  /* Geometría */
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+}

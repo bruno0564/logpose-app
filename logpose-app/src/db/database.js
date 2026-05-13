@@ -32,15 +32,56 @@ export async function openDB() {
   )`)
 
 
+  await instance.execute(`CREATE TABLE IF NOT EXISTS routines (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id      INTEGER,
+    name           TEXT    NOT NULL,
+    synced         INTEGER NOT NULL DEFAULT 0,
+    pending_delete INTEGER NOT NULL DEFAULT 0
+  )`)
+
   await instance.execute(`CREATE TABLE IF NOT EXISTS exercises (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
     name           TEXT    NOT NULL,
     muscle_group   TEXT,
-    notes          TEXT,
-    position       INTEGER NOT NULL DEFAULT 0,
     synced         INTEGER NOT NULL DEFAULT 0,
     pending_delete INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  await instance.execute(`CREATE TABLE IF NOT EXISTS routine_exercises (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id         INTEGER,
+    local_routine_id  INTEGER NOT NULL REFERENCES routines(id),
+    local_exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    day_of_week       INTEGER NOT NULL,
+    position          INTEGER NOT NULL DEFAULT 0,
+    synced            INTEGER NOT NULL DEFAULT 0,
+    pending_delete    INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  await instance.execute(`CREATE TABLE IF NOT EXISTS workout_sessions (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id        INTEGER,
+    local_routine_id INTEGER REFERENCES routines(id),
+    day_of_week      INTEGER,
+    date             TEXT    NOT NULL,
+    note             TEXT,
+    synced           INTEGER NOT NULL DEFAULT 0,
+    pending_delete   INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  await instance.execute(`CREATE TABLE IF NOT EXISTS workout_sets (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id         INTEGER,
+    local_session_id  INTEGER NOT NULL REFERENCES workout_sessions(id),
+    local_exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    set_number        INTEGER NOT NULL,
+    weight            REAL    NOT NULL,
+    reps              INTEGER NOT NULL,
+    note              TEXT,
+    synced            INTEGER NOT NULL DEFAULT 0,
+    pending_delete    INTEGER NOT NULL DEFAULT 0
   )`)
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS todo_lists (
@@ -88,6 +129,14 @@ export async function insertLocalEntry(weight, date, note) {
     [weight, date, note || null]
   )
   return result.lastInsertId
+}
+
+export async function updateLocalEntry(id, weight, date, note) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE body_weight SET weight = ?, date = ?, note = ?, synced = 0 WHERE id = ?',
+    [weight, date, note || null, id]
+  )
 }
 
 // una vez subido al servidor, guarda su server_id y marca como sincronizado
@@ -209,81 +258,62 @@ export async function getPendingDeleteQuotes() {
 
 
 
-// ── Exercises ──────────────────────────────────────────────────────────────────
+// ── Routines ───────────────────────────────────────────────────────────────────
 
-export async function getExercises() {
+export async function getRoutines() {
   const db = await openDB()
-  return db.select('SELECT * FROM exercises WHERE pending_delete = 0 ORDER BY position ASC, id ASC')
+  return db.select('SELECT * FROM routines WHERE pending_delete = 0 ORDER BY id ASC')
 }
 
-// calcula la posición máxima actual y añade el nuevo ejercicio al final
-export async function addExercise(name, muscle_group, notes) {
+export async function insertLocalRoutine(name) {
   const db = await openDB()
-  const rows = await db.select('SELECT MAX(position) as p FROM exercises')
-  const maxPos = rows[0]?.p ?? 0
-  await db.execute(
-    'INSERT INTO exercises (name, muscle_group, notes, position, synced) VALUES (?, ?, ?, ?, 0)',
-    [name.trim(), muscle_group?.trim() || null, notes?.trim() || null, maxPos + 1]
+  const result = await db.execute(
+    'INSERT INTO routines (name, synced) VALUES (?, 0)',
+    [name.trim()]
   )
+  return result.lastInsertId
 }
 
-// al editar, marca synced=0 para que el sync lo suba al servidor con los cambios
-export async function updateExercise(id, name, muscle_group, notes) {
+export async function deleteLocalRoutine(id) {
   const db = await openDB()
-  await db.execute(
-    'UPDATE exercises SET name = ?, muscle_group = ?, notes = ?, synced = 0 WHERE id = ?',
-    [name.trim(), muscle_group?.trim() || null, notes?.trim() || null, id]
-  )
-}
-
-// si el ejercicio tiene server_id lo marca para borrar (hay que borrarlo en el servidor)
-// si solo existe en local, lo borra directamente
-export async function deleteExercise(id) {
-  const db = await openDB()
-  const rows = await db.select('SELECT server_id FROM exercises WHERE id = ?', [id])
+  const rows = await db.select('SELECT server_id FROM routines WHERE id = ?', [id])
   if (rows[0]?.server_id) {
-    await db.execute('UPDATE exercises SET pending_delete = 1 WHERE id = ?', [id])
+    await db.execute('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
   } else {
-    await db.execute('DELETE FROM exercises WHERE id = ?', [id])
+    await db.execute('DELETE FROM routines WHERE id = ?', [id])
   }
 }
 
-export async function getUnsyncedExercises() {
+export async function getUnsyncedRoutines() {
   const db = await openDB()
-  return db.select('SELECT * FROM exercises WHERE synced = 0 AND pending_delete = 0')
+  return db.select('SELECT * FROM routines WHERE synced = 0 AND pending_delete = 0')
 }
 
-export async function getPendingDeleteExercises() {
+export async function getPendingDeleteRoutines() {
   const db = await openDB()
-  return db.select('SELECT * FROM exercises WHERE pending_delete = 1 AND server_id IS NOT NULL')
+  return db.select('SELECT * FROM routines WHERE pending_delete = 1 AND server_id IS NOT NULL')
 }
 
-export async function markExerciseSynced(localId, serverId) {
+export async function markRoutineSynced(localId, serverId) {
   const db = await openDB()
   await db.execute(
-    'UPDATE exercises SET synced = 1, server_id = ? WHERE id = ?',
+    'UPDATE routines SET synced = 1, server_id = ? WHERE id = ?',
     [serverId, localId]
   )
 }
 
-export async function deleteLocalExercise(localId) {
+export async function upsertRoutineFromServer(serverRoutine) {
   const db = await openDB()
-  await db.execute('DELETE FROM exercises WHERE id = ?', [localId])
-}
-
-export async function upsertExerciseFromServer(serverEx) {
-  const db = await openDB()
-  const rows = await db.select('SELECT id FROM exercises WHERE server_id = ?', [serverEx.id])
+  const rows = await db.select('SELECT id FROM routines WHERE server_id = ?', [serverRoutine.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE exercises SET name = ?, muscle_group = ?, notes = ?, position = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [serverEx.name, serverEx.muscle_group, serverEx.notes, serverEx.position, serverEx.id]
+      'UPDATE routines SET name = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverRoutine.name, serverRoutine.id]
     )
   } else {
-    const maxRows = await db.select('SELECT MAX(position) as p FROM exercises')
     await db.execute(
-      'INSERT INTO exercises (server_id, name, muscle_group, notes, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
-      [serverEx.id, serverEx.name, serverEx.muscle_group, serverEx.notes, serverEx.position ?? (maxRows[0]?.p ?? 0) + 1]
+      'INSERT INTO routines (server_id, name, synced) VALUES (?, ?, 1)',
+      [serverRoutine.id, serverRoutine.name]
     )
   }
 }
@@ -439,4 +469,153 @@ export async function upsertTodoItemFromServer(serverItem, localListId) {
       [serverItem.id, localListId, serverItem.title, serverItem.done ? 1 : 0]
     )
   }
+}
+
+// ── Exercises ─────────────────────────────────────────────────────────────────
+
+export async function getExercises() {
+  const db = await openDB()
+  return db.select('SELECT * FROM exercises WHERE pending_delete = 0 ORDER BY muscle_group, name')
+}
+
+export async function insertLocalExercise(name, muscleGroup) {
+  const db = await openDB()
+  const result = await db.execute(
+    'INSERT INTO exercises (name, muscle_group, synced) VALUES (?, ?, 0)',
+    [name.trim(), muscleGroup || null]
+  )
+  return result.lastInsertId
+}
+
+export async function deleteLocalExercise(id) {
+  const db = await openDB()
+  const rows = await db.select('SELECT server_id FROM exercises WHERE id = ?', [id])
+  if (rows[0]?.server_id) {
+    await db.execute('UPDATE exercises SET pending_delete = 1 WHERE id = ?', [id])
+  } else {
+    await db.execute('DELETE FROM exercises WHERE id = ?', [id])
+  }
+}
+
+export async function getUnsyncedExercises() {
+  const db = await openDB()
+  return db.select('SELECT * FROM exercises WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteExercises() {
+  const db = await openDB()
+  return db.select('SELECT * FROM exercises WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markExerciseSynced(localId, serverId) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE exercises SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function upsertExerciseFromServer(serverEx) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id FROM exercises WHERE server_id = ?', [serverEx.id])
+  if (rows.length > 0) {
+    await db.execute(
+      'UPDATE exercises SET name = ?, muscle_group = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverEx.name, serverEx.muscle_group, serverEx.id]
+    )
+  } else {
+    await db.execute(
+      'INSERT INTO exercises (server_id, name, muscle_group, synced) VALUES (?, ?, ?, 1)',
+      [serverEx.id, serverEx.name, serverEx.muscle_group]
+    )
+  }
+}
+
+// ── Routine Exercises ─────────────────────────────────────────────────────────
+
+export async function getRoutineExercisesForDay(localRoutineId, dayOfWeek) {
+  const db = await openDB()
+  return db.select(`
+    SELECT re.id, re.local_exercise_id, re.position,
+           e.name as exercise_name, e.muscle_group
+    FROM routine_exercises re
+    JOIN exercises e ON e.id = re.local_exercise_id
+    WHERE re.local_routine_id = ? AND re.day_of_week = ? AND re.pending_delete = 0
+    ORDER BY re.position
+  `, [localRoutineId, dayOfWeek])
+}
+
+export async function getAllRoutineExercises(localRoutineId) {
+  const db = await openDB()
+  return db.select(`
+    SELECT re.id, re.local_exercise_id, re.day_of_week, re.position,
+           e.name as exercise_name, e.muscle_group
+    FROM routine_exercises re
+    JOIN exercises e ON e.id = re.local_exercise_id
+    WHERE re.local_routine_id = ? AND re.pending_delete = 0
+    ORDER BY re.day_of_week, re.position
+  `, [localRoutineId])
+}
+
+export async function insertRoutineExercise(localRoutineId, localExerciseId, dayOfWeek, position) {
+  const db = await openDB()
+  const result = await db.execute(
+    'INSERT INTO routine_exercises (local_routine_id, local_exercise_id, day_of_week, position, synced) VALUES (?, ?, ?, ?, 0)',
+    [localRoutineId, localExerciseId, dayOfWeek, position]
+  )
+  return result.lastInsertId
+}
+
+export async function deleteRoutineExercise(id) {
+  const db = await openDB()
+  await db.execute('DELETE FROM routine_exercises WHERE id = ?', [id])
+}
+
+// ── Workout Sessions ──────────────────────────────────────────────────────────
+
+export async function insertWorkoutSession(localRoutineId, dayOfWeek, date, note) {
+  const db = await openDB()
+  const result = await db.execute(
+    'INSERT INTO workout_sessions (local_routine_id, day_of_week, date, note, synced) VALUES (?, ?, ?, ?, 0)',
+    [localRoutineId || null, dayOfWeek ?? null, date, note || null]
+  )
+  return result.lastInsertId
+}
+
+export async function getSessionsForRoutineDay(localRoutineId, dayOfWeek) {
+  const db = await openDB()
+  return db.select(
+    'SELECT * FROM workout_sessions WHERE local_routine_id = ? AND day_of_week = ? AND pending_delete = 0 ORDER BY date DESC',
+    [localRoutineId, dayOfWeek]
+  )
+}
+
+// ── Workout Sets ──────────────────────────────────────────────────────────────
+
+export async function insertWorkoutSet(localSessionId, localExerciseId, setNumber, weight, reps, note) {
+  const db = await openDB()
+  const result = await db.execute(
+    'INSERT INTO workout_sets (local_session_id, local_exercise_id, set_number, weight, reps, note, synced) VALUES (?, ?, ?, ?, ?, ?, 0)',
+    [localSessionId, localExerciseId, setNumber, weight, reps, note || null]
+  )
+  return result.lastInsertId
+}
+
+export async function getSetsForSession(localSessionId) {
+  const db = await openDB()
+  return db.select(
+    'SELECT ws.*, e.name as exercise_name FROM workout_sets ws JOIN exercises e ON e.id = ws.local_exercise_id WHERE ws.local_session_id = ? AND ws.pending_delete = 0 ORDER BY ws.local_exercise_id, ws.set_number',
+    [localSessionId]
+  )
+}
+
+export async function getSetsForExercise(localExerciseId) {
+  const db = await openDB()
+  return db.select(`
+    SELECT ws.*, s.date, s.day_of_week
+    FROM workout_sets ws
+    JOIN workout_sessions s ON s.id = ws.local_session_id
+    WHERE ws.local_exercise_id = ? AND ws.pending_delete = 0
+    ORDER BY s.date DESC, ws.set_number
+  `, [localExerciseId])
 }

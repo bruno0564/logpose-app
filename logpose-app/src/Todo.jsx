@@ -131,7 +131,7 @@ export default function Todo() {
 
       <div className="todo-layout">
         <div className="todo-sidebar">
-          <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card" style={{ marginBottom: 0, padding: '1.25rem' }}>
             <h2 className="card-title">Listas</h2>
 
             {lists.map(list => (
@@ -171,7 +171,7 @@ export default function Todo() {
               : <p className="hint">Selecciona una lista.</p>
           ) : (
             <div className="card" style={{ marginBottom: 0 }}>
-              <h2 className="card-title">{activeList.name}</h2>
+              <h2 className="card-title" style={{ marginBottom: '1rem' }}>{activeList.name}</h2>
 
               <form onSubmit={handleAddItem} className="todo-add-item">
                 <input type="text" placeholder="Nueva tarea..." value={newItemTitle}
@@ -180,7 +180,7 @@ export default function Todo() {
               </form>
 
               {items.length === 0 ? (
-                <p className="hint" style={{ marginTop: '1rem' }}>Sin tareas todavía.</p>
+                <p className="hint">Sin tareas todavía.</p>
               ) : (
                 <>
                   {pending.map(item => (
