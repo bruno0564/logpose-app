@@ -11,7 +11,7 @@ import {
   upsertFromServer, getUnsyncedEntries, getPendingDeletes,
 } from '../db/database'
 import {
-  isServerReachable, fetchAllFromServer, postToServer, deleteFromServer,
+  isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, deleteBodyWeightFromServer,
 } from '../api/client'
 
 const SCREEN_W = Dimensions.get('window').width
@@ -41,15 +41,15 @@ export default function BodyWeightScreen() {
       if (!reachable) return
       const unsynced = await getUnsyncedEntries()
       for (const entry of unsynced) {
-        const created = await postToServer(entry)
+        const created = await postBodyWeightToServer(entry)
         await markSynced(entry.id, created.id)
       }
       const pendingDeletes = await getPendingDeletes()
       for (const entry of pendingDeletes) {
-        await deleteFromServer(entry.server_id)
+        await deleteBodyWeightFromServer(entry.server_id)
         await deleteLocalEntry(entry.id)
       }
-      const serverEntries = await fetchAllFromServer()
+      const serverEntries = await fetchAllBodyWeightFromServer()
       for (const entry of serverEntries) {
         await upsertFromServer(entry)
       }

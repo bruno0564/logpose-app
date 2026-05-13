@@ -4,7 +4,7 @@ import {
   getLocalEntries, insertLocalEntry, markSynced, markPendingDelete,
   deleteLocalEntry, upsertFromServer, getUnsyncedEntries, getPendingDeletes,
 } from './db/database'
-import { isServerReachable, fetchAllFromServer, postToServer, deleteFromServer } from './api/client'
+import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -34,14 +34,14 @@ function BodyWeight() {
     try {
       if (!await isServerReachable()) return
       for (const entry of await getUnsyncedEntries()) {
-        const created = await postToServer(entry)
+        const created = await postBodyWeightToServer(entry)
         await markSynced(entry.id, created.id)
       }
       for (const entry of await getPendingDeletes()) {
-        await deleteFromServer(entry.server_id)
+        await deleteBodyWeightFromServer(entry.server_id)
         await deleteLocalEntry(entry.id)
       }
-      for (const entry of await fetchAllFromServer()) {
+      for (const entry of await fetchAllBodyWeightFromServer()) {
         await upsertFromServer(entry)
       }
     } catch { /* sin conexión */ } finally {

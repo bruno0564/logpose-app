@@ -57,14 +57,9 @@
   border-radius: 10px;
   padding: 1.75rem;
   margin-bottom: 0.75rem;
-  cursor: pointer;
-  transition: border-color 0.15s;
-  position: relative;
-  min-height: 80px;
-}
-
-.home-quote-card:hover {
-  border-color: #222;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .home-quote-text {
@@ -74,12 +69,11 @@
   line-height: 1.65;
 }
 
-.home-quote-pager {
-  position: absolute;
-  bottom: 1rem;
-  right: 1.25rem;
-  font-size: 0.7rem;
-  color: #2a2a2a;
+.home-quote-author {
+  font-size: 0.75rem;
+  color: #444;
+  text-align: right;
+  margin-top: 0.75rem;
 }
 
 .home-hint {

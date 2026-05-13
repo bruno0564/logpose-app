@@ -28,8 +28,12 @@ export async function openDB() {
       pending_delete INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS quotes (
-      id   INTEGER PRIMARY KEY AUTOINCREMENT,
-      text TEXT NOT NULL
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      server_id      INTEGER,
+      text           TEXT    NOT NULL,
+      author         TEXT,
+      synced         INTEGER NOT NULL DEFAULT 0,
+      pending_delete INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS exercises (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +51,16 @@ export async function openDB() {
       reps        INTEGER NOT NULL
     );
   `)
+  // migración: añadir columnas nuevas a quotes si no existen
+  for (const col of [
+    'ALTER TABLE quotes ADD COLUMN server_id INTEGER',
+    'ALTER TABLE quotes ADD COLUMN author TEXT',
+    'ALTER TABLE quotes ADD COLUMN synced INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE quotes ADD COLUMN pending_delete INTEGER NOT NULL DEFAULT 0',
+  ]) {
+    try { await db.runAsync(col) } catch {}
+  }
+
   for (const text of REMOVED_QUOTES) {
     await db.runAsync('DELETE FROM quotes WHERE text = ?', [text])
   }
@@ -59,17 +73,59 @@ export async function openDB() {
 
 export async function getQuotes() {
   const db = await openDB()
-  return db.getAllAsync('SELECT * FROM quotes ORDER BY id ASC')
+  return db.getAllAsync('SELECT * FROM quotes WHERE pending_delete = 0 ORDER BY id ASC')
 }
 
-export async function addQuote(text) {
+export async function insertLocalQuote(text, author) {
   const db = await openDB()
-  await db.runAsync('INSERT INTO quotes (text) VALUES (?)', [text.trim()])
+  await db.runAsync(
+    'INSERT INTO quotes (text, author, synced) VALUES (?, ?, 0)',
+    [text.trim(), author || null]
+  )
 }
 
-export async function deleteQuote(id) {
+export async function deleteLocalQuote(id) {
   const db = await openDB()
-  await db.runAsync('DELETE FROM quotes WHERE id = ?', [id])
+  const row = await db.getFirstAsync('SELECT server_id FROM quotes WHERE id = ?', [id])
+  if (row?.server_id) {
+    await db.runAsync('UPDATE quotes SET pending_delete = 1 WHERE id = ?', [id])
+  } else {
+    await db.runAsync('DELETE FROM quotes WHERE id = ?', [id])
+  }
+}
+
+export async function getUnsyncedQuotes() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM quotes WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteQuotes() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM quotes WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markQuoteSynced(localId, serverId) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE quotes SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function upsertQuoteFromServer(serverQuote) {
+  const db = await openDB()
+  const existing = await db.getFirstAsync('SELECT id FROM quotes WHERE server_id = ?', [serverQuote.id])
+  if (existing) {
+    await db.runAsync(
+      'UPDATE quotes SET text = ?, author = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverQuote.text, serverQuote.author, serverQuote.id]
+    )
+  } else {
+    await db.runAsync(
+      'INSERT INTO quotes (server_id, text, author, synced) VALUES (?, ?, ?, 1)',
+      [serverQuote.id, serverQuote.text, serverQuote.author]
+    )
+  }
 }
 
 export async function getLatestWeight() {

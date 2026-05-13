@@ -22,12 +22,12 @@ export async function isServerReachable() {
 
 // ── Body Weight ────────────────────────────────────────────────────────────────
 
-export async function fetchAllFromServer() {
+export async function fetchAllBodyWeightFromServer() {
   const res = await fetchWithTimeout(`${SERVER}/body-weight/`)
   return res.json()
 }
 
-export async function postToServer(entry) {
+export async function postBodyWeightToServer(entry) {
   const res = await fetchWithTimeout(`${SERVER}/body-weight/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -36,8 +36,28 @@ export async function postToServer(entry) {
   return res.json()
 }
 
-export async function deleteFromServer(serverId) {
+export async function deleteBodyWeightFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/body-weight/${serverId}`, { method: 'DELETE' })
+}
+
+// ── Quotes ────────────────────────────────────────────────────────────────
+
+export async function fetchAllQuotesFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/quotes/`)
+  return res.json()
+}
+
+export async function postQuoteToServer(entry) {
+  const res = await fetchWithTimeout(`${SERVER}/quotes/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: entry.text, author: entry.author || null }),
+  })
+  return res.json()
+}
+
+export async function deleteQuoteFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/quotes/${serverId}`, { method: 'DELETE' })
 }
 
 // ── Exercises ──────────────────────────────────────────────────────────────────
