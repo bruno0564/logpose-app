@@ -4,6 +4,7 @@ import BodyWeight from './BodyWeight.jsx'
 import Gym from './Gym.jsx'
 import Calendar from './Calendar.jsx'
 import Todo from './Todo.jsx'
+import Quotes from './Quotes.jsx'
 
 const API = 'http://localhost:8000'
 
@@ -13,6 +14,7 @@ const NAV = [
   { id: 'gym',          label: 'Gym' },
   { id: 'calendar',     label: 'Calendario' },
   { id: 'todo',         label: 'To-Do' },
+  { id: 'quotes',       label: 'Quotes' },
 ]
 
 function Sidebar({ active, onNav, online }) {
@@ -67,6 +69,7 @@ function App() {
         {page === 'gym'         && <Gym />}
         {page === 'calendar'    && <Calendar />}
         {page === 'todo'        && <Todo />}
+        {page === 'quotes'      && <Quotes />}
       </main>
     </div>
   )

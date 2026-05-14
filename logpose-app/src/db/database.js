@@ -256,6 +256,19 @@ export async function getPendingDeleteQuotes() {
   return db.select('SELECT * FROM quotes WHERE pending_delete = 1 AND server_id IS NOT NULL')
 }
 
+export async function updateLocalQuote(id, text, author) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE quotes SET text = ?, author = ?, synced = 0 WHERE id = ?',
+    [text, author || null, id]
+  )
+}
+
+export async function purgeLocalQuote(localId) {
+  const db = await openDB()
+  await db.execute('DELETE FROM quotes WHERE id = ?', [localId])
+}
+
 
 
 // ── Routines ───────────────────────────────────────────────────────────────────
@@ -300,6 +313,11 @@ export async function markRoutineSynced(localId, serverId) {
     'UPDATE routines SET synced = 1, server_id = ? WHERE id = ?',
     [serverId, localId]
   )
+}
+
+export async function purgeLocalRoutine(localId) {
+  const db = await openDB()
+  await db.execute('DELETE FROM routines WHERE id = ?', [localId])
 }
 
 export async function upsertRoutineFromServer(serverRoutine) {

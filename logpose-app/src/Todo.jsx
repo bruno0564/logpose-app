@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   getTodoLists, insertTodoList, deleteTodoList,
   getTodoItems, insertTodoItem, toggleTodoItem, deleteTodoItem,
@@ -15,6 +15,7 @@ import {
 export default function Todo() {
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
+  const activeListRef = useRef(null)
   const [items, setItems] = useState([])
   const [newListName, setNewListName] = useState('')
   const [addingList, setAddingList] = useState(false)
@@ -25,6 +26,8 @@ export default function Todo() {
     setLists(rows)
     return rows
   }, [])
+
+  useEffect(() => { activeListRef.current = activeList }, [activeList])
 
   const loadItems = useCallback(async (localListId) => {
     setItems(await getTodoItems(localListId))
@@ -62,8 +65,9 @@ export default function Todo() {
       }
     } catch { /* sin conexión */ } finally {
       await loadLists()
+      if (activeListRef.current) await loadItems(activeListRef.current.id)
     }
-  }, [loadLists])
+  }, [loadLists, loadItems])
 
   useEffect(() => {
     async function init() {

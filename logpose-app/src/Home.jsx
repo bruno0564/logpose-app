@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import './Home.css'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
-  markQuoteSynced, upsertQuoteFromServer, deleteLocalQuote,
+  markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote,
 } from './db/database'
 import {
   isServerReachable,
@@ -42,7 +42,7 @@ export default function Home() {
       }
       for (const q of await getPendingDeleteQuotes()) {
         await deleteQuoteFromServer(q.server_id)
-        await deleteLocalQuote(q.id)
+        await purgeLocalQuote(q.id)
       }
       for (const q of await fetchAllQuotesFromServer()) {
         await upsertQuoteFromServer(q)

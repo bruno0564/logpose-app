@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  getRoutines, insertLocalRoutine, deleteLocalRoutine,
+  getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer,
   getExercises, insertLocalExercise,
@@ -47,7 +47,7 @@ export default function Gym() {
       }
       for (const r of await getPendingDeleteRoutines()) {
         await deleteRoutineFromServer(r.server_id)
-        await deleteLocalRoutine(r.id)
+        await purgeLocalRoutine(r.id)
       }
       for (const r of await fetchAllRoutinesFromServer()) {
         await upsertRoutineFromServer(r)

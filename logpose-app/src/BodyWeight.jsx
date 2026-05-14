@@ -79,7 +79,11 @@ function BodyWeight() {
   }
 
   async function handleDelete(entry) {
-    await markPendingDelete(entry.id)
+    if (entry.server_id) {
+      await markPendingDelete(entry.id)
+    } else {
+      await deleteLocalEntry(entry.id)
+    }
     await loadLocal()
     sync()
   }

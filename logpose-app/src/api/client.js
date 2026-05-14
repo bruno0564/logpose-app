@@ -65,6 +65,15 @@ export async function postQuoteToServer(entry) {
   return res.json()
 }
 
+export async function putQuoteToServer(serverId, entry) {
+  const res = await fetchWithTimeout(`${SERVER}/quotes/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: entry.text, author: entry.author || null }),
+  })
+  return res.json()
+}
+
 export async function deleteQuoteFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/quotes/${serverId}`, { method: 'DELETE' })
 }
