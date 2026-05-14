@@ -198,3 +198,42 @@ export async function putTodoItemToServer(serverId, title, done) {
 export async function deleteTodoItemFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/todos/items/${serverId}`, { method: 'DELETE' })
 }
+
+// ── Calendar Events ────────────────────────────────────────────────────────────
+
+export async function fetchAllCalendarEventsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/calendar/`)
+  return res.json()
+}
+
+export async function postCalendarEventToServer(event) {
+  const res = await fetchWithTimeout(`${SERVER}/calendar/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: event.title, date: event.date || null,
+      start_time: event.start_time || null, end_time: event.end_time || null,
+      recurrence: event.recurrence, days_of_week: event.days_of_week || null,
+      notes: event.notes || null, color: event.color || null,
+    }),
+  })
+  return res.json()
+}
+
+export async function putCalendarEventToServer(serverId, event) {
+  const res = await fetchWithTimeout(`${SERVER}/calendar/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: event.title, date: event.date || null,
+      start_time: event.start_time || null, end_time: event.end_time || null,
+      recurrence: event.recurrence, days_of_week: event.days_of_week || null,
+      notes: event.notes || null, color: event.color || null,
+    }),
+  })
+  return res.json()
+}
+
+export async function deleteCalendarEventFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/calendar/${serverId}`, { method: 'DELETE' })
+}

@@ -39,6 +39,9 @@ export async function openDB() {
     synced         INTEGER NOT NULL DEFAULT 0,
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
+  try {
+    await instance.execute('ALTER TABLE routines ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0')
+  } catch { /* columna ya existe */ }
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS exercises (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +85,21 @@ export async function openDB() {
     note              TEXT,
     synced            INTEGER NOT NULL DEFAULT 0,
     pending_delete    INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  await instance.execute(`CREATE TABLE IF NOT EXISTS calendar_events (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id      INTEGER,
+    title          TEXT    NOT NULL,
+    date           TEXT,
+    start_time     TEXT,
+    end_time       TEXT,
+    recurrence     TEXT    NOT NULL DEFAULT 'none',
+    days_of_week   TEXT,
+    notes          TEXT,
+    color          TEXT,
+    synced         INTEGER NOT NULL DEFAULT 0,
+    pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS todo_lists (
@@ -318,6 +336,28 @@ export async function markRoutineSynced(localId, serverId) {
 export async function purgeLocalRoutine(localId) {
   const db = await openDB()
   await db.execute('DELETE FROM routines WHERE id = ?', [localId])
+}
+
+export async function getActiveRoutine() {
+  const db = await openDB()
+  const rows = await db.select('SELECT * FROM routines WHERE is_active = 1 AND pending_delete = 0 LIMIT 1')
+  return rows[0] ?? null
+}
+
+export async function setActiveRoutine(localId) {
+  const db = await openDB()
+  await db.execute('UPDATE routines SET is_active = 0')
+  await db.execute('UPDATE routines SET is_active = 1 WHERE id = ?', [localId])
+}
+
+export async function getActiveTrainingDays() {
+  const db = await openDB()
+  return db.select(`
+    SELECT DISTINCT re.day_of_week
+    FROM routine_exercises re
+    JOIN routines r ON r.id = re.local_routine_id
+    WHERE r.is_active = 1 AND r.pending_delete = 0 AND re.pending_delete = 0
+  `)
 }
 
 export async function upsertRoutineFromServer(serverRoutine) {
@@ -636,4 +676,81 @@ export async function getSetsForExercise(localExerciseId) {
     WHERE ws.local_exercise_id = ? AND ws.pending_delete = 0
     ORDER BY s.date DESC, ws.set_number
   `, [localExerciseId])
+}
+
+// ── Calendar Events ───────────────────────────────────────────────────────────
+
+export async function getCalendarEvents() {
+  const db = await openDB()
+  return db.select('SELECT * FROM calendar_events WHERE pending_delete = 0 ORDER BY id ASC')
+}
+
+export async function insertCalendarEvent(data) {
+  const db = await openDB()
+  const result = await db.execute(
+    `INSERT INTO calendar_events (title, date, start_time, end_time, recurrence, days_of_week, notes, color, synced)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    [data.title, data.date || null, data.start_time || null, data.end_time || null,
+     data.recurrence, data.days_of_week || null, data.notes || null, data.color || null]
+  )
+  return result.lastInsertId
+}
+
+export async function updateCalendarEvent(id, data) {
+  const db = await openDB()
+  await db.execute(
+    `UPDATE calendar_events SET title=?, date=?, start_time=?, end_time=?, recurrence=?,
+     days_of_week=?, notes=?, color=?, synced=0 WHERE id=?`,
+    [data.title, data.date || null, data.start_time || null, data.end_time || null,
+     data.recurrence, data.days_of_week || null, data.notes || null, data.color || null, id]
+  )
+}
+
+export async function markCalendarEventPendingDelete(localId) {
+  const db = await openDB()
+  await db.execute('UPDATE calendar_events SET pending_delete = 1 WHERE id = ?', [localId])
+}
+
+export async function purgeCalendarEvent(localId) {
+  const db = await openDB()
+  await db.execute('DELETE FROM calendar_events WHERE id = ?', [localId])
+}
+
+export async function markCalendarEventSynced(localId, serverId) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE calendar_events SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function getUnsyncedCalendarEvents() {
+  const db = await openDB()
+  return db.select('SELECT * FROM calendar_events WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteCalendarEvents() {
+  const db = await openDB()
+  return db.select('SELECT * FROM calendar_events WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function upsertCalendarEventFromServer(serverEvent) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id FROM calendar_events WHERE server_id = ?', [serverEvent.id])
+  if (rows.length > 0) {
+    await db.execute(
+      `UPDATE calendar_events SET title=?, date=?, start_time=?, end_time=?, recurrence=?,
+       days_of_week=?, notes=?, color=?, synced=1, pending_delete=0 WHERE server_id=?`,
+      [serverEvent.title, serverEvent.date, serverEvent.start_time, serverEvent.end_time,
+       serverEvent.recurrence, serverEvent.days_of_week, serverEvent.notes, serverEvent.color, serverEvent.id]
+    )
+  } else {
+    await db.execute(
+      `INSERT INTO calendar_events (server_id, title, date, start_time, end_time, recurrence,
+       days_of_week, notes, color, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [serverEvent.id, serverEvent.title, serverEvent.date, serverEvent.start_time,
+       serverEvent.end_time, serverEvent.recurrence, serverEvent.days_of_week,
+       serverEvent.notes, serverEvent.color]
+    )
+  }
 }

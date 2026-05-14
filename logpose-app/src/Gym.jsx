@@ -7,6 +7,7 @@ import {
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
   insertWorkoutSession, insertWorkoutSet,
+  getActiveRoutine, setActiveRoutine,
 } from './db/database'
 import {
   isServerReachable,
@@ -18,6 +19,7 @@ const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 export default function Gym() {
   const [view, setView] = useState('routines')
   const [routines, setRoutines] = useState([])
+  const [activeRoutineId, setActiveRoutineId] = useState(null)
   const [selectedRoutine, setSelectedRoutine] = useState(null)
   const [selectedDay, setSelectedDay] = useState(null)
   const [routineExercises, setRoutineExercises] = useState([])
@@ -27,6 +29,8 @@ export default function Gym() {
 
   const loadRoutines = useCallback(async () => {
     setRoutines(await getRoutines())
+    const active = await getActiveRoutine()
+    setActiveRoutineId(active?.id ?? null)
   }, [])
 
   const loadExercises = useCallback(async () => {
@@ -70,6 +74,12 @@ export default function Gym() {
     setAdding(false)
     await loadRoutines()
     syncRoutines()
+  }
+
+  async function handleActivate(e, r) {
+    e.stopPropagation()
+    await setActiveRoutine(r.id)
+    setActiveRoutineId(r.id)
   }
 
   async function handleDelete(r) {
@@ -149,17 +159,42 @@ export default function Gym() {
         <p className="hint">Sin rutinas todavía. Crea la primera arriba.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 480 }}>
-          {routines.map(r => (
-            <div
-              key={r.id}
-              className="card"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '1rem 1.25rem', cursor: 'pointer' }}
-              onClick={() => openRoutine(r)}
-            >
-              <span style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 500 }}>{r.name}</span>
-              <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}>×</button>
-            </div>
-          ))}
+          {routines.map(r => {
+            const isActive = r.id === activeRoutineId
+            return (
+              <div
+                key={r.id}
+                className="card"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginBottom: 0, padding: '1rem 1.25rem', cursor: 'pointer',
+                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                }}
+                onClick={() => openRoutine(r)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  {isActive && (
+                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Activa
+                    </span>
+                  )}
+                  <span style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 500 }}>{r.name}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  {!isActive && (
+                    <button
+                      className="btn-cancel"
+                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}
+                      onClick={e => handleActivate(e, r)}
+                    >
+                      Activar
+                    </button>
+                  )}
+                  <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}>×</button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
