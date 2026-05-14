@@ -46,6 +46,7 @@ export default function App() {
           initialRouteName="Home"
           screenOptions={{
             headerShown: false,
+            tabBarShowLabel: false,
             tabBarStyle: {
               backgroundColor: '#111',
               borderTopColor: '#1a1a1a',
