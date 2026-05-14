@@ -140,6 +140,7 @@ export default function BodyWeightScreen() {
   }
 
   return (
+    <>
     <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>Body Weight</Text>
 
@@ -342,6 +343,7 @@ export default function BodyWeightScreen() {
           </View>
         </View>
       </Modal>
+    </>
   )
 }
 
