@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, Modal, Alert, Keyboard,
@@ -20,6 +20,7 @@ import {
 export default function TodoScreen() {
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
+  const activeListRef = useRef(null)
   const [items, setItems] = useState([])
   const [newListName, setNewListName] = useState('')
   const [newItemTitle, setNewItemTitle] = useState('')
@@ -87,8 +88,9 @@ export default function TodoScreen() {
       // Sync failed silently — data stays local
     } finally {
       await loadLists()
+      if (activeListRef.current) await loadItems(activeListRef.current.id)
     }
-  }, [loadLists])
+  }, [loadLists, loadItems])
 
   useEffect(() => {
     async function init() {
@@ -100,6 +102,7 @@ export default function TodoScreen() {
   }, [])
 
   useEffect(() => {
+    activeListRef.current = activeList
     if (activeList) loadItems(activeList.id)
     else setItems([])
   }, [activeList])

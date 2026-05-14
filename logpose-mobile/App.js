@@ -9,6 +9,7 @@ import HomeScreen from './src/screens/HomeScreen'
 import GymScreen from './src/screens/GymScreen'
 import CalendarScreen from './src/screens/CalendarScreen'
 import TodoScreen from './src/screens/TodoScreen'
+import QuotesScreen from './src/screens/QuotesScreen'
 import { isServerReachable } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
@@ -100,6 +101,16 @@ export default function App() {
               title: 'To-Do',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="checkmark-done-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Quotes"
+            component={QuotesScreen}
+            options={{
+              title: 'Frases',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
               ),
             }}
           />

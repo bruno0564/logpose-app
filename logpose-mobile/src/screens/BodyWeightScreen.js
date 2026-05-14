@@ -85,7 +85,8 @@ export default function BodyWeightScreen() {
   }
 
   async function handleDelete(entry) {
-    await markPendingDelete(entry.id)
+    if (entry.server_id) { await markPendingDelete(entry.id) }
+    else { await deleteLocalEntry(entry.id) }
     await loadLocal()
     await sync()
   }
@@ -341,7 +342,6 @@ export default function BodyWeightScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
   )
 }
 

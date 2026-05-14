@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
-  markQuoteSynced, upsertQuoteFromServer, deleteLocalQuote,
+  markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote,
 } from '../db/database'
 import {
   isServerReachable,
-  fetchAllQuotesFromServer, postQuoteToServer, deleteQuoteFromServer,
+  fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -37,12 +37,17 @@ export default function HomeScreen() {
     try {
       if (!await isServerReachable()) return
       for (const q of await getUnsyncedQuotes()) {
-        const created = await postQuoteToServer(q)
-        await markQuoteSynced(q.id, created.id)
+        if (q.server_id) {
+          await putQuoteToServer(q.server_id, q)
+          await markQuoteSynced(q.id, q.server_id)
+        } else {
+          const created = await postQuoteToServer(q)
+          await markQuoteSynced(q.id, created.id)
+        }
       }
       for (const q of await getPendingDeleteQuotes()) {
         await deleteQuoteFromServer(q.server_id)
-        await deleteLocalQuote(q.id)
+        await purgeLocalQuote(q.id)
       }
       for (const q of await fetchAllQuotesFromServer()) {
         await upsertQuoteFromServer(q)

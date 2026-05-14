@@ -4,13 +4,14 @@ import {
   Modal, Alert, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import {
-  getRoutines, insertLocalRoutine, deleteLocalRoutine,
+  getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer,
   getExercises, insertLocalExercise,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
   insertWorkoutSession, insertWorkoutSet,
+  getActiveRoutine, setActiveRoutine,
 } from '../db/database'
 import {
   isServerReachable,
@@ -22,6 +23,7 @@ const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 export default function GymScreen() {
   const [view, setView] = useState('routines')
   const [routines, setRoutines] = useState([])
+  const [activeRoutineId, setActiveRoutineId] = useState(null)
   const [selectedRoutine, setSelectedRoutine] = useState(null)
   const [selectedDay, setSelectedDay] = useState(null)
   const [routineExercises, setRoutineExercises] = useState([])
@@ -31,6 +33,8 @@ export default function GymScreen() {
 
   const loadRoutines = useCallback(async () => {
     setRoutines(await getRoutines())
+    const active = await getActiveRoutine()
+    setActiveRoutineId(active?.id ?? null)
   }, [])
 
   const loadExercises = useCallback(async () => {
@@ -51,7 +55,7 @@ export default function GymScreen() {
       }
       for (const r of await getPendingDeleteRoutines()) {
         await deleteRoutineFromServer(r.server_id)
-        await deleteLocalRoutine(r.id)
+        await purgeLocalRoutine(r.id)
       }
       for (const r of await fetchAllRoutinesFromServer()) {
         await upsertRoutineFromServer(r)
@@ -73,6 +77,11 @@ export default function GymScreen() {
     setAdding(false)
     await loadRoutines()
     syncRoutines()
+  }
+
+  async function handleActivate(r) {
+    await setActiveRoutine(r.id)
+    setActiveRoutineId(r.id)
   }
 
   function handleDelete(r) {
@@ -155,14 +164,27 @@ export default function GymScreen() {
       {routines.length === 0 ? (
         <Text style={s.hint}>Sin rutinas todavía. Crea la primera arriba.</Text>
       ) : (
-        routines.map(r => (
-          <TouchableOpacity key={r.id} style={s.rowCard} onPress={() => openRoutine(r)}>
-            <Text style={s.rowText}>{r.name}</Text>
-            <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
-              <Text style={s.deleteBtn}>×</Text>
+        routines.map(r => {
+          const isActive = r.id === activeRoutineId
+          return (
+            <TouchableOpacity key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]} onPress={() => openRoutine(r)}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.rowText}>{r.name}</Text>
+                {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                {!isActive && (
+                  <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
+                    <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
+                  <Text style={s.deleteBtn}>×</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))
+          )
+        })
       )}
     </ScrollView>
   )

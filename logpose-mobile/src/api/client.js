@@ -107,3 +107,102 @@ export async function postExerciseToServer(exercise) {
 export async function deleteExerciseFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/exercises/${serverId}`, { method: 'DELETE' })
 }
+
+// ── Quotes (update) ───────────────────────────────────────────────────────────
+
+export async function putQuoteToServer(serverId, entry) {
+  const res = await fetchWithTimeout(`${SERVER}/quotes/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: entry.text, author: entry.author || null }),
+  })
+  return res.json()
+}
+
+// ── To-Do Lists ────────────────────────────────────────────────────────────────
+
+export async function fetchAllTodoListsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/todos/lists`)
+  return res.json()
+}
+
+export async function postTodoListToServer(name) {
+  const res = await fetchWithTimeout(`${SERVER}/todos/lists`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  return res.json()
+}
+
+export async function deleteTodoListFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/todos/lists/${serverId}`, { method: 'DELETE' })
+}
+
+// ── To-Do Items ────────────────────────────────────────────────────────────────
+
+export async function fetchTodoItemsFromServer(serverListId) {
+  const res = await fetchWithTimeout(`${SERVER}/todos/lists/${serverListId}/items`)
+  return res.json()
+}
+
+export async function postTodoItemToServer(serverListId, title, done = false) {
+  const res = await fetchWithTimeout(`${SERVER}/todos/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ list_id: serverListId, title, done }),
+  })
+  return res.json()
+}
+
+export async function putTodoItemToServer(serverId, title, done) {
+  const res = await fetchWithTimeout(`${SERVER}/todos/items/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, done }),
+  })
+  return res.json()
+}
+
+export async function deleteTodoItemFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/todos/items/${serverId}`, { method: 'DELETE' })
+}
+
+// ── Calendar Events ────────────────────────────────────────────────────────────
+
+export async function fetchAllCalendarEventsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/calendar/`)
+  return res.json()
+}
+
+export async function postCalendarEventToServer(event) {
+  const res = await fetchWithTimeout(`${SERVER}/calendar/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: event.title, date: event.date || null,
+      start_time: event.start_time || null, end_time: event.end_time || null,
+      recurrence: event.recurrence, days_of_week: event.days_of_week || null,
+      notes: event.notes || null, color: event.color || null,
+    }),
+  })
+  return res.json()
+}
+
+export async function putCalendarEventToServer(serverId, event) {
+  const res = await fetchWithTimeout(`${SERVER}/calendar/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: event.title, date: event.date || null,
+      start_time: event.start_time || null, end_time: event.end_time || null,
+      recurrence: event.recurrence, days_of_week: event.days_of_week || null,
+      notes: event.notes || null, color: event.color || null,
+    }),
+  })
+  return res.json()
+}
+
+export async function deleteCalendarEventFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/calendar/${serverId}`, { method: 'DELETE' })
+}
