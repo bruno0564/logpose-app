@@ -320,6 +320,7 @@ export async function insertLocalRoutine(name) {
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
   const rows = await db.select('SELECT server_id FROM routines WHERE id = ?', [id])
+  await db.execute('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
   if (rows[0]?.server_id) {
     await db.execute('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
   } else {
@@ -347,6 +348,12 @@ export async function markRoutineSynced(localId, serverId) {
 
 export async function purgeLocalRoutine(localId) {
   const db = await openDB()
+  const sessions = await db.select('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [localId])
+  for (const s of sessions) {
+    await db.execute('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
+  }
+  await db.execute('DELETE FROM workout_sessions WHERE local_routine_id = ?', [localId])
+  await db.execute('DELETE FROM routine_exercises WHERE local_routine_id = ?', [localId])
   await db.execute('DELETE FROM routines WHERE id = ?', [localId])
 }
 
@@ -388,6 +395,18 @@ export async function upsertRoutineFromServer(serverRoutine) {
   }
 }
 
+export async function pruneStaleRoutines(validServerIds) {
+  const db = await openDB()
+  const synced = await db.select(
+    'SELECT id, server_id FROM routines WHERE server_id IS NOT NULL AND pending_delete = 0'
+  )
+  for (const r of synced) {
+    if (!validServerIds.has(r.server_id)) {
+      await purgeLocalRoutine(r.id)
+    }
+  }
+}
+
 // ── To-Do Lists ────────────────────────────────────────────────────────────────
 
 export async function getTodoLists() {
@@ -404,12 +423,11 @@ export async function insertTodoList(name) {
   return result.lastInsertId
 }
 
-// al borrar una lista también marca todos sus items como pending_delete
 export async function deleteTodoList(localId) {
   const db = await openDB()
   const rows = await db.select('SELECT server_id FROM todo_lists WHERE id = ?', [localId])
-  await db.execute('UPDATE todo_items SET pending_delete = 1 WHERE local_list_id = ?', [localId])
   if (rows[0]?.server_id) {
+    await db.execute('UPDATE todo_items SET pending_delete = 1 WHERE local_list_id = ?', [localId])
     await db.execute('UPDATE todo_lists SET pending_delete = 1 WHERE id = ?', [localId])
   } else {
     await db.execute('DELETE FROM todo_items WHERE local_list_id = ?', [localId])

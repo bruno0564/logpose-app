@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
-  markRoutineSynced, upsertRoutineFromServer,
+  markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
   getExercises, insertLocalExercise,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
@@ -16,6 +16,8 @@ import {
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
+let syncingRoutines = false
+
 export default function Gym() {
   const [view, setView] = useState('routines')
   const [routines, setRoutines] = useState([])
@@ -26,6 +28,7 @@ export default function Gym() {
   const [exercises, setExercises] = useState([])
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
+  const [confirmTarget, setConfirmTarget] = useState(null)
 
   const loadRoutines = useCallback(async () => {
     setRoutines(await getRoutines())
@@ -43,20 +46,25 @@ export default function Gym() {
   }, [])
 
   const syncRoutines = useCallback(async () => {
+    if (syncingRoutines) return
+    syncingRoutines = true
     try {
       if (!await isServerReachable()) return
+      for (const r of await getPendingDeleteRoutines()) {
+        try { await deleteRoutineFromServer(r.server_id) } catch { /* already gone */ }
+        await purgeLocalRoutine(r.id)
+      }
       for (const r of await getUnsyncedRoutines()) {
         const created = await postRoutineToServer(r)
         await markRoutineSynced(r.id, created.id)
       }
-      for (const r of await getPendingDeleteRoutines()) {
-        await deleteRoutineFromServer(r.server_id)
-        await purgeLocalRoutine(r.id)
-      }
-      for (const r of await fetchAllRoutinesFromServer()) {
+      const serverRoutines = await fetchAllRoutinesFromServer()
+      for (const r of serverRoutines) {
         await upsertRoutineFromServer(r)
       }
+      await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
     } catch { /* offline */ } finally {
+      syncingRoutines = false
       await loadRoutines()
     }
   }, [loadRoutines])
@@ -83,7 +91,12 @@ export default function Gym() {
   }
 
   async function handleDelete(r) {
-    if (!confirm(`¿Eliminar la rutina "${r.name}"?`)) return
+    setConfirmTarget(r)
+  }
+
+  async function confirmDelete() {
+    const r = confirmTarget
+    setConfirmTarget(null)
     await deleteLocalRoutine(r.id)
     await loadRoutines()
     syncRoutines()
@@ -123,6 +136,13 @@ export default function Gym() {
 
   return (
     <div className="page">
+      {confirmTarget && (
+        <ConfirmModal
+          message={`¿Eliminar la rutina "${confirmTarget.name}"?`}
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmTarget(null)}
+        />
+      )}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 className="page-title">Gym</h1>
@@ -133,7 +153,7 @@ export default function Gym() {
 
       {adding && (
         <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 400 }}>
-          <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem' }}>
+          <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
             <input
               autoFocus
               type="text"
@@ -141,7 +161,7 @@ export default function Gym() {
               value={newName}
               onChange={e => setNewName(e.target.value)}
               style={{
-                flex: 1, padding: '0.5rem 0.75rem',
+                flex: 1, minWidth: 0, padding: '0.5rem 0.75rem',
                 background: 'var(--surface-2)', border: '1px solid var(--border-2)',
                 borderRadius: 'var(--radius-sm)', color: 'var(--text)',
                 fontSize: '0.85rem', outline: 'none',
@@ -290,6 +310,12 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
 function ExercisePickerModal({ day, routine, exercises, routineExercises, onClose, onAdded }) {
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
+  const suggestions = muscleGroups.filter(g =>
+    g.toLowerCase().includes(newMuscle.toLowerCase()) && g.toLowerCase() !== newMuscle.toLowerCase()
+  )
 
   const alreadyAdded = new Set(
     routineExercises.filter(re => re.day_of_week === day).map(re => re.local_exercise_id)
@@ -368,13 +394,32 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                 onChange={e => setNewName(e.target.value)}
                 style={{ padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
               />
-              <input
-                type="text"
-                placeholder="Músculo (opcional)"
-                value={newMuscle}
-                onChange={e => setNewMuscle(e.target.value)}
-                style={{ padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Músculo (opcional)"
+                  value={newMuscle}
+                  onChange={e => { setNewMuscle(e.target.value); setShowSuggestions(true) }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', zIndex: 10, marginTop: 2 }}>
+                    {suggestions.map(g => (
+                      <div
+                        key={g}
+                        onMouseDown={() => { setNewMuscle(g); setShowSuggestions(false) }}
+                        style={{ padding: '0.35rem 0.6rem', color: 'var(--text-2)', fontSize: '0.83rem', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {g}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button type="submit" className="btn-primary" style={{ marginTop: '0.1rem' }}>Crear y añadir</button>
             </form>
           </div>
@@ -502,6 +547,26 @@ function TrainView({ routine, day, dayExercises, onBack }) {
         >
           {saving ? 'Guardando...' : 'Guardar sesión'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Confirm Modal ─────────────────────────────────────────────────────────────
+
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" style={{ maxWidth: 340 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span>Confirmar</span>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
+        </div>
+        <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', padding: '1rem 1rem 0' }}>{message}</p>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', padding: '1rem' }}>
+          <button className="btn-cancel" onClick={onCancel}>Cancelar</button>
+          <button className="btn-delete" onClick={onConfirm}>Eliminar</button>
+        </div>
       </div>
     </div>
   )

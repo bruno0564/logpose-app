@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
@@ -57,9 +58,11 @@ export default function HomeScreen() {
     }
   }, [load])
 
-  useEffect(() => {
-    load().then(() => sync())
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      load().then(() => sync())
+    }, [load, sync])
+  )
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>

@@ -304,6 +304,7 @@ export async function insertLocalRoutine(name) {
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
   const row = await db.getFirstAsync('SELECT server_id FROM routines WHERE id = ?', [id])
+  await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
   if (row?.server_id) {
     await db.runAsync('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
   } else {
@@ -342,6 +343,18 @@ export async function upsertRoutineFromServer(serverRoutine) {
       'INSERT INTO routines (server_id, name, synced) VALUES (?, ?, 1)',
       [serverRoutine.id, serverRoutine.name]
     )
+  }
+}
+
+export async function pruneStaleRoutines(validServerIds) {
+  const db = await openDB()
+  const synced = await db.getAllAsync(
+    'SELECT id, server_id FROM routines WHERE server_id IS NOT NULL AND pending_delete = 0'
+  )
+  for (const r of synced) {
+    if (!validServerIds.has(r.server_id)) {
+      await purgeLocalRoutine(r.id)
+    }
   }
 }
 
@@ -464,6 +477,12 @@ export async function purgeLocalQuote(id) {
 
 export async function purgeLocalRoutine(id) {
   const db = await openDB()
+  const sessions = await db.getAllAsync('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [id])
+  for (const s of sessions) {
+    await db.runAsync('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
+  }
+  await db.runAsync('DELETE FROM workout_sessions WHERE local_routine_id = ?', [id])
+  await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
   await db.runAsync('DELETE FROM routines WHERE id = ?', [id])
 }
 
