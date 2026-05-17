@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Modal, StyleSheet, KeyboardAvoidingView, Platform,
+  Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
+import { LineChart } from 'react-native-chart-kit'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
@@ -13,6 +14,7 @@ import {
   insertRoutineExercise, deleteRoutineExercise,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine,
+  getAllSessions, getSetsForSession, getExerciseProgression,
 } from '../db/database'
 import {
   isServerReachable,
@@ -25,6 +27,7 @@ let syncingRoutines = false
 
 export default function GymScreen() {
   const [view, setView] = useState('routines')
+  const [tab, setTab] = useState('routines')
   const [routines, setRoutines] = useState([])
   const [activeRoutineId, setActiveRoutineId] = useState(null)
   const [selectedRoutine, setSelectedRoutine] = useState(null)
@@ -149,59 +152,214 @@ export default function GymScreen() {
       />
       <View style={s.header}>
         <Text style={s.title}>Gym</Text>
-        <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
-          <Text style={s.btnPrimaryText}>+ Rutina</Text>
-        </TouchableOpacity>
+        {tab === 'routines' && (
+          <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
+            <Text style={s.btnPrimaryText}>+ Rutina</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <Text style={s.subtitle}>Tus rutinas de entrenamiento</Text>
 
-      {adding && (
-        <View style={s.card}>
-          <TextInput
-            autoFocus
-            style={s.input}
-            placeholder="Nombre de la rutina..."
-            placeholderTextColor="#444"
-            value={newName}
-            onChangeText={setNewName}
-          />
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <TouchableOpacity style={[s.btnPrimary, { flex: 1 }]} onPress={handleAdd}>
-              <Text style={s.btnPrimaryText}>Crear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.btnCancel, { flex: 1 }]} onPress={() => { setAdding(false); setNewName('') }}>
-              <Text style={s.btnCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      <View style={s.tabBar}>
+        {['routines', 'stats'].map(t => (
+          <TouchableOpacity key={t} style={[s.tabBtn, tab === t && s.tabBtnActive]} onPress={() => setTab(t)}>
+            <Text style={[s.tabBtnText, tab === t && s.tabBtnTextActive]}>
+              {t === 'routines' ? 'Rutinas' : 'Estadísticas'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      {routines.length === 0 ? (
-        <Text style={s.hint}>Sin rutinas todavía. Crea la primera arriba.</Text>
-      ) : (
-        routines.map(r => {
-          const isActive = r.id === activeRoutineId
-          return (
-            <TouchableOpacity key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]} onPress={() => openRoutine(r)}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowText}>{r.name}</Text>
-                {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                {!isActive && (
-                  <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
-                    <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
-                  <Text style={s.deleteBtn}>×</Text>
+      {tab === 'stats' && <StatsView exercises={exercises} />}
+
+      {tab === 'routines' && (
+        <>
+          <Text style={s.subtitle}>Tus rutinas de entrenamiento</Text>
+
+          {adding && (
+            <View style={s.card}>
+              <TextInput
+                autoFocus
+                style={s.input}
+                placeholder="Nombre de la rutina..."
+                placeholderTextColor="#444"
+                value={newName}
+                onChangeText={setNewName}
+              />
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity style={[s.btnPrimary, { flex: 1 }]} onPress={handleAdd}>
+                  <Text style={s.btnPrimaryText}>Crear</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.btnCancel, { flex: 1 }]} onPress={() => { setAdding(false); setNewName('') }}>
+                  <Text style={s.btnCancelText}>Cancelar</Text>
                 </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          )
-        })
+            </View>
+          )}
+
+          {routines.length === 0 ? (
+            <Text style={s.hint}>Sin rutinas todavía. Crea la primera arriba.</Text>
+          ) : (
+            routines.map(r => {
+              const isActive = r.id === activeRoutineId
+              return (
+                <TouchableOpacity key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]} onPress={() => openRoutine(r)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowText}>{r.name}</Text>
+                    {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {!isActive && (
+                      <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
+                        <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
+                      <Text style={s.deleteBtn}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              )
+            })
+          )}
+        </>
       )}
     </ScrollView>
+  )
+}
+
+// ── Stats View ────────────────────────────────────────────────────────────────
+
+function StatsView({ exercises }) {
+  const [sessions, setSessions] = useState([])
+  const [expanded, setExpanded] = useState(null)
+  const [sessionSets, setSessionSets] = useState({})
+  const [selectedExercise, setSelectedExercise] = useState(null)
+  const [progression, setProgression] = useState([])
+
+  useEffect(() => {
+    getAllSessions().then(setSessions)
+  }, [])
+
+  async function toggleSession(id) {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (!sessionSets[id]) {
+      const sets = await getSetsForSession(id)
+      setSessionSets(prev => ({ ...prev, [id]: sets }))
+    }
+  }
+
+  async function handleSelectExercise(ex) {
+    setSelectedExercise(ex)
+    const data = await getExerciseProgression(ex.id)
+    setProgression(data)
+  }
+
+  const screenWidth = Dimensions.get('window').width - 32
+
+  const chartData = progression.length > 0 ? {
+    labels: progression.map(p => p.date.slice(5)),
+    datasets: [{ data: progression.map(p => p.max_weight) }],
+  } : null
+
+  return (
+    <View>
+      {sessions.length === 0 && (
+        <Text style={[s.hint, { marginTop: 8 }]}>Sin sesiones todavía. Empieza a entrenar desde Rutinas.</Text>
+      )}
+
+      {sessions.map(session => {
+        const isOpen = expanded === session.id
+        const sets = sessionSets[session.id] || []
+        const exGroups = sets.reduce((acc, ws) => {
+          if (!acc[ws.exercise_name]) acc[ws.exercise_name] = []
+          acc[ws.exercise_name].push(ws)
+          return acc
+        }, {})
+
+        return (
+          <View key={session.id} style={[s.card, { padding: 0, overflow: 'hidden', marginBottom: 6 }]}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}
+              onPress={() => toggleSession(session.id)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#f0f0f0', fontWeight: '600', fontSize: 14 }}>{session.date}</Text>
+                {session.routine_name && (
+                  <Text style={{ color: '#444', fontSize: 11, marginTop: 2 }}>
+                    {session.routine_name}{session.day_of_week != null ? ` · ${DAYS[session.day_of_week]}` : ''}
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={{ color: '#444', fontSize: 11 }}>{session.set_count} series</Text>
+                <Text style={{ color: '#444', fontSize: 13 }}>{isOpen ? '▲' : '▼'}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {isOpen && (
+              <View style={{ borderTopWidth: 1, borderTopColor: '#1e1e1e', padding: 14, paddingTop: 10 }}>
+                {Object.entries(exGroups).map(([name, exSets]) => (
+                  <View key={name} style={{ marginBottom: 10 }}>
+                    <Text style={{ color: '#888', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>{name}</Text>
+                    {exSets.map(ws => (
+                      <View key={ws.id} style={{ flexDirection: 'row', gap: 16, paddingLeft: 8, paddingVertical: 2 }}>
+                        <Text style={{ color: '#444', fontSize: 12 }}>Serie {ws.set_number}</Text>
+                        <Text style={{ color: '#444', fontSize: 12 }}>{ws.weight} kg</Text>
+                        <Text style={{ color: '#444', fontSize: 12 }}>{ws.reps} reps</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )
+      })}
+
+      {exercises.length > 0 && (
+        <View style={{ marginTop: 20 }}>
+          <Text style={{ color: '#888', fontSize: 13, fontWeight: '600', marginBottom: 10 }}>Progresión por ejercicio</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+            {exercises.map(ex => (
+              <TouchableOpacity
+                key={ex.id}
+                style={[s.btnCancel, { paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: selectedExercise?.id === ex.id ? '#818cf8' : '#2a2a2a', backgroundColor: selectedExercise?.id === ex.id ? '#818cf8' : '#181818' }]}
+                onPress={() => handleSelectExercise(ex)}
+              >
+                <Text style={{ color: selectedExercise?.id === ex.id ? '#fff' : '#888', fontSize: 12 }}>{ex.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {selectedExercise && progression.length === 0 && (
+            <Text style={s.hint}>Sin datos para {selectedExercise.name} todavía.</Text>
+          )}
+          {selectedExercise && chartData && (
+            <View style={s.card}>
+              <Text style={{ color: '#888', fontSize: 12, marginBottom: 10 }}>{selectedExercise.name} — peso máximo (kg)</Text>
+              <LineChart
+                data={chartData}
+                width={screenWidth - 28}
+                height={160}
+                chartConfig={{
+                  backgroundColor: '#111',
+                  backgroundGradientFrom: '#111',
+                  backgroundGradientTo: '#111',
+                  decimalPlaces: 1,
+                  color: () => '#818cf8',
+                  labelColor: () => '#444',
+                  propsForDots: { r: '3', strokeWidth: '1', stroke: '#818cf8' },
+                }}
+                bezier
+                style={{ borderRadius: 8, marginLeft: -16 }}
+                withInnerLines={false}
+              />
+            </View>
+          )}
+        </View>
+      )}
+    </View>
   )
 }
 
@@ -533,7 +691,12 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
 
 const s = StyleSheet.create({
   screen:          { flex: 1, backgroundColor: '#0a0a0a', padding: 16, paddingTop: 54 },
-  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  tabBar:          { flexDirection: 'row', backgroundColor: '#111', borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: 1, borderColor: '#1e1e1e' },
+  tabBtn:          { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },
+  tabBtnActive:    { backgroundColor: '#818cf8' },
+  tabBtnText:      { color: '#444', fontSize: 13, fontWeight: '500' },
+  tabBtnTextActive:{ color: '#fff', fontWeight: '600' },
   title:           { color: '#f0f0f0', fontSize: 22, fontWeight: '700' },
   subtitle:        { color: '#888', fontSize: 13, marginBottom: 20 },
   hint:            { color: '#444', fontSize: 13 },

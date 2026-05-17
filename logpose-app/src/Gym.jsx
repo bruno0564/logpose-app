@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
@@ -8,6 +9,7 @@ import {
   insertRoutineExercise, deleteRoutineExercise,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine,
+  getAllSessions, getSetsForSession, getExerciseProgression,
 } from './db/database'
 import {
   isServerReachable,
@@ -26,6 +28,7 @@ export default function Gym() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [routineExercises, setRoutineExercises] = useState([])
   const [exercises, setExercises] = useState([])
+  const [tab, setTab] = useState('routines')
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [confirmTarget, setConfirmTarget] = useState(null)
@@ -146,12 +149,20 @@ export default function Gym() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 className="page-title">Gym</h1>
-          <button className="btn-primary" onClick={() => setAdding(a => !a)}>+ Rutina</button>
+          {tab === 'routines' && <button className="btn-primary" onClick={() => setAdding(a => !a)}>+ Rutina</button>}
         </div>
-        <p className="page-subtitle">Tus rutinas de entrenamiento</p>
+        <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '0.2rem', width: 'fit-content' }}>
+          {['routines', 'stats'].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{ padding: '0.3rem 1rem', fontSize: '0.82rem', fontWeight: 500, border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: tab === t ? 'var(--accent)' : 'transparent', color: tab === t ? '#fff' : 'var(--text-2)', transition: 'all 0.15s' }}>
+              {t === 'routines' ? 'Rutinas' : 'Estadísticas'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {adding && (
+      {tab === 'stats' && <StatsView exercises={exercises} />}
+
+      {tab === 'routines' && adding && (
         <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 400 }}>
           <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
             <input
@@ -175,9 +186,10 @@ export default function Gym() {
         </div>
       )}
 
-      {routines.length === 0 ? (
+      {tab === 'routines' && routines.length === 0 && (
         <p className="hint">Sin rutinas todavía. Crea la primera arriba.</p>
-      ) : (
+      )}
+      {tab === 'routines' && routines.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 480 }}>
           {routines.map(r => {
             const isActive = r.id === activeRoutineId
@@ -215,6 +227,126 @@ export default function Gym() {
               </div>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Stats View ────────────────────────────────────────────────────────────────
+
+function StatsView({ exercises }) {
+  const [sessions, setSessions] = useState([])
+  const [expanded, setExpanded] = useState(null)
+  const [sessionSets, setSessionSets] = useState({})
+  const [selectedExercise, setSelectedExercise] = useState(null)
+  const [progression, setProgression] = useState([])
+
+  useEffect(() => {
+    getAllSessions().then(setSessions)
+  }, [])
+
+  async function toggleSession(id) {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (!sessionSets[id]) {
+      const sets = await getSetsForSession(id)
+      setSessionSets(prev => ({ ...prev, [id]: sets }))
+    }
+  }
+
+  async function handleSelectExercise(ex) {
+    setSelectedExercise(ex)
+    const data = await getExerciseProgression(ex.id)
+    setProgression(data)
+  }
+
+  const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+  return (
+    <div>
+      {sessions.length === 0 && (
+        <p className="hint">Sin sesiones todavía. Empieza a entrenar desde la pestaña Rutinas.</p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 520, marginBottom: '2rem' }}>
+        {sessions.map(s => {
+          const isOpen = expanded === s.id
+          const sets = sessionSets[s.id] || []
+          const exGroups = sets.reduce((acc, ws) => {
+            if (!acc[ws.exercise_name]) acc[ws.exercise_name] = []
+            acc[ws.exercise_name].push(ws)
+            return acc
+          }, {})
+
+          return (
+            <div key={s.id} className="card" style={{ marginBottom: 0, padding: 0, overflow: 'hidden' }}>
+              <div
+                onClick={() => toggleSession(s.id)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1.25rem', cursor: 'pointer' }}
+              >
+                <div>
+                  <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem' }}>{s.date}</span>
+                  {s.routine_name && <span style={{ color: 'var(--text-3)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{s.routine_name}{s.day_of_week != null ? ` · ${DAYS[s.day_of_week]}` : ''}</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>{s.set_count} series</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{isOpen ? '▲' : '▼'}</span>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div style={{ borderTop: '1px solid var(--border)', padding: '0.75rem 1.25rem 1rem' }}>
+                  {Object.entries(exGroups).map(([name, exSets]) => (
+                    <div key={name} style={{ marginBottom: '0.75rem' }}>
+                      <p style={{ color: 'var(--text-2)', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.3rem' }}>{name}</p>
+                      {exSets.map(ws => (
+                        <div key={ws.id} style={{ display: 'flex', gap: '1rem', color: 'var(--text-3)', fontSize: '0.78rem', paddingLeft: '0.5rem' }}>
+                          <span>Serie {ws.set_number}</span>
+                          <span>{ws.weight} kg</span>
+                          <span>{ws.reps} reps</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {exercises.length > 0 && (
+        <div style={{ maxWidth: 520 }}>
+          <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem' }}>Progresión por ejercicio</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+            {exercises.map(ex => (
+              <button
+                key={ex.id}
+                onClick={() => handleSelectExercise(ex)}
+                style={{ padding: '0.25rem 0.65rem', fontSize: '0.75rem', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: selectedExercise?.id === ex.id ? 'var(--accent)' : 'var(--surface-2)', color: selectedExercise?.id === ex.id ? '#fff' : 'var(--text-2)' }}
+              >
+                {ex.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedExercise && progression.length === 0 && (
+            <p className="hint">Sin datos para {selectedExercise.name} todavía.</p>
+          )}
+          {selectedExercise && progression.length > 0 && (
+            <div className="card" style={{ padding: '1rem' }}>
+              <p style={{ color: 'var(--text-2)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{selectedExercise.name} — peso máximo (kg)</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={progression}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickFormatter={d => d.slice(5)} />
+                  <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={35} />
+                  <Tooltip contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 12 }} formatter={(v) => [`${v} kg`, 'Máx']} />
+                  <Line type="monotone" dataKey="max_weight" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3, fill: 'var(--accent)' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
     </div>
