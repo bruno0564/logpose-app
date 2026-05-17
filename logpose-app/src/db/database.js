@@ -670,6 +670,33 @@ export async function insertWorkoutSession(localRoutineId, dayOfWeek, date, note
   return result.lastInsertId
 }
 
+export async function getAllSessions() {
+  const db = await openDB()
+  return db.select(`
+    SELECT s.id, s.date, s.day_of_week, s.note,
+           r.name as routine_name,
+           COUNT(ws.id) as set_count
+    FROM workout_sessions s
+    LEFT JOIN routines r ON r.id = s.local_routine_id
+    LEFT JOIN workout_sets ws ON ws.local_session_id = s.id AND ws.pending_delete = 0
+    WHERE s.pending_delete = 0
+    GROUP BY s.id
+    ORDER BY s.date DESC, s.id DESC
+  `)
+}
+
+export async function getExerciseProgression(localExerciseId) {
+  const db = await openDB()
+  return db.select(`
+    SELECT s.date, MAX(ws.weight) as max_weight, SUM(ws.reps) as total_reps, COUNT(ws.id) as sets
+    FROM workout_sets ws
+    JOIN workout_sessions s ON s.id = ws.local_session_id
+    WHERE ws.local_exercise_id = ? AND ws.pending_delete = 0
+    GROUP BY s.date
+    ORDER BY s.date ASC
+  `, [localExerciseId])
+}
+
 export async function getSessionsForRoutineDay(localRoutineId, dayOfWeek) {
   const db = await openDB()
   return db.select(
