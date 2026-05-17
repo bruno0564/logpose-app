@@ -273,6 +273,18 @@ export async function getPendingDeletes() {
   return db.getAllAsync('SELECT * FROM body_weight WHERE pending_delete = 1 AND server_id IS NOT NULL')
 }
 
+export async function pruneEntriesDeletedFromServer(serverIds) {
+  const db = await openDB()
+  const local = await db.getAllAsync(
+    'SELECT id, server_id FROM body_weight WHERE server_id IS NOT NULL AND pending_delete = 0'
+  )
+  for (const row of local) {
+    if (!serverIds.has(row.server_id)) {
+      await db.runAsync('DELETE FROM body_weight WHERE id = ?', [row.id])
+    }
+  }
+}
+
 // ── Routines ──────────────────────────────────────────────────────────────────
 
 export async function getRoutines() {
