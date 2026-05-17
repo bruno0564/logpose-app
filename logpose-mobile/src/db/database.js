@@ -304,6 +304,7 @@ export async function insertLocalRoutine(name) {
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
   const row = await db.getFirstAsync('SELECT server_id FROM routines WHERE id = ?', [id])
+  await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
   if (row?.server_id) {
     await db.runAsync('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
   } else {
@@ -464,6 +465,7 @@ export async function purgeLocalQuote(id) {
 
 export async function purgeLocalRoutine(id) {
   const db = await openDB()
+  await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
   await db.runAsync('DELETE FROM routines WHERE id = ?', [id])
 }
 
