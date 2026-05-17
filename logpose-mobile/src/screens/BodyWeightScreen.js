@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, ActivityIndicator, ScrollView, Dimensions, Modal,
@@ -8,7 +9,7 @@ import { LineChart } from 'react-native-chart-kit'
 import {
   getLocalEntries, insertLocalEntry, updateLocalEntry, markSynced,
   markPendingDelete, deleteLocalEntry,
-  upsertFromServer, getUnsyncedEntries, getPendingDeletes,
+  upsertFromServer, getUnsyncedEntries, getPendingDeletes, pruneEntriesDeletedFromServer,
 } from '../db/database'
 import {
   isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer,
@@ -30,6 +31,7 @@ export default function BodyWeightScreen() {
   const [showAddPicker, setShowAddPicker] = useState(false)
   const [editEntry, setEditEntry] = useState(null)
   const [showEditPicker, setShowEditPicker] = useState(false)
+  const syncingRef = useRef(false)
 
   const loadLocal = useCallback(async () => {
     const rows = await getLocalEntries()
@@ -37,6 +39,8 @@ export default function BodyWeightScreen() {
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingRef.current) return
+    syncingRef.current = true
     setSyncing(true)
     try {
       const reachable = await isServerReachable()
@@ -57,23 +61,28 @@ export default function BodyWeightScreen() {
         await deleteLocalEntry(entry.id)
       }
       const serverEntries = await fetchAllBodyWeightFromServer()
+      const serverIds = new Set(serverEntries.map(e => e.id))
       for (const entry of serverEntries) {
         await upsertFromServer(entry)
       }
+      await pruneEntriesDeletedFromServer(serverIds)
     } finally {
+      syncingRef.current = false
       setSyncing(false)
       await loadLocal()
     }
   }, [loadLocal])
 
-  useEffect(() => {
-    async function init() {
-      await loadLocal()
-      setLoading(false)
-      await sync()
-    }
-    init()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      async function init() {
+        await loadLocal()
+        setLoading(false)
+        sync()
+      }
+      init()
+    }, [loadLocal, sync])
+  )
 
   async function handleAdd() {
     if (!weight || !date) return

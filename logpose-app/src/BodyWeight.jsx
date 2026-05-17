@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import {
   getLocalEntries, insertLocalEntry, updateLocalEntry, markSynced, markPendingDelete,
-  deleteLocalEntry, upsertFromServer, getUnsyncedEntries, getPendingDeletes,
+  deleteLocalEntry, upsertFromServer, getUnsyncedEntries, getPendingDeletes, pruneEntriesDeletedFromServer,
 } from './db/database'
 import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
 
@@ -26,12 +26,15 @@ function BodyWeight() {
   const [editEntry, setEditEntry] = useState(null)
   const [filterFrom, setFilterFrom] = useState(daysAgo(30))
   const [filterTo, setFilterTo] = useState(today())
+  const syncingRef = useRef(false)
 
   const loadLocal = useCallback(async () => {
     setEntries(await getLocalEntries())
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingRef.current) return
+    syncingRef.current = true
     try {
       if (!await isServerReachable()) return
       for (const entry of await getUnsyncedEntries()) {
@@ -47,10 +50,14 @@ function BodyWeight() {
         await deleteBodyWeightFromServer(entry.server_id)
         await deleteLocalEntry(entry.id)
       }
-      for (const entry of await fetchAllBodyWeightFromServer()) {
+      const serverEntries = await fetchAllBodyWeightFromServer()
+      const serverIds = new Set(serverEntries.map(e => e.id))
+      for (const entry of serverEntries) {
         await upsertFromServer(entry)
       }
+      await pruneEntriesDeletedFromServer(serverIds)
     } catch { /* sin conexión */ } finally {
+      syncingRef.current = false
       await loadLocal()
     }
   }, [loadLocal])
