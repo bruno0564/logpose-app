@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Modal, Alert, StyleSheet, KeyboardAvoidingView, Platform,
+  Modal, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
-  markRoutineSynced, upsertRoutineFromServer,
+  markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
   getExercises, insertLocalExercise,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
@@ -20,6 +21,8 @@ import {
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
+let syncingRoutines = false
+
 export default function GymScreen() {
   const [view, setView] = useState('routines')
   const [routines, setRoutines] = useState([])
@@ -29,6 +32,7 @@ export default function GymScreen() {
   const [routineExercises, setRoutineExercises] = useState([])
   const [exercises, setExercises] = useState([])
   const [adding, setAdding] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState(null)
   const [newName, setNewName] = useState('')
 
   const loadRoutines = useCallback(async () => {
@@ -47,28 +51,35 @@ export default function GymScreen() {
   }, [])
 
   const syncRoutines = useCallback(async () => {
+    if (syncingRoutines) return
+    syncingRoutines = true
     try {
       if (!await isServerReachable()) return
+      for (const r of await getPendingDeleteRoutines()) {
+        try { await deleteRoutineFromServer(r.server_id) } catch { /* already gone */ }
+        await purgeLocalRoutine(r.id)
+      }
       for (const r of await getUnsyncedRoutines()) {
         const created = await postRoutineToServer(r)
         await markRoutineSynced(r.id, created.id)
       }
-      for (const r of await getPendingDeleteRoutines()) {
-        await deleteRoutineFromServer(r.server_id)
-        await purgeLocalRoutine(r.id)
-      }
-      for (const r of await fetchAllRoutinesFromServer()) {
+      const serverRoutines = await fetchAllRoutinesFromServer()
+      for (const r of serverRoutines) {
         await upsertRoutineFromServer(r)
       }
+      await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
     } catch { /* offline */ } finally {
+      syncingRoutines = false
       await loadRoutines()
     }
   }, [loadRoutines])
 
-  useEffect(() => {
-    loadRoutines().then(() => syncRoutines())
-    loadExercises()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadRoutines().then(() => syncRoutines())
+      loadExercises()
+    }, [loadRoutines, syncRoutines, loadExercises])
+  )
 
   async function handleAdd() {
     if (!newName.trim()) return
@@ -85,17 +96,15 @@ export default function GymScreen() {
   }
 
   function handleDelete(r) {
-    Alert.alert('Eliminar rutina', `¿Eliminar "${r.name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          await deleteLocalRoutine(r.id)
-          await loadRoutines()
-          syncRoutines()
-        },
-      },
-    ])
+    setConfirmTarget(r)
+  }
+
+  async function confirmDelete() {
+    const r = confirmTarget
+    setConfirmTarget(null)
+    await deleteLocalRoutine(r.id)
+    await loadRoutines()
+    syncRoutines()
   }
 
   function openRoutine(routine) {
@@ -132,6 +141,12 @@ export default function GymScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ConfirmModal
+        visible={confirmTarget !== null}
+        message={confirmTarget ? `¿Eliminar la rutina "${confirmTarget.name}"?` : ''}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmTarget(null)}
+      />
       <View style={s.header}>
         <Text style={s.title}>Gym</Text>
         <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
@@ -257,6 +272,12 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
 function ExercisePickerModal({ visible, day, routine, exercises, routineExercises, onClose, onAdded }) {
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
+  const suggestions = muscleGroups.filter(g =>
+    g.toLowerCase().includes(newMuscle.toLowerCase()) && g.toLowerCase() !== newMuscle.toLowerCase()
+  )
 
   if (day === null) return null
 
@@ -335,8 +356,23 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
               placeholder="Músculo (opcional)"
               placeholderTextColor="#444"
               value={newMuscle}
-              onChangeText={setNewMuscle}
+              onChangeText={v => { setNewMuscle(v); setShowSuggestions(true) }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setShowSuggestions(false)}
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <View style={{ borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 6, marginTop: 2, overflow: 'hidden' }}>
+                {suggestions.map(g => (
+                  <TouchableOpacity
+                    key={g}
+                    onPress={() => { setNewMuscle(g); setShowSuggestions(false) }}
+                    style={{ paddingHorizontal: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e1e' }}
+                  >
+                    <Text style={{ color: '#888', fontSize: 13 }}>{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             <TouchableOpacity style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
               <Text style={s.btnPrimaryText}>Crear y añadir</Text>
             </TouchableOpacity>
@@ -391,8 +427,8 @@ function TrainView({ routine, day, dayExercises, onBack }) {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={onBack} style={{ marginBottom: 12 }}>
           <Text style={s.backBtn}>← Volver</Text>
         </TouchableOpacity>
@@ -462,6 +498,34 @@ function TrainView({ routine, day, dayExercises, onBack }) {
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+  )
+}
+
+// ── Confirm Modal ─────────────────────────────────────────────────────────────
+
+function ConfirmModal({ visible, message, onConfirm, onCancel }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
+        <TouchableOpacity activeOpacity={1} style={s.modal}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Confirmar</Text>
+            <TouchableOpacity onPress={onCancel} hitSlop={10}>
+              <Text style={s.closeBtn}>×</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={{ color: '#888', fontSize: 14, padding: 16, paddingTop: 8 }}>{message}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingTop: 0, justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={s.btnCancel} onPress={onCancel}>
+              <Text style={s.btnCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#7f1d1d', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 }} onPress={onConfirm}>
+              <Text style={{ color: '#fca5a5', fontSize: 13, fontWeight: '600' }}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
   )
 }
 

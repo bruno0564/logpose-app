@@ -348,6 +348,11 @@ export async function markRoutineSynced(localId, serverId) {
 
 export async function purgeLocalRoutine(localId) {
   const db = await openDB()
+  const sessions = await db.select('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [localId])
+  for (const s of sessions) {
+    await db.execute('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
+  }
+  await db.execute('DELETE FROM workout_sessions WHERE local_routine_id = ?', [localId])
   await db.execute('DELETE FROM routine_exercises WHERE local_routine_id = ?', [localId])
   await db.execute('DELETE FROM routines WHERE id = ?', [localId])
 }
@@ -387,6 +392,18 @@ export async function upsertRoutineFromServer(serverRoutine) {
       'INSERT INTO routines (server_id, name, synced) VALUES (?, ?, 1)',
       [serverRoutine.id, serverRoutine.name]
     )
+  }
+}
+
+export async function pruneStaleRoutines(validServerIds) {
+  const db = await openDB()
+  const synced = await db.select(
+    'SELECT id, server_id FROM routines WHERE server_id IS NOT NULL AND pending_delete = 0'
+  )
+  for (const r of synced) {
+    if (!validServerIds.has(r.server_id)) {
+      await purgeLocalRoutine(r.id)
+    }
   }
 }
 
