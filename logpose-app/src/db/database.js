@@ -1043,3 +1043,11 @@ export async function upsertCalendarEventFromServer(serverEvent) {
     )
   }
 }
+
+export async function pruneStaleCalendarEvents(serverIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM calendar_events WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM calendar_events WHERE id = ?', [row.id])
+  }
+}

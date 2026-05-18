@@ -5,12 +5,15 @@ import {
   markCalendarEventPendingDelete, purgeCalendarEvent,
   markCalendarEventSynced, getUnsyncedCalendarEvents,
   getPendingDeleteCalendarEvents, upsertCalendarEventFromServer,
+  pruneStaleCalendarEvents,
 } from './db/database'
 import {
   isServerReachable,
   fetchAllCalendarEventsFromServer, postCalendarEventToServer,
   putCalendarEventToServer, deleteCalendarEventFromServer,
 } from './api/client'
+
+let syncingCalendar = false
 
 const MONTHS   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
@@ -85,6 +88,8 @@ export default function Calendar() {
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingCalendar) return
+    syncingCalendar = true
     try {
       if (!await isServerReachable()) return
       for (const e of await getUnsyncedCalendarEvents()) {
@@ -100,10 +105,11 @@ export default function Calendar() {
         await deleteCalendarEventFromServer(e.server_id)
         await purgeCalendarEvent(e.id)
       }
-      for (const e of await fetchAllCalendarEventsFromServer()) {
-        await upsertCalendarEventFromServer(e)
-      }
+      const serverEvents = await fetchAllCalendarEventsFromServer()
+      for (const e of serverEvents) await upsertCalendarEventFromServer(e)
+      await pruneStaleCalendarEvents(new Set(serverEvents.map(e => e.id)))
     } catch { /* offline */ } finally {
+      syncingCalendar = false
       await loadEvents()
     }
   }, [loadEvents])
