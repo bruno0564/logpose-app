@@ -493,15 +493,28 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
 
 // ── Exercise Picker Modal ────────────────────────────────────────────────────
 
+const MUSCLE_SUBGROUPS = {
+  'Pecho':     ['Superior', 'Inferior', 'Medio'],
+  'Espalda':   ['Dorsal', 'Trapecio', 'Lumbar'],
+  'Hombro':    ['Anterior', 'Lateral', 'Posterior'],
+  'Bíceps':    ['Cabeza corta', 'Cabeza larga'],
+  'Tríceps':   ['Cabeza larga', 'Cabeza lateral', 'Cabeza media'],
+  'Pierna':    ['Cuádriceps', 'Isquiotibiales', 'Glúteo', 'Gemelo'],
+  'Abdomen':   ['Superior', 'Inferior', 'Oblicuos'],
+  'Antebrazo': ['Flexores', 'Extensores'],
+}
+
 function ExercisePickerModal({ visible, day, routine, exercises, routineExercises, onClose, onAdded }) {
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
+  const [newSubgroup, setNewSubgroup] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
     g.toLowerCase().includes(newMuscle.toLowerCase()) && g.toLowerCase() !== newMuscle.toLowerCase()
   )
+  const subgroups = MUSCLE_SUBGROUPS[newMuscle] ?? []
 
   if (day === null) return null
 
@@ -524,11 +537,12 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
   async function handleCreate() {
     if (!newName.trim()) return
-    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null)
+    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null)
     const pos = routineExercises.filter(re => re.day_of_week === day).length
     await insertRoutineExercise(routine.id, id, day, pos)
     setNewName('')
     setNewMuscle('')
+    setNewSubgroup('')
     onAdded()
   }
 
@@ -580,7 +594,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
               placeholder="Músculo (opcional)"
               placeholderTextColor="#444"
               value={newMuscle}
-              onChangeText={v => { setNewMuscle(v); setShowSuggestions(true) }}
+              onChangeText={v => { setNewMuscle(v); setNewSubgroup(''); setShowSuggestions(true) }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setShowSuggestions(false)}
             />
@@ -589,10 +603,26 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                 {suggestions.map(g => (
                   <TouchableOpacity
                     key={g}
-                    onPress={() => { setNewMuscle(g); setShowSuggestions(false) }}
+                    onPress={() => { setNewMuscle(g); setNewSubgroup(''); setShowSuggestions(false) }}
                     style={{ paddingHorizontal: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e1e' }}
                   >
                     <Text style={{ color: '#888', fontSize: 13 }}>{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {subgroups.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                {subgroups.map(sg => (
+                  <TouchableOpacity
+                    key={sg}
+                    onPress={() => setNewSubgroup(newSubgroup === sg ? '' : sg)}
+                    style={{
+                      paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+                      backgroundColor: newSubgroup === sg ? '#7c3aed' : '#2a2a2a',
+                    }}
+                  >
+                    <Text style={{ color: newSubgroup === sg ? '#fff' : '#666', fontSize: 12, fontWeight: '600' }}>{sg}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

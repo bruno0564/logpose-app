@@ -505,15 +505,28 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
 
 // ── Exercise Picker Modal ────────────────────────────────────────────────────
 
+const MUSCLE_SUBGROUPS = {
+  'Pecho':     ['Superior', 'Inferior', 'Medio'],
+  'Espalda':   ['Dorsal', 'Trapecio', 'Lumbar'],
+  'Hombro':    ['Anterior', 'Lateral', 'Posterior'],
+  'Bíceps':    ['Cabeza corta', 'Cabeza larga'],
+  'Tríceps':   ['Cabeza larga', 'Cabeza lateral', 'Cabeza media'],
+  'Pierna':    ['Cuádriceps', 'Isquiotibiales', 'Glúteo', 'Gemelo'],
+  'Abdomen':   ['Superior', 'Inferior', 'Oblicuos'],
+  'Antebrazo': ['Flexores', 'Extensores'],
+}
+
 function ExercisePickerModal({ day, routine, exercises, routineExercises, onClose, onAdded }) {
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
+  const [newSubgroup, setNewSubgroup] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
     g.toLowerCase().includes(newMuscle.toLowerCase()) && g.toLowerCase() !== newMuscle.toLowerCase()
   )
+  const subgroups = MUSCLE_SUBGROUPS[newMuscle] ?? []
 
   const alreadyAdded = new Set(
     routineExercises.filter(re => re.day_of_week === day).map(re => re.local_exercise_id)
@@ -535,11 +548,12 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
   async function handleCreate(e) {
     e.preventDefault()
     if (!newName.trim()) return
-    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null)
+    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null)
     const pos = routineExercises.filter(re => re.day_of_week === day).length
     await insertRoutineExercise(routine.id, id, day, pos)
     setNewName('')
     setNewMuscle('')
+    setNewSubgroup('')
     onAdded()
   }
 
@@ -597,7 +611,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                   type="text"
                   placeholder="Músculo (opcional)"
                   value={newMuscle}
-                  onChange={e => { setNewMuscle(e.target.value); setShowSuggestions(true) }}
+                  onChange={e => { setNewMuscle(e.target.value); setNewSubgroup(''); setShowSuggestions(true) }}
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                   style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
@@ -607,7 +621,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                     {suggestions.map(g => (
                       <div
                         key={g}
-                        onMouseDown={() => { setNewMuscle(g); setShowSuggestions(false) }}
+                        onMouseDown={() => { setNewMuscle(g); setNewSubgroup(''); setShowSuggestions(false) }}
                         style={{ padding: '0.35rem 0.6rem', color: 'var(--text-2)', fontSize: '0.83rem', cursor: 'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -618,6 +632,26 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                   </div>
                 )}
               </div>
+              {subgroups.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                  {subgroups.map(sg => (
+                    <button
+                      key={sg}
+                      type="button"
+                      onClick={() => setNewSubgroup(newSubgroup === sg ? '' : sg)}
+                      style={{
+                        padding: '0.2rem 0.55rem', fontSize: '0.72rem', fontWeight: 600,
+                        borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+                        background: newSubgroup === sg ? '#7c3aed' : 'var(--surface-2)',
+                        color: newSubgroup === sg ? '#fff' : 'var(--text-3)',
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      {sg}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button type="submit" className="btn-primary" style={{ marginTop: '0.1rem' }}>Crear y añadir</button>
             </form>
           </div>
