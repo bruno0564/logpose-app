@@ -119,7 +119,6 @@ export default function BodyWeightScreen() {
     ? (entries.reduce((s, e) => s + e.weight, 0) / entries.length).toFixed(1)
     : null
 
-  // Chart
   const chartSource = [...displayed].reverse().slice(-60)
   const hasChart = chartSource.length >= 2
 
@@ -159,7 +158,6 @@ export default function BodyWeightScreen() {
         <View style={s.stat}><Text style={s.statVal}>{entries.length || '—'}</Text><Text style={s.statLbl}>Total</Text></View>
       </View>
 
-      {/* Formulario nuevo registro */}
       <View style={s.card}>
         <Text style={s.cardTitle}>Nuevo registro</Text>
         <TextInput
@@ -197,11 +195,9 @@ export default function BodyWeightScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Historial con filtro y gráfica */}
       <View style={s.card}>
         <Text style={s.cardTitle}>Historial</Text>
 
-        {/* Filtro de fechas */}
         <View style={s.filterRow}>
           <TouchableOpacity style={s.filterBtn} onPress={() => setShowFromPicker(true)}>
             <Text style={s.filterLabel}>Desde</Text>
@@ -242,7 +238,6 @@ export default function BodyWeightScreen() {
           />
         )}
 
-        {/* Gráfica */}
         {loading ? (
           <ActivityIndicator color="#7c3aed" style={{ marginTop: 16 }} />
         ) : hasChart ? (
@@ -273,7 +268,6 @@ export default function BodyWeightScreen() {
           <Text style={s.hint}>Añade al menos 2 registros para ver la gráfica.</Text>
         ) : null}
 
-        {/* Tabla */}
         {!loading && displayed.length === 0 ? (
           <Text style={s.hint}>Sin registros{filterFrom || filterTo ? ' en ese rango' : ''}.</Text>
         ) : (

@@ -356,7 +356,6 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             onChangeText={t => setForm(f => ({ ...f, title: t }))}
           />
 
-          {/* Recurrencia */}
           <View style={s.recRow}>
             {REC.map((r, i) => (
               <TouchableOpacity
@@ -371,7 +370,6 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             ))}
           </View>
 
-          {/* Fecha (una vez) */}
           {form.recurrence === 'none' && (
             <TextInput
               style={s.input}
@@ -382,7 +380,6 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             />
           )}
 
-          {/* Días (semanal) */}
           {form.recurrence === 'weekly' && (
             <View style={s.daySelector}>
               {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((label, idx) => (
@@ -399,7 +396,6 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             </View>
           )}
 
-          {/* Horario */}
           <View style={s.timeRow}>
             <TextInput
               style={[s.input, { flex: 1 }]}
@@ -417,7 +413,6 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             />
           </View>
 
-          {/* Color */}
           <View style={s.colorRow}>
             {COLORS.map(c => (
               <TouchableOpacity
@@ -428,7 +423,6 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             ))}
           </View>
 
-          {/* Notas */}
           <TextInput
             style={[s.input, { minHeight: 60, textAlignVertical: 'top' }]}
             placeholder="Notas (opcional)"
@@ -465,7 +459,6 @@ const s = StyleSheet.create({
   gymBanner:        { backgroundColor: '#1a1a1a', marginHorizontal: 16, borderRadius: 8, padding: 10, marginBottom: 4 },
   gymBannerText:    { color: '#888', fontSize: 13 },
 
-  // Mes
   card:             { backgroundColor: '#1a1a1a', borderRadius: 16, marginHorizontal: 16, padding: 20 },
   monthRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   arrowBtn:         { padding: 8 },
@@ -484,7 +477,6 @@ const s = StyleSheet.create({
   dotRow:           { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
   dot:              { width: 5, height: 5, borderRadius: 3 },
 
-  // Día
   emptyText:        { color: '#333', fontSize: 14, textAlign: 'center', marginTop: 60 },
   eventCard:        { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderLeftWidth: 3, gap: 10 },
   eventTitle:       { color: '#fff', fontSize: 14, fontWeight: '600' },
@@ -492,7 +484,6 @@ const s = StyleSheet.create({
   eventNotes:       { color: '#555', fontSize: 12, marginTop: 4, fontStyle: 'italic' },
   deleteIcon:       { color: '#ef4444', fontSize: 20, lineHeight: 22 },
 
-  // Modal
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modal:            { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
   modalTitle:       { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 16 },

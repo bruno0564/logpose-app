@@ -193,7 +193,7 @@ export async function postSetToServer(set) {
   return res.json()
 }
 
-// ── To-Do Lists ────────────────────────────────────────────────────────────────
+// ── Task Lists ────────────────────────────────────────────────────────────────
 
 export async function fetchAllTaskListsFromServer() {
   const res = await fetchWithTimeout(`${SERVER}/tasks/lists`)
@@ -213,7 +213,7 @@ export async function deleteTaskListFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/tasks/lists/${serverId}`, { method: 'DELETE' })
 }
 
-// ── To-Do Items ────────────────────────────────────────────────────────────────
+// ── Task Items ────────────────────────────────────────────────────────────────
 
 export async function fetchTaskItemsFromServer(serverListId) {
   const res = await fetchWithTimeout(`${SERVER}/tasks/lists/${serverListId}/items`)
