@@ -21,6 +21,72 @@ import {
 
 let syncingTasks = false
 
+function ListModal({ visible, value, onChange, onClose, onSave }) {
+  const [kbHeight, setKbHeight] = useState(0)
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', e => setKbHeight(e.endCoordinates.height))
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0))
+    return () => { show.remove(); hide.remove() }
+  }, [])
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={[s.overlay, { paddingBottom: kbHeight }]}>
+        <View style={s.modal}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Nueva lista</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" color="#aaa" size={22} />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={s.modalInput}
+            placeholder="Nombre de la lista"
+            placeholderTextColor="#444"
+            value={value}
+            onChangeText={onChange}
+            autoFocus
+            onSubmitEditing={onSave}
+            returnKeyType="done"
+          />
+          <TouchableOpacity style={s.saveBtn} onPress={onSave}>
+            <Text style={s.saveBtnText}>Crear</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
+function ConfirmModal({ visible, name, onConfirm, onCancel }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
+        <TouchableOpacity activeOpacity={1} style={s.modal}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Eliminar lista</Text>
+            <TouchableOpacity onPress={onCancel}>
+              <Ionicons name="close" color="#aaa" size={20} />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
+            ¿Eliminar "{name}" y todas sus tareas?
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={s.saveBtn} onPress={onCancel}>
+              <Text style={[s.saveBtnText, { color: '#aaa' }]}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.saveBtn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={onConfirm}>
+              <Text style={[s.saveBtnText, { color: '#fca5a5' }]}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  )
+}
+
 export default function TasksScreen() {
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
@@ -89,8 +155,7 @@ export default function TasksScreen() {
   useFocusEffect(
     useCallback(() => {
       async function init() {
-        const rows = await loadLists()
-        if (rows.length > 0 && !activeListRef.current) setActiveList(rows[0])
+        await loadLists()
         sync()
       }
       init()
@@ -191,7 +256,7 @@ export default function TasksScreen() {
     <View style={s.container}>
       {/* Header */}
       <View style={s.header}>
-        {activeList && lists.length > 1 ? (
+        {activeList ? (
           <TouchableOpacity onPress={() => setActiveList(null)}>
             <Ionicons name="chevron-back" color="#7c3aed" size={22} />
           </TouchableOpacity>
@@ -315,72 +380,6 @@ function ItemRow({ item, onToggle, onDelete }) {
         <Ionicons name="close" color="#333" size={16} />
       </TouchableOpacity>
     </View>
-  )
-}
-
-function ListModal({ visible, value, onChange, onClose, onSave }) {
-  const [kbHeight, setKbHeight] = useState(0)
-
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', e => setKbHeight(e.endCoordinates.height))
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0))
-    return () => { show.remove(); hide.remove() }
-  }, [])
-
-  return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={[s.overlay, { paddingBottom: kbHeight }]}>
-        <View style={s.modal}>
-          <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Nueva lista</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" color="#aaa" size={22} />
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            style={s.modalInput}
-            placeholder="Nombre de la lista"
-            placeholderTextColor="#444"
-            value={value}
-            onChangeText={onChange}
-            autoFocus
-            onSubmitEditing={onSave}
-            returnKeyType="done"
-          />
-          <TouchableOpacity style={s.saveBtn} onPress={onSave}>
-            <Text style={s.saveBtnText}>Crear</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  )
-}
-
-function ConfirmModal({ visible, name, onConfirm, onCancel }) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
-        <TouchableOpacity activeOpacity={1} style={s.modal}>
-          <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Eliminar lista</Text>
-            <TouchableOpacity onPress={onCancel}>
-              <Ionicons name="close" color="#aaa" size={20} />
-            </TouchableOpacity>
-          </View>
-          <Text style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
-            ¿Eliminar "{name}" y todas sus tareas?
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
-            <TouchableOpacity style={s.saveBtn} onPress={onCancel}>
-              <Text style={[s.saveBtnText, { color: '#aaa' }]}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={onConfirm}>
-              <Text style={[s.saveBtnText, { color: '#fca5a5' }]}>Eliminar</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
   )
 }
 
