@@ -102,7 +102,7 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
-  await instance.execute(`CREATE TABLE IF NOT EXISTS todo_lists (
+  await instance.execute(`CREATE TABLE IF NOT EXISTS task_lists (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
     name           TEXT    NOT NULL,
@@ -110,10 +110,10 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
-  await instance.execute(`CREATE TABLE IF NOT EXISTS todo_items (
+  await instance.execute(`CREATE TABLE IF NOT EXISTS task_items (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id      INTEGER,
-    local_list_id  INTEGER NOT NULL REFERENCES todo_lists(id),
+    local_list_id  INTEGER NOT NULL REFERENCES task_lists(id),
     title          TEXT    NOT NULL,
     done           INTEGER NOT NULL DEFAULT 0,
     synced         INTEGER NOT NULL DEFAULT 0,
@@ -416,68 +416,69 @@ export async function pruneStaleRoutines(validServerIds) {
 
 // ── To-Do Lists ────────────────────────────────────────────────────────────────
 
-export async function getTodoLists() {
+export async function getTaskLists() {
   const db = await openDB()
-  return db.select('SELECT * FROM todo_lists WHERE pending_delete = 0 ORDER BY id ASC')
+  return db.select('SELECT * FROM task_lists WHERE pending_delete = 0 ORDER BY id ASC')
 }
 
-export async function insertTodoList(name) {
+export async function insertTaskList(name) {
   const db = await openDB()
   const result = await db.execute(
-    'INSERT INTO todo_lists (name, synced) VALUES (?, 0)',
+    'INSERT INTO task_lists (name, synced) VALUES (?, 0)',
     [name.trim()]
   )
   return result.lastInsertId
 }
 
-export async function deleteTodoList(localId) {
+export async function deleteTaskList(localId) {
   const db = await openDB()
-  const rows = await db.select('SELECT server_id FROM todo_lists WHERE id = ?', [localId])
+  const rows = await db.select('SELECT server_id FROM task_lists WHERE id = ?', [localId])
   if (rows[0]?.server_id) {
-    await db.execute('UPDATE todo_items SET pending_delete = 1 WHERE local_list_id = ?', [localId])
-    await db.execute('UPDATE todo_lists SET pending_delete = 1 WHERE id = ?', [localId])
+    await db.execute('UPDATE task_items SET pending_delete = 1 WHERE local_list_id = ? AND server_id IS NOT NULL', [localId])
+    await db.execute('DELETE FROM task_items WHERE local_list_id = ? AND server_id IS NULL', [localId])
+    await db.execute('UPDATE task_lists SET pending_delete = 1 WHERE id = ?', [localId])
   } else {
-    await db.execute('DELETE FROM todo_items WHERE local_list_id = ?', [localId])
-    await db.execute('DELETE FROM todo_lists WHERE id = ?', [localId])
+    await db.execute('DELETE FROM task_items WHERE local_list_id = ?', [localId])
+    await db.execute('DELETE FROM task_lists WHERE id = ?', [localId])
   }
 }
 
-export async function getUnsyncedTodoLists() {
+export async function getUnsyncedTaskLists() {
   const db = await openDB()
-  return db.select('SELECT * FROM todo_lists WHERE synced = 0 AND pending_delete = 0')
+  return db.select('SELECT * FROM task_lists WHERE synced = 0 AND pending_delete = 0')
 }
 
-export async function getPendingDeleteTodoLists() {
+export async function getPendingDeleteTaskLists() {
   const db = await openDB()
-  return db.select('SELECT * FROM todo_lists WHERE pending_delete = 1 AND server_id IS NOT NULL')
+  return db.select('SELECT * FROM task_lists WHERE pending_delete = 1 AND server_id IS NOT NULL')
 }
 
-export async function markTodoListSynced(localId, serverId) {
+export async function markTaskListSynced(localId, serverId) {
   const db = await openDB()
   await db.execute(
-    'UPDATE todo_lists SET synced = 1, server_id = ? WHERE id = ?',
+    'UPDATE task_lists SET synced = 1, server_id = ? WHERE id = ?',
     [serverId, localId]
   )
 }
 
-export async function deleteLocalTodoList(localId) {
+export async function deleteLocalTaskList(localId) {
   const db = await openDB()
-  await db.execute('DELETE FROM todo_items WHERE local_list_id = ?', [localId])
-  await db.execute('DELETE FROM todo_lists WHERE id = ?', [localId])
+  await db.execute('DELETE FROM task_items WHERE local_list_id = ?', [localId])
+  await db.execute('DELETE FROM task_lists WHERE id = ?', [localId])
 }
 
-export async function upsertTodoListFromServer(serverList) {
+export async function upsertTaskListFromServer(serverList) {
   const db = await openDB()
-  const rows = await db.select('SELECT id FROM todo_lists WHERE server_id = ?', [serverList.id])
+  const rows = await db.select('SELECT id FROM task_lists WHERE server_id = ?', [serverList.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE todo_lists SET name = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      'UPDATE task_lists SET name = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
       [serverList.name, serverList.id]
     )
     return rows[0].id
   } else {
     const result = await db.execute(
-      'INSERT INTO todo_lists (server_id, name, synced) VALUES (?, ?, 1)',
+      'INSERT INTO task_lists (server_id, name, synced) VALUES (?, ?, 1)',
       [serverList.id, serverList.name]
     )
     return result.lastInsertId
@@ -486,83 +487,107 @@ export async function upsertTodoListFromServer(serverList) {
 
 // ── To-Do Items ────────────────────────────────────────────────────────────────
 
-export async function getTodoItems(localListId) {
+export async function getTaskItems(localListId) {
   const db = await openDB()
   return db.select(
-    'SELECT * FROM todo_items WHERE local_list_id = ? AND pending_delete = 0 ORDER BY id ASC',
+    'SELECT * FROM task_items WHERE local_list_id = ? AND pending_delete = 0 ORDER BY id ASC',
     [localListId]
   )
 }
 
-export async function insertTodoItem(localListId, title) {
+export async function insertTaskItem(localListId, title) {
   const db = await openDB()
   const result = await db.execute(
-    'INSERT INTO todo_items (local_list_id, title, done, synced) VALUES (?, ?, 0, 0)',
+    'INSERT INTO task_items (local_list_id, title, done, synced) VALUES (?, ?, 0, 0)',
     [localListId, title.trim()]
   )
   return result.lastInsertId
 }
 
-export async function toggleTodoItem(localId, done) {
+export async function toggleTaskItem(localId, done) {
   const db = await openDB()
   await db.execute(
-    'UPDATE todo_items SET done = ?, synced = 0 WHERE id = ?',
+    'UPDATE task_items SET done = ?, synced = 0 WHERE id = ?',
     [done ? 1 : 0, localId]
   )
 }
 
-export async function deleteTodoItem(localId) {
+export async function deleteTaskItem(localId) {
   const db = await openDB()
-  const rows = await db.select('SELECT server_id FROM todo_items WHERE id = ?', [localId])
+  const rows = await db.select('SELECT server_id FROM task_items WHERE id = ?', [localId])
   if (rows[0]?.server_id) {
-    await db.execute('UPDATE todo_items SET pending_delete = 1 WHERE id = ?', [localId])
+    await db.execute('UPDATE task_items SET pending_delete = 1 WHERE id = ?', [localId])
   } else {
-    await db.execute('DELETE FROM todo_items WHERE id = ?', [localId])
+    await db.execute('DELETE FROM task_items WHERE id = ?', [localId])
   }
 }
 
 // solo sincroniza items cuya lista ya tiene server_id (la lista debe existir en el servidor primero)
-export async function getUnsyncedTodoItems() {
+export async function getUnsyncedTaskItems() {
   const db = await openDB()
   return db.select(`
     SELECT ti.*, tl.server_id as list_server_id
-    FROM todo_items ti
-    JOIN todo_lists tl ON tl.id = ti.local_list_id
+    FROM task_items ti
+    JOIN task_lists tl ON tl.id = ti.local_list_id
     WHERE ti.synced = 0 AND ti.pending_delete = 0 AND tl.server_id IS NOT NULL
   `)
 }
 
-export async function getPendingDeleteTodoItems() {
+export async function getPendingDeleteTaskItems() {
   const db = await openDB()
-  return db.select('SELECT * FROM todo_items WHERE pending_delete = 1 AND server_id IS NOT NULL')
+  return db.select('SELECT * FROM task_items WHERE pending_delete = 1 AND server_id IS NOT NULL')
 }
 
-export async function markTodoItemSynced(localId, serverId) {
+export async function markTaskItemSynced(localId, serverId) {
   const db = await openDB()
   await db.execute(
-    'UPDATE todo_items SET synced = 1, server_id = ? WHERE id = ?',
+    'UPDATE task_items SET synced = 1, server_id = ? WHERE id = ?',
     [serverId, localId]
   )
 }
 
-export async function deleteLocalTodoItem(localId) {
+export async function deleteLocalTaskItem(localId) {
   const db = await openDB()
-  await db.execute('DELETE FROM todo_items WHERE id = ?', [localId])
+  await db.execute('DELETE FROM task_items WHERE id = ?', [localId])
 }
 
-export async function upsertTodoItemFromServer(serverItem, localListId) {
+export async function upsertTaskItemFromServer(serverItem, localListId) {
   const db = await openDB()
-  const rows = await db.select('SELECT id FROM todo_items WHERE server_id = ?', [serverItem.id])
+  const rows = await db.select('SELECT id FROM task_items WHERE server_id = ?', [serverItem.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE todo_items SET title = ?, done = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      'UPDATE task_items SET title = ?, done = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
       [serverItem.title, serverItem.done ? 1 : 0, serverItem.id]
     )
   } else {
     await db.execute(
-      'INSERT INTO todo_items (server_id, local_list_id, title, done, synced) VALUES (?, ?, ?, ?, 1)',
+      'INSERT INTO task_items (server_id, local_list_id, title, done, synced) VALUES (?, ?, ?, ?, 1)',
       [serverItem.id, localListId, serverItem.title, serverItem.done ? 1 : 0]
     )
+  }
+}
+
+export async function pruneStaleTaskLists(validServerIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM task_lists WHERE server_id IS NOT NULL')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.execute('DELETE FROM task_items WHERE local_list_id = ?', [row.id])
+      await db.execute('DELETE FROM task_lists WHERE id = ?', [row.id])
+    }
+  }
+}
+
+export async function pruneStaleTaskItemsForList(localListId, validServerItemIds) {
+  const db = await openDB()
+  const rows = await db.select(
+    'SELECT id, server_id FROM task_items WHERE local_list_id = ? AND server_id IS NOT NULL',
+    [localListId]
+  )
+  for (const row of rows) {
+    if (!validServerItemIds.has(row.server_id)) {
+      await db.execute('DELETE FROM task_items WHERE id = ?', [row.id])
+    }
   }
 }
 

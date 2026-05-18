@@ -8,7 +8,7 @@ import BodyWeightScreen from './src/screens/BodyWeightScreen'
 import HomeScreen from './src/screens/HomeScreen'
 import GymScreen from './src/screens/GymScreen'
 import CalendarScreen from './src/screens/CalendarScreen'
-import TodoScreen from './src/screens/TodoScreen'
+import TasksScreen from './src/screens/TasksScreen'
 import QuotesScreen from './src/screens/QuotesScreen'
 import { isServerReachable } from './src/api/client'
 
@@ -96,8 +96,8 @@ export default function App() {
             }}
           />
           <Tab.Screen
-            name="Todo"
-            component={TodoScreen}
+            name="Tasks"
+            component={TasksScreen}
             options={{
               title: 'To-Do',
               tabBarIcon: ({ color, size }) => (

@@ -312,6 +312,39 @@ body {
   border-color: var(--text-3);
 }
 
+.btn-danger {
+  height: 34px;
+  padding: 0 1rem;
+  background: rgba(127, 29, 29, 0.6);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.btn-danger:hover {
+  background: rgba(127, 29, 29, 0.9);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
 /* ── Table ───────────────────────────────────────── */
 
 .table {

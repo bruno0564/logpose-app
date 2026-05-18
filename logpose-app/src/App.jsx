@@ -3,7 +3,7 @@ import Home from './Home.jsx'
 import BodyWeight from './BodyWeight.jsx'
 import Gym from './Gym.jsx'
 import Calendar from './Calendar.jsx'
-import Todo from './Todo.jsx'
+import Tasks from './Tasks.jsx'
 import Quotes from './Quotes.jsx'
 
 const API = 'http://localhost:8000'
@@ -68,7 +68,7 @@ function App() {
         {page === 'body-weight' && <BodyWeight />}
         {page === 'gym'         && <Gym />}
         {page === 'calendar'    && <Calendar />}
-        {page === 'todo'        && <Todo />}
+        {page === 'todo'        && <Tasks />}
         {page === 'quotes'      && <Quotes />}
       </main>
     </div>

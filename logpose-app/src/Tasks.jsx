@@ -1,28 +1,32 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  getTodoLists, insertTodoList, deleteTodoList,
-  getTodoItems, insertTodoItem, toggleTodoItem, deleteTodoItem,
-  getUnsyncedTodoLists, getPendingDeleteTodoLists, markTodoListSynced, deleteLocalTodoList,
-  getUnsyncedTodoItems, getPendingDeleteTodoItems, markTodoItemSynced, deleteLocalTodoItem,
-  upsertTodoListFromServer, upsertTodoItemFromServer,
+  getTaskLists, insertTaskList, deleteTaskList,
+  getTaskItems, insertTaskItem, toggleTaskItem, deleteTaskItem,
+  getUnsyncedTaskLists, getPendingDeleteTaskLists, markTaskListSynced, deleteLocalTaskList,
+  getUnsyncedTaskItems, getPendingDeleteTaskItems, markTaskItemSynced, deleteLocalTaskItem,
+  upsertTaskListFromServer, upsertTaskItemFromServer,
+  pruneStaleTaskLists, pruneStaleTaskItemsForList,
 } from './db/database'
 import {
   isServerReachable,
-  fetchAllTodoListsFromServer, postTodoListToServer, deleteTodoListFromServer,
-  fetchTodoItemsFromServer, postTodoItemToServer, putTodoItemToServer, deleteTodoItemFromServer,
+  fetchAllTaskListsFromServer, postTaskListToServer, deleteTaskListFromServer,
+  fetchTaskItemsFromServer, postTaskItemToServer, putTaskItemToServer, deleteTaskItemFromServer,
 } from './api/client'
 
-export default function Todo() {
+let syncingTasks = false
+
+export default function Tasks() {
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
   const activeListRef = useRef(null)
   const [items, setItems] = useState([])
   const [newListName, setNewListName] = useState('')
   const [addingList, setAddingList] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState(null)
   const [newItemTitle, setNewItemTitle] = useState('')
 
   const loadLists = useCallback(async () => {
-    const rows = await getTodoLists()
+    const rows = await getTaskLists()
     setLists(rows)
     return rows
   }, [])
@@ -30,40 +34,46 @@ export default function Todo() {
   useEffect(() => { activeListRef.current = activeList }, [activeList])
 
   const loadItems = useCallback(async (localListId) => {
-    setItems(await getTodoItems(localListId))
+    setItems(await getTaskItems(localListId))
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingTasks) return
+    syncingTasks = true
     try {
       if (!await isServerReachable()) return
-      for (const lst of await getUnsyncedTodoLists()) {
-        const created = await postTodoListToServer(lst.name)
-        await markTodoListSynced(lst.id, created.id)
+      for (const lst of await getUnsyncedTaskLists()) {
+        const created = await postTaskListToServer(lst.name)
+        await markTaskListSynced(lst.id, created.id)
       }
-      for (const item of await getUnsyncedTodoItems()) {
+      for (const item of await getUnsyncedTaskItems()) {
         if (item.server_id) {
-          await putTodoItemToServer(item.server_id, item.title, item.done === 1)
+          await putTaskItemToServer(item.server_id, item.title, item.done === 1)
         } else {
-          const created = await postTodoItemToServer(item.list_server_id, item.title, item.done === 1)
-          await markTodoItemSynced(item.id, created.id)
+          const created = await postTaskItemToServer(item.list_server_id, item.title, item.done === 1)
+          await markTaskItemSynced(item.id, created.id)
         }
       }
-      for (const item of await getPendingDeleteTodoItems()) {
-        await deleteTodoItemFromServer(item.server_id)
-        await deleteLocalTodoItem(item.id)
+      for (const item of await getPendingDeleteTaskItems()) {
+        await deleteTaskItemFromServer(item.server_id)
+        await deleteLocalTaskItem(item.id)
       }
-      for (const lst of await getPendingDeleteTodoLists()) {
-        await deleteTodoListFromServer(lst.server_id)
-        await deleteLocalTodoList(lst.id)
+      for (const lst of await getPendingDeleteTaskLists()) {
+        await deleteTaskListFromServer(lst.server_id)
+        await deleteLocalTaskList(lst.id)
       }
-      const serverLists = await fetchAllTodoListsFromServer()
+      const serverLists = await fetchAllTaskListsFromServer()
       for (const serverList of serverLists) {
-        const localListId = await upsertTodoListFromServer(serverList)
-        for (const serverItem of await fetchTodoItemsFromServer(serverList.id)) {
-          await upsertTodoItemFromServer(serverItem, localListId)
+        const localListId = await upsertTaskListFromServer(serverList)
+        const serverItems = await fetchTaskItemsFromServer(serverList.id)
+        for (const serverItem of serverItems) {
+          await upsertTaskItemFromServer(serverItem, localListId)
         }
+        await pruneStaleTaskItemsForList(localListId, new Set(serverItems.map(i => i.id)))
       }
+      await pruneStaleTaskLists(new Set(serverLists.map(l => l.id)))
     } catch { /* sin conexión */ } finally {
+      syncingTasks = false
       await loadLists()
       if (activeListRef.current) await loadItems(activeListRef.current.id)
     }
@@ -86,7 +96,7 @@ export default function Todo() {
   async function handleAddList(e) {
     e.preventDefault()
     if (!newListName.trim()) return
-    const localId = await insertTodoList(newListName.trim())
+    const localId = await insertTaskList(newListName.trim())
     setNewListName('')
     setAddingList(false)
     const rows = await loadLists()
@@ -94,9 +104,14 @@ export default function Todo() {
     sync()
   }
 
-  async function handleDeleteList(list) {
-    if (!confirm(`¿Eliminar la lista "${list.name}" y todas sus tareas?`)) return
-    await deleteTodoList(list.id)
+  function handleDeleteList(list) {
+    setConfirmTarget(list)
+  }
+
+  async function confirmDeleteList() {
+    const list = confirmTarget
+    setConfirmTarget(null)
+    await deleteTaskList(list.id)
     const updated = await loadLists()
     setActiveList(updated.length > 0 ? updated[0] : null)
     sync()
@@ -105,20 +120,20 @@ export default function Todo() {
   async function handleAddItem(e) {
     e.preventDefault()
     if (!newItemTitle.trim() || !activeList) return
-    await insertTodoItem(activeList.id, newItemTitle.trim())
+    await insertTaskItem(activeList.id, newItemTitle.trim())
     setNewItemTitle('')
     await loadItems(activeList.id)
     sync()
   }
 
   async function handleToggle(item) {
-    await toggleTodoItem(item.id, item.done === 0)
+    await toggleTaskItem(item.id, item.done === 0)
     await loadItems(activeList.id)
     sync()
   }
 
   async function handleDeleteItem(item) {
-    await deleteTodoItem(item.id)
+    await deleteTaskItem(item.id)
     await loadItems(activeList.id)
     sync()
   }
@@ -128,6 +143,23 @@ export default function Todo() {
 
   return (
     <div className="page">
+      {confirmTarget && (
+        <div className="modal-overlay" onClick={() => setConfirmTarget(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Confirmar</h3>
+              <button className="modal-close" onClick={() => setConfirmTarget(null)}>×</button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+              ¿Eliminar la lista "{confirmTarget.name}" y todas sus tareas?
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn-cancel" onClick={() => setConfirmTarget(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmDeleteList}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="page-header">
         <h1 className="page-title">To-Do</h1>
         <p className="page-subtitle">Listas de tareas</p>
