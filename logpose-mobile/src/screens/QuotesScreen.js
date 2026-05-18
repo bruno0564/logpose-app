@@ -1,21 +1,25 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Modal, Alert, StyleSheet,
+  Modal, StyleSheet,
 } from 'react-native'
 import {
   getQuotes, insertLocalQuote, updateLocalQuote, deleteLocalQuote,
   getUnsyncedQuotes, getPendingDeleteQuotes,
-  markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote,
+  markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote, pruneStaleQuotes,
 } from '../db/database'
 import {
   isServerReachable,
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
 
+let syncingQuotes = false
+
 export default function QuotesScreen() {
   const [quotes, setQuotes] = useState([])
-  const [editingQuote, setEditingQuote] = useState(null)  // null=cerrado 'new'=nuevo obj=editando
+  const [editingQuote, setEditingQuote] = useState(null)
+  const [confirmTarget, setConfirmTarget] = useState(null)
   const [form, setForm] = useState({ text: '', author: '' })
 
   const loadQuotes = useCallback(async () => {
@@ -23,6 +27,8 @@ export default function QuotesScreen() {
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingQuotes) return
+    syncingQuotes = true
     try {
       if (!await isServerReachable()) return
       for (const q of await getUnsyncedQuotes()) {
@@ -38,16 +44,20 @@ export default function QuotesScreen() {
         await deleteQuoteFromServer(q.server_id)
         await purgeLocalQuote(q.id)
       }
-      for (const q of await fetchAllQuotesFromServer()) {
-        await upsertQuoteFromServer(q)
-      }
-    } catch {}
-    finally { await loadQuotes() }
+      const serverQuotes = await fetchAllQuotesFromServer()
+      for (const q of serverQuotes) await upsertQuoteFromServer(q)
+      await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
+    } catch {} finally {
+      syncingQuotes = false
+      await loadQuotes()
+    }
   }, [loadQuotes])
 
-  useEffect(() => {
-    loadQuotes().then(() => sync())
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadQuotes().then(() => sync())
+    }, [loadQuotes, sync])
+  )
 
   function openAdd() {
     setForm({ text: '', author: '' })
@@ -71,18 +81,16 @@ export default function QuotesScreen() {
     sync()
   }
 
-  async function handleDelete(q) {
-    Alert.alert('Eliminar frase', '¿Eliminar esta frase?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          await deleteLocalQuote(q.id)
-          await loadQuotes()
-          sync()
-        },
-      },
-    ])
+  function handleDelete(q) {
+    setConfirmTarget(q)
+  }
+
+  async function confirmDelete() {
+    const q = confirmTarget
+    setConfirmTarget(null)
+    await deleteLocalQuote(q.id)
+    await loadQuotes()
+    sync()
   }
 
   return (
@@ -148,6 +156,23 @@ export default function QuotesScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal visible={confirmTarget !== null} transparent animationType="fade" onRequestClose={() => setConfirmTarget(null)}>
+        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setConfirmTarget(null)}>
+          <TouchableOpacity activeOpacity={1} style={[s.modal, { borderRadius: 16 }]}>
+            <Text style={s.modalTitle}>Eliminar frase</Text>
+            <Text style={{ color: '#888', fontSize: 14, marginBottom: 4 }}>¿Eliminar esta frase?</Text>
+            <View style={s.modalBtns}>
+              <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={() => setConfirmTarget(null)}>
+                <Text style={s.btnCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.btn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={confirmDelete}>
+                <Text style={[s.btnSaveText, { color: '#fca5a5' }]}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   )

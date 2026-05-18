@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   getQuotes, insertLocalQuote, updateLocalQuote,
   markQuoteSynced, markQuotePendingDelete, purgeLocalQuote,
-  upsertQuoteFromServer, getUnsyncedQuotes, getPendingDeleteQuotes,
+  upsertQuoteFromServer, getUnsyncedQuotes, getPendingDeleteQuotes, pruneStaleQuotes,
 } from './db/database'
 import {
   isServerReachable, fetchAllQuotesFromServer,
   postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from './api/client'
+
+let syncingQuotes = false
 
 function Quotes() {
   const [quotes, setQuotes] = useState([])
@@ -21,6 +23,8 @@ function Quotes() {
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingQuotes) return
+    syncingQuotes = true
     try {
       if (!await isServerReachable()) return
       for (const q of await getUnsyncedQuotes()) {
@@ -36,10 +40,11 @@ function Quotes() {
         await deleteQuoteFromServer(q.server_id)
         await purgeLocalQuote(q.id)
       }
-      for (const q of await fetchAllQuotesFromServer()) {
-        await upsertQuoteFromServer(q)
-      }
+      const serverQuotes = await fetchAllQuotesFromServer()
+      for (const q of serverQuotes) await upsertQuoteFromServer(q)
+      await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
     } catch { /* sin conexión */ } finally {
+      syncingQuotes = false
       await loadLocal()
     }
   }, [loadLocal])

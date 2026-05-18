@@ -192,6 +192,16 @@ export async function upsertQuoteFromServer(serverQuote) {
   }
 }
 
+export async function pruneStaleQuotes(validServerIds) {
+  const db = await openDB()
+  const rows = await db.getAllAsync('SELECT id, server_id FROM quotes WHERE server_id IS NOT NULL')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.runAsync('DELETE FROM quotes WHERE id = ?', [row.id])
+    }
+  }
+}
+
 export async function getLatestWeight() {
   const db = await openDB()
   return db.getFirstAsync(
