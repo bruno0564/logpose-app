@@ -1,14 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TouchableOpacity, ScrollView, Modal,
-  TextInput, StyleSheet, Alert,
+  TextInput, StyleSheet,
 } from 'react-native'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
   markCalendarEventPendingDelete, purgeCalendarEvent,
   markCalendarEventSynced, getUnsyncedCalendarEvents,
   getPendingDeleteCalendarEvents, upsertCalendarEventFromServer,
-  getActiveTrainingDays,
+  getActiveTrainingDays, pruneStaleCalendarEvents,
 } from '../db/database'
 import {
   isServerReachable,
@@ -49,6 +50,29 @@ function buildCells(year, month) {
   return cells
 }
 
+let syncingCalendar = false
+
+function ConfirmModal({ visible, title, onConfirm, onCancel }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={onCancel}>
+        <TouchableOpacity activeOpacity={1} style={[s.modal, { borderRadius: 16 }]}>
+          <Text style={s.modalTitle}>Eliminar evento</Text>
+          <Text style={{ color: '#888', fontSize: 14, marginBottom: 16 }}>¿Eliminar "{title}"?</Text>
+          <View style={s.modalBtns}>
+            <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={onCancel}>
+              <Text style={s.btnCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.btn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={onConfirm}>
+              <Text style={[s.btnSaveText, { color: '#fca5a5' }]}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  )
+}
+
 const BLANK = { title: '', recurrence: 'none', date: '', start_time: '', end_time: '', days_of_week: '', notes: '', color: '#7c3aed' }
 
 export default function CalendarScreen() {
@@ -57,10 +81,11 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(today.getMonth())
   const [events, setEvents] = useState([])
   const [gymDays, setGymDays] = useState([])
-  const [selectedDate, setSelectedDate] = useState(null)  // Date obj o null
+  const [selectedDate, setSelectedDate] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [form, setForm] = useState(BLANK)
+  const [confirmTarget, setConfirmTarget] = useState(null)
 
   const loadEvents = useCallback(async () => {
     setEvents(await getCalendarEvents())
@@ -69,6 +94,8 @@ export default function CalendarScreen() {
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingCalendar) return
+    syncingCalendar = true
     try {
       if (!await isServerReachable()) return
       for (const ev of await getUnsyncedCalendarEvents()) {
@@ -84,16 +111,20 @@ export default function CalendarScreen() {
         await deleteCalendarEventFromServer(ev.server_id)
         await purgeCalendarEvent(ev.id)
       }
-      for (const ev of await fetchAllCalendarEventsFromServer()) {
-        await upsertCalendarEventFromServer(ev)
-      }
-    } catch {}
-    finally { await loadEvents() }
+      const serverEvents = await fetchAllCalendarEventsFromServer()
+      for (const ev of serverEvents) await upsertCalendarEventFromServer(ev)
+      await pruneStaleCalendarEvents(new Set(serverEvents.map(ev => ev.id)))
+    } catch {} finally {
+      syncingCalendar = false
+      await loadEvents()
+    }
   }, [loadEvents])
 
-  useEffect(() => {
-    loadEvents().then(() => sync())
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents().then(() => sync())
+    }, [loadEvents, sync])
+  )
 
   function openCreate(dateStr) {
     setEditingEvent(null)
@@ -129,19 +160,17 @@ export default function CalendarScreen() {
     sync()
   }
 
-  async function handleDelete(ev) {
-    Alert.alert('Eliminar evento', `¿Eliminar "${ev.title}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar', style: 'destructive',
-        onPress: async () => {
-          if (ev.server_id) { await markCalendarEventPendingDelete(ev.id) }
-          else { await purgeCalendarEvent(ev.id) }
-          await loadEvents()
-          sync()
-        },
-      },
-    ])
+  function handleDelete(ev) {
+    setConfirmTarget(ev)
+  }
+
+  async function confirmDelete() {
+    const ev = confirmTarget
+    setConfirmTarget(null)
+    if (ev.server_id) { await markCalendarEventPendingDelete(ev.id) }
+    else { await purgeCalendarEvent(ev.id) }
+    await loadEvents()
+    sync()
   }
 
   // ── Vista día ────────────────────────────────────────────────────────────────
@@ -203,6 +232,12 @@ export default function CalendarScreen() {
           editingEvent={editingEvent}
           onSave={handleSave}
           onClose={() => setModalVisible(false)}
+        />
+        <ConfirmModal
+          visible={confirmTarget !== null}
+          title={confirmTarget?.title ?? ''}
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmTarget(null)}
         />
       </View>
     )
@@ -281,6 +316,12 @@ export default function CalendarScreen() {
         editingEvent={editingEvent}
         onSave={handleSave}
         onClose={() => setModalVisible(false)}
+      />
+      <ConfirmModal
+        visible={confirmTarget !== null}
+        title={confirmTarget?.title ?? ''}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmTarget(null)}
       />
     </View>
   )
