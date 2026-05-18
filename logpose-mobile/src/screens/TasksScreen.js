@@ -145,7 +145,7 @@ export default function TasksScreen() {
         await pruneStaleTaskItemsForList(localListId, new Set(serverItems.map(i => i.id)))
       }
       await pruneStaleTaskLists(new Set(serverLists.map(l => l.id)))
-    } catch { /* offline */ } finally {
+    } catch {} finally {
       syncingTasks = false
       await loadLists()
       if (activeListRef.current) await loadItems(activeListRef.current.id)
@@ -254,7 +254,6 @@ export default function TasksScreen() {
 
   return (
     <View style={s.container}>
-      {/* Header */}
       <View style={s.header}>
         {activeList ? (
           <TouchableOpacity onPress={() => setActiveList(null)}>
@@ -267,7 +266,6 @@ export default function TasksScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Lists picker (when no active list selected or multiple lists) */}
       {!activeList ? (
         <FlatList
           data={lists}
@@ -287,7 +285,6 @@ export default function TasksScreen() {
         />
       ) : (
         <View style={{ flex: 1 }}>
-          {/* List tabs */}
           {lists.length > 1 && (
             <FlatList
               horizontal
@@ -309,7 +306,6 @@ export default function TasksScreen() {
             />
           )}
 
-          {/* Items */}
           <FlatList
             data={pending}
             keyExtractor={i => String(i.id)}
@@ -332,7 +328,6 @@ export default function TasksScreen() {
             )}
           />
 
-          {/* Add item input — sube con el teclado */}
           <View style={[s.addItemRow, { bottom: kbHeight }]}>
             <TextInput
               style={s.addItemInput}

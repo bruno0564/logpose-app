@@ -56,7 +56,7 @@ function BodyWeight() {
         await upsertFromServer(entry)
       }
       await pruneEntriesDeletedFromServer(serverIds)
-    } catch { /* sin conexión */ } finally {
+    } catch {} finally {
       syncingRef.current = false
       await loadLocal()
     }

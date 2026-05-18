@@ -761,7 +761,7 @@ export async function getActiveTrainingDays() {
   `)
 }
 
-// ── To-Do Lists ───────────────────────────────────────────────────────────────
+// ── Task Lists ───────────────────────────────────────────────────────────────
 
 export async function getTaskLists() {
   const db = await openDB()
@@ -832,7 +832,7 @@ export async function upsertTaskListFromServer(serverList) {
   }
 }
 
-// ── To-Do Items ───────────────────────────────────────────────────────────────
+// ── Task Items ───────────────────────────────────────────────────────────────
 
 export async function getTaskItems(localListId) {
   const db = await openDB()

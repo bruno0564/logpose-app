@@ -43,7 +43,7 @@ function Quotes() {
       const serverQuotes = await fetchAllQuotesFromServer()
       for (const q of serverQuotes) await upsertQuoteFromServer(q)
       await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
-    } catch { /* sin conexión */ } finally {
+    } catch {} finally {
       syncingQuotes = false
       await loadLocal()
     }

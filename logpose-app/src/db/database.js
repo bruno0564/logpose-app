@@ -1,10 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
 
-// instancia única de la DB, se reutiliza en todas las llamadas
 let db
 
-// abre la conexión con SQLite y crea las tablas si no existen
-// si ya está abierta devuelve la misma instancia (patrón singleton)
 export async function openDB() {
   if (db) return db
   const instance = await Database.load('sqlite:logpose.db')
@@ -128,20 +125,17 @@ export async function openDB() {
 
 // ── Body Weight ────────────────────────────────────────────────────────────────
 
-// devuelve todos los registros excepto los marcados para borrar, ordenados por fecha
 export async function getLocalEntries() {
   const db = await openDB()
   return db.select('SELECT * FROM body_weight WHERE pending_delete = 0 ORDER BY date DESC')
 }
 
-// devuelve solo el registro más reciente (para mostrarlo en Home)
 export async function getLatestWeight() {
   const db = await openDB()
   const rows = await db.select('SELECT * FROM body_weight WHERE pending_delete = 0 ORDER BY date DESC LIMIT 1')
   return rows[0] ?? null
 }
 
-// inserta un registro nuevo con synced=0 (pendiente de subir al servidor)
 export async function insertLocalEntry(weight, date, note) {
   const db = await openDB()
   const result = await db.execute(
@@ -159,7 +153,6 @@ export async function updateLocalEntry(id, weight, date, note) {
   )
 }
 
-// una vez subido al servidor, guarda su server_id y marca como sincronizado
 export async function markSynced(localId, serverId) {
   const db = await openDB()
   await db.execute(
@@ -168,21 +161,16 @@ export async function markSynced(localId, serverId) {
   )
 }
 
-// marca un registro para borrar del servidor (no lo borra aún de local)
-// se usa cuando el registro ya tiene server_id y hay que borrarlo también en el servidor
 export async function markPendingDelete(localId) {
   const db = await openDB()
   await db.execute('UPDATE body_weight SET pending_delete = 1 WHERE id = ?', [localId])
 }
 
-// borra definitivamente el registro de la DB local (tras confirmación del servidor)
 export async function deleteLocalEntry(localId) {
   const db = await openDB()
   await db.execute('DELETE FROM body_weight WHERE id = ?', [localId])
 }
 
-// sincroniza un registro que viene del servidor hacia local
-// si ya existe (mismo server_id) lo actualiza, si no existe lo inserta
 export async function upsertFromServer(serverEntry) {
   const db = await openDB()
   const rows = await db.select('SELECT id FROM body_weight WHERE server_id = ?', [serverEntry.id])
@@ -199,13 +187,11 @@ export async function upsertFromServer(serverEntry) {
   }
 }
 
-// devuelve registros que aún no se han subido al servidor
 export async function getUnsyncedEntries() {
   const db = await openDB()
   return db.select('SELECT * FROM body_weight WHERE synced = 0 AND pending_delete = 0')
 }
 
-// devuelve registros marcados para borrar que ya tienen server_id (hay que borrarlos en el servidor)
 export async function getPendingDeletes() {
   const db = await openDB()
   return db.select('SELECT * FROM body_weight WHERE pending_delete = 1 AND server_id IS NOT NULL')
@@ -426,7 +412,7 @@ export async function pruneStaleRoutines(validServerIds) {
   }
 }
 
-// ── To-Do Lists ────────────────────────────────────────────────────────────────
+// ── Task Lists ────────────────────────────────────────────────────────────────
 
 export async function getTaskLists() {
   const db = await openDB()
@@ -497,7 +483,7 @@ export async function upsertTaskListFromServer(serverList) {
   }
 }
 
-// ── To-Do Items ────────────────────────────────────────────────────────────────
+// ── Task Items ────────────────────────────────────────────────────────────────
 
 export async function getTaskItems(localListId) {
   const db = await openDB()

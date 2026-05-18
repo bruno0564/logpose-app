@@ -129,7 +129,7 @@ export default function Gym() {
       const serverSets = await fetchAllSetsFromServer()
       for (const ws of serverSets) await upsertSetFromServer(ws)
 
-    } catch { /* offline */ } finally {
+    } catch {} finally {
       syncingGym = false
       await loadRoutines()
       await loadExercises()
