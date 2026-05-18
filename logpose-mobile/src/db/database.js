@@ -304,7 +304,14 @@ export async function insertLocalRoutine(name) {
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
   const row = await db.getFirstAsync('SELECT server_id FROM routines WHERE id = ?', [id])
-  await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
+  const res = await db.getAllAsync('SELECT id, server_id FROM routine_exercises WHERE local_routine_id = ?', [id])
+  for (const re of res) {
+    if (re.server_id) {
+      await db.runAsync('UPDATE routine_exercises SET pending_delete = 1 WHERE id = ?', [re.id])
+    } else {
+      await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [re.id])
+    }
+  }
   if (row?.server_id) {
     await db.runAsync('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
   } else {
@@ -443,10 +450,148 @@ export async function insertRoutineExercise(localRoutineId, localExerciseId, day
 
 export async function deleteRoutineExercise(id) {
   const db = await openDB()
-  await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id])
+  const row = await db.getFirstAsync('SELECT server_id FROM routine_exercises WHERE id = ?', [id])
+  if (row?.server_id) {
+    await db.runAsync('UPDATE routine_exercises SET pending_delete = 1 WHERE id = ?', [id])
+  } else {
+    await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id])
+  }
+}
+
+export async function getUnsyncedRoutineExercises() {
+  const db = await openDB()
+  return db.getAllAsync(`
+    SELECT re.*, r.server_id as server_routine_id, e.server_id as server_exercise_id
+    FROM routine_exercises re
+    JOIN routines r ON r.id = re.local_routine_id
+    JOIN exercises e ON e.id = re.local_exercise_id
+    WHERE re.synced = 0 AND re.pending_delete = 0
+      AND r.server_id IS NOT NULL
+      AND e.server_id IS NOT NULL
+  `)
+}
+
+export async function getPendingDeleteRoutineExercises() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM routine_exercises WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markRoutineExerciseSynced(localId, serverId) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE routine_exercises SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function purgeLocalRoutineExercise(localId) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [localId])
+}
+
+export async function upsertRoutineExerciseFromServer(serverRE) {
+  const db = await openDB()
+  const routineRow = await db.getFirstAsync('SELECT id FROM routines WHERE server_id = ?', [serverRE.routine_id])
+  const exerciseRow = await db.getFirstAsync('SELECT id FROM exercises WHERE server_id = ?', [serverRE.exercise_id])
+  const localRoutineId = routineRow?.id
+  const localExerciseId = exerciseRow?.id
+  if (!localRoutineId || !localExerciseId) return
+  const existing = await db.getFirstAsync('SELECT id FROM routine_exercises WHERE server_id = ?', [serverRE.id])
+  if (existing) {
+    await db.runAsync(
+      'UPDATE routine_exercises SET local_routine_id=?, local_exercise_id=?, day_of_week=?, position=?, synced=1, pending_delete=0 WHERE server_id=?',
+      [localRoutineId, localExerciseId, serverRE.day_of_week, serverRE.position, serverRE.id]
+    )
+  } else {
+    await db.runAsync(
+      'INSERT INTO routine_exercises (server_id, local_routine_id, local_exercise_id, day_of_week, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
+      [serverRE.id, localRoutineId, localExerciseId, serverRE.day_of_week, serverRE.position]
+    )
+  }
+}
+
+export async function pruneStaleRoutineExercises(validServerIds) {
+  const db = await openDB()
+  const synced = await db.getAllAsync(
+    'SELECT id, server_id FROM routine_exercises WHERE server_id IS NOT NULL AND pending_delete = 0'
+  )
+  for (const re of synced) {
+    if (!validServerIds.has(re.server_id)) {
+      await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [re.id])
+    }
+  }
+}
+
+export async function purgeLocalExercise(id) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM routine_exercises WHERE local_exercise_id = ?', [id])
+  await db.runAsync('DELETE FROM workout_sets WHERE local_exercise_id = ?', [id])
+  await db.runAsync('DELETE FROM exercises WHERE id = ?', [id])
+}
+
+export async function pruneStaleExercises(validServerIds) {
+  const db = await openDB()
+  const synced = await db.getAllAsync(
+    'SELECT id, server_id FROM exercises WHERE server_id IS NOT NULL AND pending_delete = 0'
+  )
+  for (const ex of synced) {
+    if (!validServerIds.has(ex.server_id)) await purgeLocalExercise(ex.id)
+  }
 }
 
 // ── Workout Sessions ──────────────────────────────────────────────────────────
+
+export async function getUnsyncedSessions() {
+  const db = await openDB()
+  return db.getAllAsync(`
+    SELECT s.*, r.server_id as server_routine_id
+    FROM workout_sessions s
+    LEFT JOIN routines r ON r.id = s.local_routine_id
+    WHERE s.synced = 0 AND s.pending_delete = 0
+  `)
+}
+
+export async function getPendingDeleteSessions() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM workout_sessions WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markSessionSynced(localId, serverId) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE workout_sessions SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function purgeLocalSession(localId) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM workout_sets WHERE local_session_id = ?', [localId])
+  await db.runAsync('DELETE FROM workout_sessions WHERE id = ?', [localId])
+}
+
+export async function upsertSessionFromServer(serverSession) {
+  const db = await openDB()
+  let localRoutineId = null
+  if (serverSession.routine_id) {
+    const row = await db.getFirstAsync('SELECT id FROM routines WHERE server_id = ?', [serverSession.routine_id])
+    localRoutineId = row?.id ?? null
+  }
+  const existing = await db.getFirstAsync('SELECT id FROM workout_sessions WHERE server_id = ?', [serverSession.id])
+  if (existing) {
+    await db.runAsync(
+      'UPDATE workout_sessions SET local_routine_id=?, day_of_week=?, date=?, note=?, synced=1, pending_delete=0 WHERE server_id=?',
+      [localRoutineId, serverSession.day_of_week, serverSession.date, serverSession.note, serverSession.id]
+    )
+    return existing.id
+  } else {
+    const result = await db.runAsync(
+      'INSERT INTO workout_sessions (server_id, local_routine_id, day_of_week, date, note, synced) VALUES (?, ?, ?, ?, ?, 1)',
+      [serverSession.id, localRoutineId, serverSession.day_of_week, serverSession.date, serverSession.note]
+    )
+    return result.lastInsertRowId
+  }
+}
 
 export async function getAllSessions() {
   const db = await openDB()
@@ -493,6 +638,58 @@ export async function insertWorkoutSession(localRoutineId, dayOfWeek, date, note
 }
 
 // ── Workout Sets ──────────────────────────────────────────────────────────────
+
+export async function getUnsyncedSets() {
+  const db = await openDB()
+  return db.getAllAsync(`
+    SELECT ws.*, s.server_id as server_session_id, e.server_id as server_exercise_id
+    FROM workout_sets ws
+    JOIN workout_sessions s ON s.id = ws.local_session_id
+    JOIN exercises e ON e.id = ws.local_exercise_id
+    WHERE ws.synced = 0 AND ws.pending_delete = 0
+      AND s.server_id IS NOT NULL
+      AND e.server_id IS NOT NULL
+  `)
+}
+
+export async function getPendingDeleteSets() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM workout_sets WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markSetSynced(localId, serverId) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE workout_sets SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function purgeLocalSet(localId) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM workout_sets WHERE id = ?', [localId])
+}
+
+export async function upsertSetFromServer(serverSet) {
+  const db = await openDB()
+  const sessionRow = await db.getFirstAsync('SELECT id FROM workout_sessions WHERE server_id = ?', [serverSet.session_id])
+  const exerciseRow = await db.getFirstAsync('SELECT id FROM exercises WHERE server_id = ?', [serverSet.exercise_id])
+  const localSessionId = sessionRow?.id
+  const localExerciseId = exerciseRow?.id
+  if (!localSessionId || !localExerciseId) return
+  const existing = await db.getFirstAsync('SELECT id FROM workout_sets WHERE server_id = ?', [serverSet.id])
+  if (existing) {
+    await db.runAsync(
+      'UPDATE workout_sets SET local_session_id=?, local_exercise_id=?, set_number=?, weight=?, reps=?, note=?, synced=1, pending_delete=0 WHERE server_id=?',
+      [localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.id]
+    )
+  } else {
+    await db.runAsync(
+      'INSERT INTO workout_sets (server_id, local_session_id, local_exercise_id, set_number, weight, reps, note, synced) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+      [serverSet.id, localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note]
+    )
+  }
+}
 
 export async function insertWorkoutSet(localSessionId, localExerciseId, setNumber, weight, reps, note) {
   const db = await openDB()

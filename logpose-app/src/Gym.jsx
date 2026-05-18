@@ -1,26 +1,36 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
   getExercises, insertLocalExercise,
+  getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
+  getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine,
   getAllSessions, getSetsForSession, getExerciseProgression,
+  getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer,
+  getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer,
 } from './db/database'
 import {
   isServerReachable,
   fetchAllRoutinesFromServer, postRoutineToServer, deleteRoutineFromServer,
+  fetchAllExercisesFromServer, postExerciseToServer, deleteExerciseFromServer,
+  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
+  fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
+  postSessionToServer, postSetToServer,
 } from './api/client'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-let syncingRoutines = false
+let syncingGym = false
 
 export default function Gym() {
+  const selectedRoutineRef = useRef(null)
+
   const [view, setView] = useState('routines')
   const [routines, setRoutines] = useState([])
   const [activeRoutineId, setActiveRoutineId] = useState(null)
@@ -48,13 +58,17 @@ export default function Gym() {
     setRoutineExercises(await getAllRoutineExercises(routine.id))
   }, [])
 
-  const syncRoutines = useCallback(async () => {
-    if (syncingRoutines) return
-    syncingRoutines = true
+  useEffect(() => { selectedRoutineRef.current = selectedRoutine }, [selectedRoutine])
+
+  const syncGym = useCallback(async () => {
+    if (syncingGym) return
+    syncingGym = true
     try {
       if (!await isServerReachable()) return
+
+      // 1. Routines
       for (const r of await getPendingDeleteRoutines()) {
-        try { await deleteRoutineFromServer(r.server_id) } catch { /* already gone */ }
+        try { await deleteRoutineFromServer(r.server_id) } catch {}
         await purgeLocalRoutine(r.id)
       }
       for (const r of await getUnsyncedRoutines()) {
@@ -62,18 +76,69 @@ export default function Gym() {
         await markRoutineSynced(r.id, created.id)
       }
       const serverRoutines = await fetchAllRoutinesFromServer()
-      for (const r of serverRoutines) {
-        await upsertRoutineFromServer(r)
-      }
+      for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
+
+      // 2. Exercises
+      for (const ex of await getPendingDeleteExercises()) {
+        try { await deleteExerciseFromServer(ex.server_id) } catch {}
+        await purgeLocalExercise(ex.id)
+      }
+      for (const ex of await getUnsyncedExercises()) {
+        const created = await postExerciseToServer(ex)
+        await markExerciseSynced(ex.id, created.id)
+      }
+      const serverExercises = await fetchAllExercisesFromServer()
+      for (const ex of serverExercises) await upsertExerciseFromServer(ex)
+      await pruneStaleExercises(new Set(serverExercises.map(e => e.id)))
+
+      // 3. Routine exercises
+      for (const re of await getPendingDeleteRoutineExercises()) {
+        try { await deleteRoutineExerciseFromServer(re.server_id) } catch {}
+        await purgeLocalRoutineExercise(re.id)
+      }
+      for (const re of await getUnsyncedRoutineExercises()) {
+        const created = await postRoutineExerciseToServer(re)
+        await markRoutineExerciseSynced(re.id, created.id)
+      }
+      const serverREs = await fetchAllRoutineExercisesFromServer()
+      for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
+      await pruneStaleRoutineExercises(new Set(serverREs.map(r => r.id)))
+
+      // 4. Sessions
+      for (const s of await getPendingDeleteSessions()) {
+        try { await deleteSessionFromServer(s.server_id) } catch {}
+        await purgeLocalSession(s.id)
+      }
+      for (const s of await getUnsyncedSessions()) {
+        const created = await postSessionToServer(s)
+        await markSessionSynced(s.id, created.id)
+      }
+      const serverSessions = await fetchAllSessionsFromServer()
+      for (const s of serverSessions) await upsertSessionFromServer(s)
+
+      // 5. Sets
+      for (const ws of await getPendingDeleteSets()) {
+        try { await deleteSetFromServer(ws.server_id) } catch {}
+        await purgeLocalSet(ws.id)
+      }
+      for (const ws of await getUnsyncedSets()) {
+        const created = await postSetToServer(ws)
+        await markSetSynced(ws.id, created.id)
+      }
+      const serverSets = await fetchAllSetsFromServer()
+      for (const ws of serverSets) await upsertSetFromServer(ws)
+
     } catch { /* offline */ } finally {
-      syncingRoutines = false
+      syncingGym = false
       await loadRoutines()
+      await loadExercises()
+      if (selectedRoutineRef.current) await loadRoutineExercises(selectedRoutineRef.current)
     }
-  }, [loadRoutines])
+  }, [loadRoutines, loadExercises, loadRoutineExercises])
 
   useEffect(() => {
-    loadRoutines().then(() => syncRoutines())
+    loadRoutines().then(() => syncGym())
     loadExercises()
   }, [])
 
@@ -84,7 +149,7 @@ export default function Gym() {
     setNewName('')
     setAdding(false)
     await loadRoutines()
-    syncRoutines()
+    syncGym()
   }
 
   async function handleActivate(e, r) {
@@ -102,7 +167,7 @@ export default function Gym() {
     setConfirmTarget(null)
     await deleteLocalRoutine(r.id)
     await loadRoutines()
-    syncRoutines()
+    syncGym()
   }
 
   function openRoutine(routine) {
@@ -119,6 +184,7 @@ export default function Gym() {
         day={selectedDay}
         dayExercises={dayExercises}
         onBack={() => setView('routine-detail')}
+        onSynced={syncGym}
       />
     )
   }
@@ -563,7 +629,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
 
 // ── Train View ────────────────────────────────────────────────────────────────
 
-function TrainView({ routine, day, dayExercises, onBack }) {
+function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [sets, setSets] = useState(() => {
     const init = {}
@@ -599,6 +665,7 @@ function TrainView({ routine, day, dayExercises, onBack }) {
         }
       }
       onBack()
+      onSynced?.()
     } finally {
       setSaving(false)
     }
