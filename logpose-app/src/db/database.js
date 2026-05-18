@@ -299,6 +299,16 @@ export async function purgeLocalQuote(localId) {
   await db.execute('DELETE FROM quotes WHERE id = ?', [localId])
 }
 
+export async function pruneStaleQuotes(validServerIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM quotes WHERE server_id IS NOT NULL')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.execute('DELETE FROM quotes WHERE id = ?', [row.id])
+    }
+  }
+}
+
 
 
 // ── Routines ───────────────────────────────────────────────────────────────────
