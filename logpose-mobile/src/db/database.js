@@ -56,12 +56,13 @@ export async function openDB() {
       pending_delete INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS exercises (
-      id             INTEGER PRIMARY KEY AUTOINCREMENT,
-      server_id      INTEGER,
-      name           TEXT    NOT NULL,
-      muscle_group   TEXT,
-      synced         INTEGER NOT NULL DEFAULT 0,
-      pending_delete INTEGER NOT NULL DEFAULT 0
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      server_id        INTEGER,
+      name             TEXT    NOT NULL,
+      muscle_group     TEXT,
+      muscle_subgroup  TEXT,
+      synced           INTEGER NOT NULL DEFAULT 0,
+      pending_delete   INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS routine_exercises (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,6 +99,7 @@ export async function openDB() {
   `)
 
   try { await db.runAsync('ALTER TABLE routines ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0') } catch {}
+  try { await db.runAsync('ALTER TABLE exercises ADD COLUMN muscle_subgroup TEXT') } catch {}
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS task_lists (
@@ -382,11 +384,11 @@ export async function getExercises() {
   return db.getAllAsync('SELECT * FROM exercises WHERE pending_delete = 0 ORDER BY muscle_group, name')
 }
 
-export async function insertLocalExercise(name, muscleGroup) {
+export async function insertLocalExercise(name, muscleGroup, muscleSubgroup) {
   const db = await openDB()
   const result = await db.runAsync(
-    'INSERT INTO exercises (name, muscle_group, synced) VALUES (?, ?, 0)',
-    [name.trim(), muscleGroup || null]
+    'INSERT INTO exercises (name, muscle_group, muscle_subgroup, synced) VALUES (?, ?, ?, 0)',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null]
   )
   return result.lastInsertRowId
 }
@@ -424,13 +426,13 @@ export async function upsertExerciseFromServer(serverEx) {
   const existing = await db.getFirstAsync('SELECT id FROM exercises WHERE server_id = ?', [serverEx.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE exercises SET name = ?, muscle_group = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [serverEx.name, serverEx.muscle_group, serverEx.id]
+      'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.id]
     )
   } else {
     await db.runAsync(
-      'INSERT INTO exercises (server_id, name, muscle_group, synced) VALUES (?, ?, ?, 1)',
-      [serverEx.id, serverEx.name, serverEx.muscle_group]
+      'INSERT INTO exercises (server_id, name, muscle_group, muscle_subgroup, synced) VALUES (?, ?, ?, ?, 1)',
+      [serverEx.id, serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null]
     )
   }
 }
