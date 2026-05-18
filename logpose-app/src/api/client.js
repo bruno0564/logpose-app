@@ -195,13 +195,13 @@ export async function postSetToServer(set) {
 
 // ── To-Do Lists ────────────────────────────────────────────────────────────────
 
-export async function fetchAllTodoListsFromServer() {
-  const res = await fetchWithTimeout(`${SERVER}/todos/lists`)
+export async function fetchAllTaskListsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/tasks/lists`)
   return res.json()
 }
 
-export async function postTodoListToServer(name) {
-  const res = await fetchWithTimeout(`${SERVER}/todos/lists`, {
+export async function postTaskListToServer(name) {
+  const res = await fetchWithTimeout(`${SERVER}/tasks/lists`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -209,19 +209,19 @@ export async function postTodoListToServer(name) {
   return res.json()
 }
 
-export async function deleteTodoListFromServer(serverId) {
-  await fetchWithTimeout(`${SERVER}/todos/lists/${serverId}`, { method: 'DELETE' })
+export async function deleteTaskListFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/tasks/lists/${serverId}`, { method: 'DELETE' })
 }
 
 // ── To-Do Items ────────────────────────────────────────────────────────────────
 
-export async function fetchTodoItemsFromServer(serverListId) {
-  const res = await fetchWithTimeout(`${SERVER}/todos/lists/${serverListId}/items`)
+export async function fetchTaskItemsFromServer(serverListId) {
+  const res = await fetchWithTimeout(`${SERVER}/tasks/lists/${serverListId}/items`)
   return res.json()
 }
 
-export async function postTodoItemToServer(serverListId, title, done = false) {
-  const res = await fetchWithTimeout(`${SERVER}/todos/items`, {
+export async function postTaskItemToServer(serverListId, title, done = false) {
+  const res = await fetchWithTimeout(`${SERVER}/tasks/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ list_id: serverListId, title, done }),
@@ -229,8 +229,8 @@ export async function postTodoItemToServer(serverListId, title, done = false) {
   return res.json()
 }
 
-export async function putTodoItemToServer(serverId, title, done) {
-  const res = await fetchWithTimeout(`${SERVER}/todos/items/${serverId}`, {
+export async function putTaskItemToServer(serverId, title, done) {
+  const res = await fetchWithTimeout(`${SERVER}/tasks/items/${serverId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, done }),
@@ -238,8 +238,8 @@ export async function putTodoItemToServer(serverId, title, done) {
   return res.json()
 }
 
-export async function deleteTodoItemFromServer(serverId) {
-  await fetchWithTimeout(`${SERVER}/todos/items/${serverId}`, { method: 'DELETE' })
+export async function deleteTaskItemFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/tasks/items/${serverId}`, { method: 'DELETE' })
 }
 
 // ── Calendar Events ────────────────────────────────────────────────────────────

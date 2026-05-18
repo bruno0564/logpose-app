@@ -1,23 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, Modal, Alert, Keyboard,
+  StyleSheet, Modal, Keyboard,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import {
-  getTodoLists, insertTodoList, deleteTodoList,
-  getTodoItems, insertTodoItem, toggleTodoItem, deleteTodoItem,
-  getUnsyncedTodoLists, getPendingDeleteTodoLists, markTodoListSynced, deleteLocalTodoList,
-  getUnsyncedTodoItems, getPendingDeleteTodoItems, markTodoItemSynced, deleteLocalTodoItem,
-  upsertTodoListFromServer, upsertTodoItemFromServer,
+  getTaskLists, insertTaskList, deleteTaskList,
+  getTaskItems, insertTaskItem, toggleTaskItem, deleteTaskItem,
+  getUnsyncedTaskLists, getPendingDeleteTaskLists, markTaskListSynced, deleteLocalTaskList,
+  getUnsyncedTaskItems, getPendingDeleteTaskItems, markTaskItemSynced, deleteLocalTaskItem,
+  upsertTaskListFromServer, upsertTaskItemFromServer,
+  pruneStaleTaskLists, pruneStaleTaskItemsForList,
 } from '../db/database'
 import {
   isServerReachable,
-  fetchAllTodoListsFromServer, postTodoListToServer, deleteTodoListFromServer,
-  fetchTodoItemsFromServer, postTodoItemToServer, putTodoItemToServer, deleteTodoItemFromServer,
+  fetchAllTaskListsFromServer, postTaskListToServer, deleteTaskListFromServer,
+  fetchTaskItemsFromServer, postTaskItemToServer, putTaskItemToServer, deleteTaskItemFromServer,
 } from '../api/client'
 
-export default function TodoScreen() {
+let syncingTasks = false
+
+export default function TasksScreen() {
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
   const activeListRef = useRef(null)
@@ -25,81 +29,73 @@ export default function TodoScreen() {
   const [newListName, setNewListName] = useState('')
   const [newItemTitle, setNewItemTitle] = useState('')
   const [listModalVisible, setListModalVisible] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState(null)
   const [kbHeight, setKbHeight] = useState(0)
 
   const loadLists = useCallback(async () => {
-    const rows = await getTodoLists()
+    const rows = await getTaskLists()
     setLists(rows)
     return rows
   }, [])
 
   const loadItems = useCallback(async (localListId) => {
-    const rows = await getTodoItems(localListId)
+    const rows = await getTaskItems(localListId)
     setItems(rows)
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingTasks) return
+    syncingTasks = true
     try {
-      const reachable = await isServerReachable()
-      if (!reachable) return
+      if (!await isServerReachable()) return
 
-      // Upload: new lists
-      const unsyncedLists = await getUnsyncedTodoLists()
-      for (const lst of unsyncedLists) {
-        const created = await postTodoListToServer(lst.name)
-        await markTodoListSynced(lst.id, created.id)
+      for (const lst of await getUnsyncedTaskLists()) {
+        const created = await postTaskListToServer(lst.name)
+        await markTaskListSynced(lst.id, created.id)
       }
-
-      // Upload: new/updated items
-      const unsyncedItems = await getUnsyncedTodoItems()
-      for (const item of unsyncedItems) {
+      for (const item of await getUnsyncedTaskItems()) {
         if (item.server_id) {
-          await putTodoItemToServer(item.server_id, item.title, item.done === 1)
+          await putTaskItemToServer(item.server_id, item.title, item.done === 1)
         } else {
-          const created = await postTodoItemToServer(item.list_server_id, item.title, item.done === 1)
-          await markTodoItemSynced(item.id, created.id)
+          const created = await postTaskItemToServer(item.list_server_id, item.title, item.done === 1)
+          await markTaskItemSynced(item.id, created.id)
         }
       }
-
-      // Upload: pending delete items
-      const pendingItems = await getPendingDeleteTodoItems()
-      for (const item of pendingItems) {
-        await deleteTodoItemFromServer(item.server_id)
-        await deleteLocalTodoItem(item.id)
+      for (const item of await getPendingDeleteTaskItems()) {
+        await deleteTaskItemFromServer(item.server_id)
+        await deleteLocalTaskItem(item.id)
       }
-
-      // Upload: pending delete lists
-      const pendingLists = await getPendingDeleteTodoLists()
-      for (const lst of pendingLists) {
-        await deleteTodoListFromServer(lst.server_id)
-        await deleteLocalTodoList(lst.id)
+      for (const lst of await getPendingDeleteTaskLists()) {
+        await deleteTaskListFromServer(lst.server_id)
+        await deleteLocalTaskList(lst.id)
       }
-
-      // Pull: all lists and their items from server
-      const serverLists = await fetchAllTodoListsFromServer()
+      const serverLists = await fetchAllTaskListsFromServer()
       for (const serverList of serverLists) {
-        const localListId = await upsertTodoListFromServer(serverList)
-        const serverItems = await fetchTodoItemsFromServer(serverList.id)
+        const localListId = await upsertTaskListFromServer(serverList)
+        const serverItems = await fetchTaskItemsFromServer(serverList.id)
         for (const serverItem of serverItems) {
-          await upsertTodoItemFromServer(serverItem, localListId)
+          await upsertTaskItemFromServer(serverItem, localListId)
         }
+        await pruneStaleTaskItemsForList(localListId, new Set(serverItems.map(i => i.id)))
       }
-    } catch {
-      // Sync failed silently — data stays local
-    } finally {
+      await pruneStaleTaskLists(new Set(serverLists.map(l => l.id)))
+    } catch { /* offline */ } finally {
+      syncingTasks = false
       await loadLists()
       if (activeListRef.current) await loadItems(activeListRef.current.id)
     }
   }, [loadLists, loadItems])
 
-  useEffect(() => {
-    async function init() {
-      const rows = await loadLists()
-      if (rows.length > 0) setActiveList(rows[0])
-      await sync()
-    }
-    init()
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      async function init() {
+        const rows = await loadLists()
+        if (rows.length > 0 && !activeListRef.current) setActiveList(rows[0])
+        sync()
+      }
+      init()
+    }, [loadLists, sync])
+  )
 
   useEffect(() => {
     activeListRef.current = activeList
@@ -115,7 +111,7 @@ export default function TodoScreen() {
 
   async function handleAddList() {
     if (!newListName.trim()) return
-    const localId = await insertTodoList(newListName.trim())
+    const localId = await insertTaskList(newListName.trim())
     setNewListName('')
     setListModalVisible(false)
     const rows = await loadLists()
@@ -124,38 +120,35 @@ export default function TodoScreen() {
     sync()
   }
 
-  async function handleDeleteList(list) {
-    Alert.alert(
-      'Eliminar lista',
-      `¿Eliminar "${list.name}" y todas sus tareas?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: async () => {
-          await deleteTodoList(list.id)
-          const rows = await loadLists()
-          setActiveList(rows.length > 0 ? rows[0] : null)
-          sync()
-        }},
-      ]
-    )
+  function handleDeleteList(list) {
+    setConfirmTarget(list)
+  }
+
+  async function confirmDeleteList() {
+    const list = confirmTarget
+    setConfirmTarget(null)
+    await deleteTaskList(list.id)
+    const rows = await loadLists()
+    setActiveList(rows.length > 0 ? rows[0] : null)
+    sync()
   }
 
   async function handleAddItem() {
     if (!newItemTitle.trim() || !activeList) return
-    await insertTodoItem(activeList.id, newItemTitle.trim())
+    await insertTaskItem(activeList.id, newItemTitle.trim())
     setNewItemTitle('')
     await loadItems(activeList.id)
     sync()
   }
 
   async function handleToggle(item) {
-    await toggleTodoItem(item.id, item.done === 0)
+    await toggleTaskItem(item.id, item.done === 0)
     await loadItems(activeList.id)
     sync()
   }
 
   async function handleDeleteItem(item) {
-    await deleteTodoItem(item.id)
+    await deleteTaskItem(item.id)
     await loadItems(activeList.id)
     sync()
   }
@@ -183,6 +176,12 @@ export default function TodoScreen() {
           onChange={setNewListName}
           onClose={() => { setListModalVisible(false); setNewListName('') }}
           onSave={handleAddList}
+        />
+        <ConfirmModal
+          visible={confirmTarget !== null}
+          name={confirmTarget?.name ?? ''}
+          onConfirm={confirmDeleteList}
+          onCancel={() => setConfirmTarget(null)}
         />
       </View>
     )
@@ -293,6 +292,12 @@ export default function TodoScreen() {
         onClose={() => { setListModalVisible(false); setNewListName('') }}
         onSave={handleAddList}
       />
+      <ConfirmModal
+        visible={confirmTarget !== null}
+        name={confirmTarget?.name ?? ''}
+        onConfirm={confirmDeleteList}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </View>
   )
 }
@@ -347,6 +352,34 @@ function ListModal({ visible, value, onChange, onClose, onSave }) {
           </TouchableOpacity>
         </View>
       </View>
+    </Modal>
+  )
+}
+
+function ConfirmModal({ visible, name, onConfirm, onCancel }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
+        <TouchableOpacity activeOpacity={1} style={s.modal}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Eliminar lista</Text>
+            <TouchableOpacity onPress={onCancel}>
+              <Ionicons name="close" color="#aaa" size={20} />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
+            ¿Eliminar "{name}" y todas sus tareas?
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={s.saveBtn} onPress={onCancel}>
+              <Text style={[s.saveBtnText, { color: '#aaa' }]}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.saveBtn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={onConfirm}>
+              <Text style={[s.saveBtnText, { color: '#fca5a5' }]}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   )
 }
