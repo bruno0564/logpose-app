@@ -3,12 +3,14 @@ import { useFocusEffect } from '@react-navigation/native'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
-  markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote,
+  markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote, pruneStaleQuotes,
 } from '../db/database'
 import {
   isServerReachable,
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
+
+let syncingHome = false
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -35,6 +37,8 @@ export default function HomeScreen() {
   }, [])
 
   const sync = useCallback(async () => {
+    if (syncingHome) return
+    syncingHome = true
     try {
       if (!await isServerReachable()) return
       for (const q of await getUnsyncedQuotes()) {
@@ -50,10 +54,11 @@ export default function HomeScreen() {
         await deleteQuoteFromServer(q.server_id)
         await purgeLocalQuote(q.id)
       }
-      for (const q of await fetchAllQuotesFromServer()) {
-        await upsertQuoteFromServer(q)
-      }
+      const serverQuotes = await fetchAllQuotesFromServer()
+      for (const q of serverQuotes) await upsertQuoteFromServer(q)
+      await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
     } catch { /* sin conexión */ } finally {
+      syncingHome = false
       await load()
     }
   }, [load])
