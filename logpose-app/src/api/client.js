@@ -98,6 +98,31 @@ export async function deleteRoutineFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/routines/${serverId}`, { method: 'DELETE' })
 }
 
+// ── Routine Exercises ─────────────────────────────────────────────────────────
+
+export async function fetchAllRoutineExercisesFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/gym/routine-exercises/`)
+  return res.json()
+}
+
+export async function postRoutineExerciseToServer(re) {
+  const res = await fetchWithTimeout(`${SERVER}/gym/routine-exercises/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      routine_id: re.server_routine_id,
+      exercise_id: re.server_exercise_id,
+      day_of_week: re.day_of_week,
+      position: re.position,
+    }),
+  })
+  return res.json()
+}
+
+export async function deleteRoutineExerciseFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/gym/routine-exercises/${serverId}`, { method: 'DELETE' })
+}
+
 // ── Exercises ─────────────────────────────────────────────────────────────────
 
 export async function fetchAllExercisesFromServer() {
@@ -119,6 +144,24 @@ export async function deleteExerciseFromServer(serverId) {
 }
 
 // ── Gym (sessions + sets) ────────────────────────────────────────────────────
+
+export async function fetchAllSessionsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/gym/sessions/`)
+  return res.json()
+}
+
+export async function fetchAllSetsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/gym/sets/`)
+  return res.json()
+}
+
+export async function deleteSessionFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/gym/sessions/${serverId}`, { method: 'DELETE' })
+}
+
+export async function deleteSetFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/gym/sets/${serverId}`, { method: 'DELETE' })
+}
 
 export async function postSessionToServer(session) {
   const res = await fetchWithTimeout(`${SERVER}/gym/sessions/`, {

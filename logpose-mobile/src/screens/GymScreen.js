@@ -1,30 +1,43 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Modal, StyleSheet, KeyboardAvoidingView, Platform,
+  Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
+import { LineChart } from 'react-native-chart-kit'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
   getExercises, insertLocalExercise,
+  getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
+  getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine,
+  getAllSessions, getSetsForSession, getExerciseProgression,
+  getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer,
+  getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer,
 } from '../db/database'
 import {
   isServerReachable,
   fetchAllRoutinesFromServer, postRoutineToServer, deleteRoutineFromServer,
+  fetchAllExercisesFromServer, postExerciseToServer, deleteExerciseFromServer,
+  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
+  fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
+  postSessionToServer, postSetToServer,
 } from '../api/client'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-let syncingRoutines = false
+let syncingGym = false
 
 export default function GymScreen() {
+  const selectedRoutineRef = useRef(null)
+
   const [view, setView] = useState('routines')
+  const [tab, setTab] = useState('routines')
   const [routines, setRoutines] = useState([])
   const [activeRoutineId, setActiveRoutineId] = useState(null)
   const [selectedRoutine, setSelectedRoutine] = useState(null)
@@ -50,13 +63,17 @@ export default function GymScreen() {
     setRoutineExercises(await getAllRoutineExercises(routine.id))
   }, [])
 
-  const syncRoutines = useCallback(async () => {
-    if (syncingRoutines) return
-    syncingRoutines = true
+  useEffect(() => { selectedRoutineRef.current = selectedRoutine }, [selectedRoutine])
+
+  const syncGym = useCallback(async () => {
+    if (syncingGym) return
+    syncingGym = true
     try {
       if (!await isServerReachable()) return
+
+      // 1. Routines
       for (const r of await getPendingDeleteRoutines()) {
-        try { await deleteRoutineFromServer(r.server_id) } catch { /* already gone */ }
+        try { await deleteRoutineFromServer(r.server_id) } catch {}
         await purgeLocalRoutine(r.id)
       }
       for (const r of await getUnsyncedRoutines()) {
@@ -64,21 +81,72 @@ export default function GymScreen() {
         await markRoutineSynced(r.id, created.id)
       }
       const serverRoutines = await fetchAllRoutinesFromServer()
-      for (const r of serverRoutines) {
-        await upsertRoutineFromServer(r)
-      }
+      for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
+
+      // 2. Exercises
+      for (const ex of await getPendingDeleteExercises()) {
+        try { await deleteExerciseFromServer(ex.server_id) } catch {}
+        await purgeLocalExercise(ex.id)
+      }
+      for (const ex of await getUnsyncedExercises()) {
+        const created = await postExerciseToServer(ex)
+        await markExerciseSynced(ex.id, created.id)
+      }
+      const serverExercises = await fetchAllExercisesFromServer()
+      for (const ex of serverExercises) await upsertExerciseFromServer(ex)
+      await pruneStaleExercises(new Set(serverExercises.map(e => e.id)))
+
+      // 3. Routine exercises
+      for (const re of await getPendingDeleteRoutineExercises()) {
+        try { await deleteRoutineExerciseFromServer(re.server_id) } catch {}
+        await purgeLocalRoutineExercise(re.id)
+      }
+      for (const re of await getUnsyncedRoutineExercises()) {
+        const created = await postRoutineExerciseToServer(re)
+        await markRoutineExerciseSynced(re.id, created.id)
+      }
+      const serverREs = await fetchAllRoutineExercisesFromServer()
+      for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
+      await pruneStaleRoutineExercises(new Set(serverREs.map(r => r.id)))
+
+      // 4. Sessions
+      for (const s of await getPendingDeleteSessions()) {
+        try { await deleteSessionFromServer(s.server_id) } catch {}
+        await purgeLocalSession(s.id)
+      }
+      for (const s of await getUnsyncedSessions()) {
+        const created = await postSessionToServer(s)
+        await markSessionSynced(s.id, created.id)
+      }
+      const serverSessions = await fetchAllSessionsFromServer()
+      for (const s of serverSessions) await upsertSessionFromServer(s)
+
+      // 5. Sets
+      for (const ws of await getPendingDeleteSets()) {
+        try { await deleteSetFromServer(ws.server_id) } catch {}
+        await purgeLocalSet(ws.id)
+      }
+      for (const ws of await getUnsyncedSets()) {
+        const created = await postSetToServer(ws)
+        await markSetSynced(ws.id, created.id)
+      }
+      const serverSets = await fetchAllSetsFromServer()
+      for (const ws of serverSets) await upsertSetFromServer(ws)
+
     } catch { /* offline */ } finally {
-      syncingRoutines = false
+      syncingGym = false
       await loadRoutines()
+      await loadExercises()
+      if (selectedRoutineRef.current) await loadRoutineExercises(selectedRoutineRef.current)
     }
-  }, [loadRoutines])
+  }, [loadRoutines, loadExercises, loadRoutineExercises])
 
   useFocusEffect(
     useCallback(() => {
-      loadRoutines().then(() => syncRoutines())
+      loadRoutines().then(() => syncGym())
       loadExercises()
-    }, [loadRoutines, syncRoutines, loadExercises])
+    }, [loadRoutines, syncGym, loadExercises])
   )
 
   async function handleAdd() {
@@ -87,7 +155,7 @@ export default function GymScreen() {
     setNewName('')
     setAdding(false)
     await loadRoutines()
-    syncRoutines()
+    syncGym()
   }
 
   async function handleActivate(r) {
@@ -104,7 +172,7 @@ export default function GymScreen() {
     setConfirmTarget(null)
     await deleteLocalRoutine(r.id)
     await loadRoutines()
-    syncRoutines()
+    syncGym()
   }
 
   function openRoutine(routine) {
@@ -121,6 +189,7 @@ export default function GymScreen() {
         day={selectedDay}
         dayExercises={dayExercises}
         onBack={() => setView('routine-detail')}
+        onSynced={syncGym}
       />
     )
   }
@@ -149,59 +218,214 @@ export default function GymScreen() {
       />
       <View style={s.header}>
         <Text style={s.title}>Gym</Text>
-        <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
-          <Text style={s.btnPrimaryText}>+ Rutina</Text>
-        </TouchableOpacity>
+        {tab === 'routines' && (
+          <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
+            <Text style={s.btnPrimaryText}>+ Rutina</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <Text style={s.subtitle}>Tus rutinas de entrenamiento</Text>
 
-      {adding && (
-        <View style={s.card}>
-          <TextInput
-            autoFocus
-            style={s.input}
-            placeholder="Nombre de la rutina..."
-            placeholderTextColor="#444"
-            value={newName}
-            onChangeText={setNewName}
-          />
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <TouchableOpacity style={[s.btnPrimary, { flex: 1 }]} onPress={handleAdd}>
-              <Text style={s.btnPrimaryText}>Crear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.btnCancel, { flex: 1 }]} onPress={() => { setAdding(false); setNewName('') }}>
-              <Text style={s.btnCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      <View style={s.tabBar}>
+        {['routines', 'stats'].map(t => (
+          <TouchableOpacity key={t} style={[s.tabBtn, tab === t && s.tabBtnActive]} onPress={() => setTab(t)}>
+            <Text style={[s.tabBtnText, tab === t && s.tabBtnTextActive]}>
+              {t === 'routines' ? 'Rutinas' : 'Estadísticas'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      {routines.length === 0 ? (
-        <Text style={s.hint}>Sin rutinas todavía. Crea la primera arriba.</Text>
-      ) : (
-        routines.map(r => {
-          const isActive = r.id === activeRoutineId
-          return (
-            <TouchableOpacity key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]} onPress={() => openRoutine(r)}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowText}>{r.name}</Text>
-                {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                {!isActive && (
-                  <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
-                    <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
-                  <Text style={s.deleteBtn}>×</Text>
+      {tab === 'stats' && <StatsView exercises={exercises} />}
+
+      {tab === 'routines' && (
+        <>
+          <Text style={s.subtitle}>Tus rutinas de entrenamiento</Text>
+
+          {adding && (
+            <View style={s.card}>
+              <TextInput
+                autoFocus
+                style={s.input}
+                placeholder="Nombre de la rutina..."
+                placeholderTextColor="#444"
+                value={newName}
+                onChangeText={setNewName}
+              />
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity style={[s.btnPrimary, { flex: 1 }]} onPress={handleAdd}>
+                  <Text style={s.btnPrimaryText}>Crear</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.btnCancel, { flex: 1 }]} onPress={() => { setAdding(false); setNewName('') }}>
+                  <Text style={s.btnCancelText}>Cancelar</Text>
                 </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          )
-        })
+            </View>
+          )}
+
+          {routines.length === 0 ? (
+            <Text style={s.hint}>Sin rutinas todavía. Crea la primera arriba.</Text>
+          ) : (
+            routines.map(r => {
+              const isActive = r.id === activeRoutineId
+              return (
+                <TouchableOpacity key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]} onPress={() => openRoutine(r)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowText}>{r.name}</Text>
+                    {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {!isActive && (
+                      <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
+                        <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
+                      <Text style={s.deleteBtn}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              )
+            })
+          )}
+        </>
       )}
     </ScrollView>
+  )
+}
+
+// ── Stats View ────────────────────────────────────────────────────────────────
+
+function StatsView({ exercises }) {
+  const [sessions, setSessions] = useState([])
+  const [expanded, setExpanded] = useState(null)
+  const [sessionSets, setSessionSets] = useState({})
+  const [selectedExercise, setSelectedExercise] = useState(null)
+  const [progression, setProgression] = useState([])
+
+  useEffect(() => {
+    getAllSessions().then(setSessions)
+  }, [])
+
+  async function toggleSession(id) {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (!sessionSets[id]) {
+      const sets = await getSetsForSession(id)
+      setSessionSets(prev => ({ ...prev, [id]: sets }))
+    }
+  }
+
+  async function handleSelectExercise(ex) {
+    setSelectedExercise(ex)
+    const data = await getExerciseProgression(ex.id)
+    setProgression(data)
+  }
+
+  const screenWidth = Dimensions.get('window').width - 32
+
+  const chartData = progression.length > 0 ? {
+    labels: progression.map(p => p.date.slice(5)),
+    datasets: [{ data: progression.map(p => p.max_weight) }],
+  } : null
+
+  return (
+    <View>
+      {sessions.length === 0 && (
+        <Text style={[s.hint, { marginTop: 8 }]}>Sin sesiones todavía. Empieza a entrenar desde Rutinas.</Text>
+      )}
+
+      {sessions.map(session => {
+        const isOpen = expanded === session.id
+        const sets = sessionSets[session.id] || []
+        const exGroups = sets.reduce((acc, ws) => {
+          if (!acc[ws.exercise_name]) acc[ws.exercise_name] = []
+          acc[ws.exercise_name].push(ws)
+          return acc
+        }, {})
+
+        return (
+          <View key={session.id} style={[s.card, { padding: 0, overflow: 'hidden', marginBottom: 6 }]}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}
+              onPress={() => toggleSession(session.id)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#f0f0f0', fontWeight: '600', fontSize: 14 }}>{session.date}</Text>
+                {session.routine_name && (
+                  <Text style={{ color: '#444', fontSize: 11, marginTop: 2 }}>
+                    {session.routine_name}{session.day_of_week != null ? ` · ${DAYS[session.day_of_week]}` : ''}
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={{ color: '#444', fontSize: 11 }}>{session.set_count} series</Text>
+                <Text style={{ color: '#444', fontSize: 13 }}>{isOpen ? '▲' : '▼'}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {isOpen && (
+              <View style={{ borderTopWidth: 1, borderTopColor: '#1e1e1e', padding: 14, paddingTop: 10 }}>
+                {Object.entries(exGroups).map(([name, exSets]) => (
+                  <View key={name} style={{ marginBottom: 10 }}>
+                    <Text style={{ color: '#888', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>{name}</Text>
+                    {exSets.map(ws => (
+                      <View key={ws.id} style={{ flexDirection: 'row', gap: 16, paddingLeft: 8, paddingVertical: 2 }}>
+                        <Text style={{ color: '#444', fontSize: 12 }}>Serie {ws.set_number}</Text>
+                        <Text style={{ color: '#444', fontSize: 12 }}>{ws.weight} kg</Text>
+                        <Text style={{ color: '#444', fontSize: 12 }}>{ws.reps} reps</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )
+      })}
+
+      {exercises.length > 0 && (
+        <View style={{ marginTop: 20 }}>
+          <Text style={{ color: '#888', fontSize: 13, fontWeight: '600', marginBottom: 10 }}>Progresión por ejercicio</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+            {exercises.map(ex => (
+              <TouchableOpacity
+                key={ex.id}
+                style={[s.btnCancel, { paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: selectedExercise?.id === ex.id ? '#818cf8' : '#2a2a2a', backgroundColor: selectedExercise?.id === ex.id ? '#818cf8' : '#181818' }]}
+                onPress={() => handleSelectExercise(ex)}
+              >
+                <Text style={{ color: selectedExercise?.id === ex.id ? '#fff' : '#888', fontSize: 12 }}>{ex.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {selectedExercise && progression.length === 0 && (
+            <Text style={s.hint}>Sin datos para {selectedExercise.name} todavía.</Text>
+          )}
+          {selectedExercise && chartData && (
+            <View style={s.card}>
+              <Text style={{ color: '#888', fontSize: 12, marginBottom: 10 }}>{selectedExercise.name} — peso máximo (kg)</Text>
+              <LineChart
+                data={chartData}
+                width={screenWidth - 28}
+                height={160}
+                chartConfig={{
+                  backgroundColor: '#111',
+                  backgroundGradientFrom: '#111',
+                  backgroundGradientTo: '#111',
+                  decimalPlaces: 1,
+                  color: () => '#818cf8',
+                  labelColor: () => '#444',
+                  propsForDots: { r: '3', strokeWidth: '1', stroke: '#818cf8' },
+                }}
+                bezier
+                style={{ borderRadius: 8, marginLeft: -16 }}
+                withInnerLines={false}
+              />
+            </View>
+          )}
+        </View>
+      )}
+    </View>
   )
 }
 
@@ -385,7 +609,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
 // ── Train View ────────────────────────────────────────────────────────────────
 
-function TrainView({ routine, day, dayExercises, onBack }) {
+function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [sets, setSets] = useState(() => {
     const init = {}
@@ -421,6 +645,7 @@ function TrainView({ routine, day, dayExercises, onBack }) {
         }
       }
       onBack()
+      onSynced?.()
     } finally {
       setSaving(false)
     }
@@ -533,7 +758,12 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
 
 const s = StyleSheet.create({
   screen:          { flex: 1, backgroundColor: '#0a0a0a', padding: 16, paddingTop: 54 },
-  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  tabBar:          { flexDirection: 'row', backgroundColor: '#111', borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: 1, borderColor: '#1e1e1e' },
+  tabBtn:          { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },
+  tabBtnActive:    { backgroundColor: '#818cf8' },
+  tabBtnText:      { color: '#444', fontSize: 13, fontWeight: '500' },
+  tabBtnTextActive:{ color: '#fff', fontWeight: '600' },
   title:           { color: '#f0f0f0', fontSize: 22, fontWeight: '700' },
   subtitle:        { color: '#888', fontSize: 13, marginBottom: 20 },
   hint:            { color: '#444', fontSize: 13 },

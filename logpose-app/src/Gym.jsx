@@ -1,24 +1,36 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
   getExercises, insertLocalExercise,
+  getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
+  getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine,
+  getAllSessions, getSetsForSession, getExerciseProgression,
+  getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer,
+  getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer,
 } from './db/database'
 import {
   isServerReachable,
   fetchAllRoutinesFromServer, postRoutineToServer, deleteRoutineFromServer,
+  fetchAllExercisesFromServer, postExerciseToServer, deleteExerciseFromServer,
+  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
+  fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
+  postSessionToServer, postSetToServer,
 } from './api/client'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-let syncingRoutines = false
+let syncingGym = false
 
 export default function Gym() {
+  const selectedRoutineRef = useRef(null)
+
   const [view, setView] = useState('routines')
   const [routines, setRoutines] = useState([])
   const [activeRoutineId, setActiveRoutineId] = useState(null)
@@ -26,6 +38,7 @@ export default function Gym() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [routineExercises, setRoutineExercises] = useState([])
   const [exercises, setExercises] = useState([])
+  const [tab, setTab] = useState('routines')
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [confirmTarget, setConfirmTarget] = useState(null)
@@ -45,13 +58,17 @@ export default function Gym() {
     setRoutineExercises(await getAllRoutineExercises(routine.id))
   }, [])
 
-  const syncRoutines = useCallback(async () => {
-    if (syncingRoutines) return
-    syncingRoutines = true
+  useEffect(() => { selectedRoutineRef.current = selectedRoutine }, [selectedRoutine])
+
+  const syncGym = useCallback(async () => {
+    if (syncingGym) return
+    syncingGym = true
     try {
       if (!await isServerReachable()) return
+
+      // 1. Routines
       for (const r of await getPendingDeleteRoutines()) {
-        try { await deleteRoutineFromServer(r.server_id) } catch { /* already gone */ }
+        try { await deleteRoutineFromServer(r.server_id) } catch {}
         await purgeLocalRoutine(r.id)
       }
       for (const r of await getUnsyncedRoutines()) {
@@ -59,18 +76,69 @@ export default function Gym() {
         await markRoutineSynced(r.id, created.id)
       }
       const serverRoutines = await fetchAllRoutinesFromServer()
-      for (const r of serverRoutines) {
-        await upsertRoutineFromServer(r)
-      }
+      for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
+
+      // 2. Exercises
+      for (const ex of await getPendingDeleteExercises()) {
+        try { await deleteExerciseFromServer(ex.server_id) } catch {}
+        await purgeLocalExercise(ex.id)
+      }
+      for (const ex of await getUnsyncedExercises()) {
+        const created = await postExerciseToServer(ex)
+        await markExerciseSynced(ex.id, created.id)
+      }
+      const serverExercises = await fetchAllExercisesFromServer()
+      for (const ex of serverExercises) await upsertExerciseFromServer(ex)
+      await pruneStaleExercises(new Set(serverExercises.map(e => e.id)))
+
+      // 3. Routine exercises
+      for (const re of await getPendingDeleteRoutineExercises()) {
+        try { await deleteRoutineExerciseFromServer(re.server_id) } catch {}
+        await purgeLocalRoutineExercise(re.id)
+      }
+      for (const re of await getUnsyncedRoutineExercises()) {
+        const created = await postRoutineExerciseToServer(re)
+        await markRoutineExerciseSynced(re.id, created.id)
+      }
+      const serverREs = await fetchAllRoutineExercisesFromServer()
+      for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
+      await pruneStaleRoutineExercises(new Set(serverREs.map(r => r.id)))
+
+      // 4. Sessions
+      for (const s of await getPendingDeleteSessions()) {
+        try { await deleteSessionFromServer(s.server_id) } catch {}
+        await purgeLocalSession(s.id)
+      }
+      for (const s of await getUnsyncedSessions()) {
+        const created = await postSessionToServer(s)
+        await markSessionSynced(s.id, created.id)
+      }
+      const serverSessions = await fetchAllSessionsFromServer()
+      for (const s of serverSessions) await upsertSessionFromServer(s)
+
+      // 5. Sets
+      for (const ws of await getPendingDeleteSets()) {
+        try { await deleteSetFromServer(ws.server_id) } catch {}
+        await purgeLocalSet(ws.id)
+      }
+      for (const ws of await getUnsyncedSets()) {
+        const created = await postSetToServer(ws)
+        await markSetSynced(ws.id, created.id)
+      }
+      const serverSets = await fetchAllSetsFromServer()
+      for (const ws of serverSets) await upsertSetFromServer(ws)
+
     } catch { /* offline */ } finally {
-      syncingRoutines = false
+      syncingGym = false
       await loadRoutines()
+      await loadExercises()
+      if (selectedRoutineRef.current) await loadRoutineExercises(selectedRoutineRef.current)
     }
-  }, [loadRoutines])
+  }, [loadRoutines, loadExercises, loadRoutineExercises])
 
   useEffect(() => {
-    loadRoutines().then(() => syncRoutines())
+    loadRoutines().then(() => syncGym())
     loadExercises()
   }, [])
 
@@ -81,7 +149,7 @@ export default function Gym() {
     setNewName('')
     setAdding(false)
     await loadRoutines()
-    syncRoutines()
+    syncGym()
   }
 
   async function handleActivate(e, r) {
@@ -99,7 +167,7 @@ export default function Gym() {
     setConfirmTarget(null)
     await deleteLocalRoutine(r.id)
     await loadRoutines()
-    syncRoutines()
+    syncGym()
   }
 
   function openRoutine(routine) {
@@ -116,6 +184,7 @@ export default function Gym() {
         day={selectedDay}
         dayExercises={dayExercises}
         onBack={() => setView('routine-detail')}
+        onSynced={syncGym}
       />
     )
   }
@@ -146,12 +215,20 @@ export default function Gym() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 className="page-title">Gym</h1>
-          <button className="btn-primary" onClick={() => setAdding(a => !a)}>+ Rutina</button>
+          {tab === 'routines' && <button className="btn-primary" onClick={() => setAdding(a => !a)}>+ Rutina</button>}
         </div>
-        <p className="page-subtitle">Tus rutinas de entrenamiento</p>
+        <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '0.2rem', width: 'fit-content' }}>
+          {['routines', 'stats'].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{ padding: '0.3rem 1rem', fontSize: '0.82rem', fontWeight: 500, border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: tab === t ? 'var(--accent)' : 'transparent', color: tab === t ? '#fff' : 'var(--text-2)', transition: 'all 0.15s' }}>
+              {t === 'routines' ? 'Rutinas' : 'Estadísticas'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {adding && (
+      {tab === 'stats' && <StatsView exercises={exercises} />}
+
+      {tab === 'routines' && adding && (
         <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 400 }}>
           <form onSubmit={handleAdd} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
             <input
@@ -175,9 +252,10 @@ export default function Gym() {
         </div>
       )}
 
-      {routines.length === 0 ? (
+      {tab === 'routines' && routines.length === 0 && (
         <p className="hint">Sin rutinas todavía. Crea la primera arriba.</p>
-      ) : (
+      )}
+      {tab === 'routines' && routines.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 480 }}>
           {routines.map(r => {
             const isActive = r.id === activeRoutineId
@@ -215,6 +293,126 @@ export default function Gym() {
               </div>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Stats View ────────────────────────────────────────────────────────────────
+
+function StatsView({ exercises }) {
+  const [sessions, setSessions] = useState([])
+  const [expanded, setExpanded] = useState(null)
+  const [sessionSets, setSessionSets] = useState({})
+  const [selectedExercise, setSelectedExercise] = useState(null)
+  const [progression, setProgression] = useState([])
+
+  useEffect(() => {
+    getAllSessions().then(setSessions)
+  }, [])
+
+  async function toggleSession(id) {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (!sessionSets[id]) {
+      const sets = await getSetsForSession(id)
+      setSessionSets(prev => ({ ...prev, [id]: sets }))
+    }
+  }
+
+  async function handleSelectExercise(ex) {
+    setSelectedExercise(ex)
+    const data = await getExerciseProgression(ex.id)
+    setProgression(data)
+  }
+
+  const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+  return (
+    <div>
+      {sessions.length === 0 && (
+        <p className="hint">Sin sesiones todavía. Empieza a entrenar desde la pestaña Rutinas.</p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 520, marginBottom: '2rem' }}>
+        {sessions.map(s => {
+          const isOpen = expanded === s.id
+          const sets = sessionSets[s.id] || []
+          const exGroups = sets.reduce((acc, ws) => {
+            if (!acc[ws.exercise_name]) acc[ws.exercise_name] = []
+            acc[ws.exercise_name].push(ws)
+            return acc
+          }, {})
+
+          return (
+            <div key={s.id} className="card" style={{ marginBottom: 0, padding: 0, overflow: 'hidden' }}>
+              <div
+                onClick={() => toggleSession(s.id)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1.25rem', cursor: 'pointer' }}
+              >
+                <div>
+                  <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem' }}>{s.date}</span>
+                  {s.routine_name && <span style={{ color: 'var(--text-3)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{s.routine_name}{s.day_of_week != null ? ` · ${DAYS[s.day_of_week]}` : ''}</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>{s.set_count} series</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{isOpen ? '▲' : '▼'}</span>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div style={{ borderTop: '1px solid var(--border)', padding: '0.75rem 1.25rem 1rem' }}>
+                  {Object.entries(exGroups).map(([name, exSets]) => (
+                    <div key={name} style={{ marginBottom: '0.75rem' }}>
+                      <p style={{ color: 'var(--text-2)', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.3rem' }}>{name}</p>
+                      {exSets.map(ws => (
+                        <div key={ws.id} style={{ display: 'flex', gap: '1rem', color: 'var(--text-3)', fontSize: '0.78rem', paddingLeft: '0.5rem' }}>
+                          <span>Serie {ws.set_number}</span>
+                          <span>{ws.weight} kg</span>
+                          <span>{ws.reps} reps</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {exercises.length > 0 && (
+        <div style={{ maxWidth: 520 }}>
+          <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem' }}>Progresión por ejercicio</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+            {exercises.map(ex => (
+              <button
+                key={ex.id}
+                onClick={() => handleSelectExercise(ex)}
+                style={{ padding: '0.25rem 0.65rem', fontSize: '0.75rem', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: selectedExercise?.id === ex.id ? 'var(--accent)' : 'var(--surface-2)', color: selectedExercise?.id === ex.id ? '#fff' : 'var(--text-2)' }}
+              >
+                {ex.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedExercise && progression.length === 0 && (
+            <p className="hint">Sin datos para {selectedExercise.name} todavía.</p>
+          )}
+          {selectedExercise && progression.length > 0 && (
+            <div className="card" style={{ padding: '1rem' }}>
+              <p style={{ color: 'var(--text-2)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{selectedExercise.name} — peso máximo (kg)</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={progression}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickFormatter={d => d.slice(5)} />
+                  <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={35} />
+                  <Tooltip contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 12 }} formatter={(v) => [`${v} kg`, 'Máx']} />
+                  <Line type="monotone" dataKey="max_weight" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3, fill: 'var(--accent)' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -431,7 +629,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
 
 // ── Train View ────────────────────────────────────────────────────────────────
 
-function TrainView({ routine, day, dayExercises, onBack }) {
+function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [sets, setSets] = useState(() => {
     const init = {}
@@ -467,6 +665,7 @@ function TrainView({ routine, day, dayExercises, onBack }) {
         }
       }
       onBack()
+      onSynced?.()
     } finally {
       setSaving(false)
     }
