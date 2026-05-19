@@ -5,6 +5,7 @@ import Gym from './Gym.jsx'
 import Calendar from './Calendar.jsx'
 import Tasks from './Tasks.jsx'
 import Quotes from './Quotes.jsx'
+import Journal from './Journal.jsx'
 
 const API = 'http://localhost:8000'
 
@@ -15,6 +16,7 @@ const NAV = [
   { id: 'calendar',     label: 'Calendario' },
   { id: 'todo',         label: 'To-Do' },
   { id: 'quotes',       label: 'Quotes' },
+  { id: 'journal',      label: 'Diario' },
 ]
 
 function Sidebar({ active, onNav, online }) {
@@ -70,6 +72,7 @@ function App() {
         {page === 'calendar'    && <Calendar />}
         {page === 'todo'        && <Tasks />}
         {page === 'quotes'      && <Quotes />}
+        {page === 'journal'     && <Journal />}
       </main>
     </div>
   )
