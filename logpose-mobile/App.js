@@ -10,6 +10,7 @@ import GymScreen from './src/screens/GymScreen'
 import CalendarScreen from './src/screens/CalendarScreen'
 import TasksScreen from './src/screens/TasksScreen'
 import QuotesScreen from './src/screens/QuotesScreen'
+import JournalScreen from './src/screens/JournalScreen'
 import { isServerReachable } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
@@ -112,6 +113,16 @@ export default function App() {
               title: 'Frases',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Journal"
+            component={JournalScreen}
+            options={{
+              title: 'Diario',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="book-outline" color={color} size={size} />
               ),
             }}
           />

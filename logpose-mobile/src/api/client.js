@@ -307,3 +307,32 @@ export async function putCalendarEventToServer(serverId, event) {
 export async function deleteCalendarEventFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/calendar/${serverId}`, { method: 'DELETE' })
 }
+
+// ── Journal ───────────────────────────────────────────────────────────────────
+
+export async function fetchAllJournalEntriesFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/journal/`)
+  return res.json()
+}
+
+export async function postJournalEntryToServer(entry) {
+  const res = await fetchWithTimeout(`${SERVER}/journal/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date: entry.date, content: entry.content }),
+  })
+  return res.json()
+}
+
+export async function putJournalEntryToServer(serverId, entry) {
+  const res = await fetchWithTimeout(`${SERVER}/journal/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: entry.content }),
+  })
+  return res.json()
+}
+
+export async function deleteJournalEntryFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/journal/${serverId}`, { method: 'DELETE' })
+}

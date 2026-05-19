@@ -132,6 +132,14 @@ export async function openDB() {
       synced         INTEGER NOT NULL DEFAULT 0,
       pending_delete INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      server_id      INTEGER,
+      date           TEXT    NOT NULL UNIQUE,
+      content        TEXT    NOT NULL DEFAULT '',
+      synced         INTEGER NOT NULL DEFAULT 0,
+      pending_delete INTEGER NOT NULL DEFAULT 0
+    );
   `)
 
   return db
@@ -1023,6 +1031,100 @@ export async function pruneStaleCalendarEvents(serverIds) {
   const rows = await db.getAllAsync('SELECT id, server_id FROM calendar_events WHERE server_id IS NOT NULL AND pending_delete = 0')
   for (const row of rows) {
     if (!serverIds.has(row.server_id)) await db.runAsync('DELETE FROM calendar_events WHERE id = ?', [row.id])
+  }
+}
+
+// ── Journal ───────────────────────────────────────────────────────────────────
+
+export async function getTodayJournalEntry() {
+  const db = await openDB()
+  const today = new Date().toISOString().slice(0, 10)
+  return db.getFirstAsync('SELECT * FROM journal_entries WHERE date = ? AND pending_delete = 0', [today])
+}
+
+export async function getAllJournalEntries() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM journal_entries WHERE pending_delete = 0 ORDER BY date DESC')
+}
+
+export async function saveJournalEntry(content) {
+  const db = await openDB()
+  const today = new Date().toISOString().slice(0, 10)
+  const existing = await getTodayJournalEntry()
+  if (existing) {
+    await db.runAsync('UPDATE journal_entries SET content = ?, synced = 0 WHERE id = ?', [content, existing.id])
+    return existing.id
+  } else {
+    const result = await db.runAsync(
+      'INSERT INTO journal_entries (date, content, synced) VALUES (?, ?, 0)',
+      [today, content]
+    )
+    return result.lastInsertId
+  }
+}
+
+export async function getJournalStreak() {
+  const db = await openDB()
+  const rows = await db.getAllAsync(
+    "SELECT date FROM journal_entries WHERE content != '' AND pending_delete = 0 ORDER BY date DESC"
+  )
+  if (rows.length === 0) return 0
+  const dates = new Set(rows.map(r => r.date))
+  let streak = 0
+  const cursor = new Date()
+  cursor.setHours(12, 0, 0, 0)
+  const todayStr = cursor.toISOString().slice(0, 10)
+  if (!dates.has(todayStr)) cursor.setDate(cursor.getDate() - 1)
+  while (true) {
+    const d = cursor.toISOString().slice(0, 10)
+    if (!dates.has(d)) break
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+}
+
+export async function getUnsyncedJournalEntries() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM journal_entries WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteJournalEntries() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM journal_entries WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markJournalEntrySynced(id, serverId) {
+  const db = await openDB()
+  await db.runAsync('UPDATE journal_entries SET synced = 1, server_id = ? WHERE id = ?', [serverId, id])
+}
+
+export async function purgeLocalJournalEntry(id) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM journal_entries WHERE id = ?', [id])
+}
+
+export async function upsertJournalEntryFromServer(entry) {
+  const db = await openDB()
+  const existing = await db.getFirstAsync('SELECT id FROM journal_entries WHERE server_id = ?', [entry.id])
+  if (existing) {
+    await db.runAsync(
+      'UPDATE journal_entries SET date = ?, content = ?, synced = 1 WHERE server_id = ?',
+      [entry.date, entry.content, entry.id]
+    )
+  } else {
+    await db.runAsync(
+      'INSERT OR IGNORE INTO journal_entries (server_id, date, content, synced) VALUES (?, ?, ?, 1)',
+      [entry.id, entry.date, entry.content]
+    )
+  }
+}
+
+export async function pruneStaleJournalEntries(serverIds) {
+  const db = await openDB()
+  const rows = await db.getAllAsync('SELECT id, server_id FROM journal_entries WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!serverIds.has(row.server_id)) await db.runAsync('DELETE FROM journal_entries WHERE id = ?', [row.id])
   }
 }
 
