@@ -84,7 +84,7 @@ body {
 .brand-dot--offline { background: var(--text-4); }
 
 .brand-status-text {
-  font-size: 0.67rem;
+  font-size: var(--font-xs);
   color: var(--text-3);
 }
 
@@ -149,7 +149,7 @@ body {
 }
 
 .page-title {
-  font-size: 1.45rem;
+  font-size: var(--font-2xl);
   font-weight: 700;
   color: var(--text);
   margin-bottom: 0.25rem;
@@ -181,14 +181,14 @@ body {
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: var(--font-3xl);
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.03em;
 }
 
 .stat-label {
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -211,7 +211,7 @@ body {
 }
 
 .card-title {
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   font-weight: 600;
   color: var(--text-3);
   text-transform: uppercase;
@@ -235,7 +235,7 @@ body {
 }
 
 .field label {
-  font-size: 0.7rem;
+  font-size: var(--font-xs);
   color: var(--text-3);
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -247,7 +247,7 @@ body {
   border: 1px solid var(--border-2);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: var(--font-base);
   outline: none;
   min-width: 110px;
   transition: border-color 0.15s;
@@ -297,12 +297,13 @@ body {
   cursor: not-allowed;
 }
 
-.btn-icon {
+.btn-icon,
+.btn-delete {
   background: none;
   border: none;
   color: var(--text-4);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--font-lg);
   padding: 0.2rem 0.35rem;
   border-radius: var(--radius-sm);
   transition: color 0.15s, background 0.15s;
@@ -311,24 +312,12 @@ body {
 
 .btn-icon:hover {
   color: var(--accent);
-  background: rgba(124, 58, 237, 0.08);
-}
-
-.btn-delete {
-  background: none;
-  border: none;
-  color: var(--text-4);
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0.2rem 0.35rem;
-  border-radius: var(--radius-sm);
-  transition: color 0.15s, background 0.15s;
-  line-height: 1;
+  background: var(--accent-subtle);
 }
 
 .btn-delete:hover {
   color: var(--danger);
-  background: rgba(239, 68, 68, 0.08);
+  background: var(--danger-subtle);
 }
 
 .btn-cancel {
@@ -351,9 +340,9 @@ body {
 .btn-danger {
   height: 34px;
   padding: 0 1rem;
-  background: rgba(127, 29, 29, 0.6);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.82rem;
@@ -362,14 +351,14 @@ body {
 }
 
 .btn-danger:hover {
-  background: rgba(127, 29, 29, 0.9);
+  background: var(--danger-bg-h);
 }
 
 .modal-close {
   background: none;
   border: none;
   color: var(--text-3);
-  font-size: 1.25rem;
+  font-size: var(--font-xl);
   line-height: 1;
   cursor: pointer;
   padding: 0.1rem 0.3rem;
@@ -389,7 +378,7 @@ body {
 }
 
 .table th {
-  font-size: 0.67rem;
+  font-size: var(--font-xs);
   color: var(--text-3);
   font-weight: 600;
   text-transform: uppercase;
@@ -401,7 +390,7 @@ body {
 
 .table td {
   padding: 0.65rem 0.75rem;
-  font-size: 0.85rem;
+  font-size: var(--font-base);
   color: var(--text-2);
   border-bottom: 1px solid var(--border);
 }
@@ -440,7 +429,7 @@ body {
   border: 1px solid var(--border-2);
   border-radius: var(--radius-sm);
   color: var(--text-3);
-  font-size: 0.78rem;
+  font-size: var(--font-sm);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
   white-space: nowrap;
@@ -486,7 +475,7 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -512,7 +501,7 @@ body {
 }
 
 .modal-header h3 {
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--text);
 }
@@ -548,7 +537,7 @@ body {
 }
 
 .todo-list-name {
-  font-size: 0.85rem;
+  font-size: var(--font-base);
   color: var(--text-2);
 }
 
@@ -576,6 +565,7 @@ body {
 
 .todo-new-list input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .todo-new-list-actions {
@@ -607,6 +597,7 @@ body {
 
 .todo-add-item input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .todo-add-item input::placeholder {
@@ -657,12 +648,12 @@ body {
 
 .todo-item-title {
   flex: 1;
-  font-size: 0.85rem;
+  font-size: var(--font-base);
   color: var(--text-2);
 }
 
 .todo-done-label {
-  font-size: 0.67rem;
+  font-size: var(--font-xs);
   color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -696,7 +687,7 @@ body {
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 1.5rem;
+  font-size: var(--font-3xl);
   line-height: 1;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -720,7 +711,7 @@ body {
   background: none;
   border: 1px solid var(--border-2);
   color: var(--text-2);
-  font-size: 0.78rem;
+  font-size: var(--font-sm);
   padding: 0.25rem 0.65rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -743,7 +734,7 @@ body {
   background: none;
   border: none;
   color: var(--text-3);
-  font-size: 0.78rem;
+  font-size: var(--font-sm);
   padding: 0.35rem 0.9rem;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -781,7 +772,7 @@ body {
 .cal-day-name {
   text-align: center;
   color: var(--text-3);
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   padding: 0.5rem 0;
@@ -907,7 +898,7 @@ body {
 }
 
 .cal-week-col-header--today {
-  background: rgba(124, 58, 237, 0.04);
+  background: var(--accent-subtle);
 }
 
 .cal-week-body {
@@ -932,11 +923,11 @@ body {
 }
 
 .cal-week-day-col--today {
-  background: rgba(124, 58, 237, 0.03);
+  background: var(--accent-subtle);
 }
 
 .cal-week-day-name {
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--text-3);
@@ -1029,7 +1020,7 @@ body {
 }
 
 .cal-event-pill {
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   color: #fff;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
@@ -1099,7 +1090,7 @@ body {
 }
 
 .settings-title {
-  font-size: 1.25rem;
+  font-size: var(--font-xl);
   font-weight: 700;
   color: var(--text);
   margin-bottom: 1.5rem;
@@ -1119,7 +1110,7 @@ body {
 }
 
 .settings-row-label {
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   font-weight: 500;
   color: var(--text);
 }
