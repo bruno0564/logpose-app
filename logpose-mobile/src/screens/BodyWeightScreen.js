@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, ActivityIndicator, ScrollView, Dimensions, Modal,
 } from 'react-native'
+import GradientButton from '../components/GradientButton'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { LineChart } from 'react-native-chart-kit'
 import {
@@ -194,9 +195,7 @@ export default function BodyWeightScreen() {
           value={note}
           onChangeText={setNote}
         />
-        <TouchableOpacity style={s.btn} onPress={handleAdd}>
-          <Text style={s.btnText}>{tr('bodyWeight.add')}</Text>
-        </TouchableOpacity>
+        <GradientButton onPress={handleAdd} label={tr('bodyWeight.add')} style={{ marginTop: 4 }} />
       </View>
 
       <View style={s.card}>
@@ -362,7 +361,7 @@ const makeStyles = (t) => StyleSheet.create({
   stat:         { flex: 1, backgroundColor: t.surface2, borderRadius: 10, padding: 12, alignItems: 'center' },
   statVal:      { color: t.text, fontSize: 18, fontWeight: '700' },
   statLbl:      { color: t.text2, fontSize: 11, marginTop: 2 },
-  card:         { backgroundColor: t.surface2, borderRadius: 10, padding: 16, marginBottom: 16 },
+  card:         { backgroundColor: t.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: t.border, ...t.shadow },
   cardTitle:    { color: t.text, fontSize: 15, fontWeight: '600', marginBottom: 12 },
   input:        { backgroundColor: t.border2, color: t.text, borderRadius: 8, padding: 10, marginBottom: 8 },
   datePicker:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: t.border2, borderRadius: 8, padding: 10, marginBottom: 8 },

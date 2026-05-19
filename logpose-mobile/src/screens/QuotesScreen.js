@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Modal, StyleSheet,
 } from 'react-native'
+import GradientButton from '../components/GradientButton'
 import {
   getQuotes, insertLocalQuote, updateLocalQuote, deleteLocalQuote,
   getUnsyncedQuotes, getPendingDeleteQuotes,
@@ -155,9 +156,7 @@ export default function QuotesScreen() {
               <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={() => setEditingQuote(null)}>
                 <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.btn, s.btnSave]} onPress={handleSave}>
-                <Text style={s.btnSaveText}>{tr('common.save')}</Text>
-              </TouchableOpacity>
+              <GradientButton onPress={handleSave} label={tr('common.save')} />
             </View>
           </View>
         </View>

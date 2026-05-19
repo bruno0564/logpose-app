@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native'
+import GradientButton from '../components/GradientButton'
 import {
   getTodayJournalEntry, getAllJournalEntries, saveJournalEntry, getJournalStreak,
   getUnsyncedJournalEntries, getPendingDeleteJournalEntries,
@@ -168,13 +169,12 @@ export default function JournalScreen() {
           <Text style={s.wordCount}>{tp('journal.wordCount', words)}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {saved && <Text style={{ color: t.success, fontSize: 12 }}>{tr('journal.saved')}</Text>}
-            <TouchableOpacity
-              style={[s.btnPrimary, (!draft.trim() || saving) && { opacity: 0.5 }]}
+            <GradientButton
               onPress={handleSave}
-              disabled={saving || !draft.trim()}
-            >
-              <Text style={s.btnPrimaryText}>{saving ? tr('journal.saving') : tr('journal.save')}</Text>
-            </TouchableOpacity>
+              label={saving ? tr('journal.saving') : tr('journal.save')}
+              disabled={!draft.trim()}
+              loading={saving}
+            />
           </View>
         </View>
       </ScrollView>
@@ -185,11 +185,11 @@ export default function JournalScreen() {
 const makeStyles = (t) => StyleSheet.create({
   screen:      { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
   header:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
-  title:       { color: t.text, fontSize: 22, fontWeight: '700' },
+  title:       { color: t.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
   dateLabel:   { color: t.text3, fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
   backBtn:     { color: t.accent, fontSize: 14, marginBottom: 12 },
   hint:        { color: t.text3, fontSize: 13 },
-  card:        { backgroundColor: t.surface, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: t.border },
+  card:        { backgroundColor: t.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: t.border, ...t.shadow },
   entryText:   { color: t.text2, fontSize: 14, lineHeight: 22 },
   emptyText:   { color: t.text4, fontStyle: 'italic' },
   wordCount:   { color: t.text4, fontSize: 11, marginTop: 8 },
