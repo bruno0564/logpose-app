@@ -6,10 +6,10 @@ import {
 } from 'react-native'
 import { LineChart } from 'react-native-chart-kit'
 import {
-  getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
+  getRoutines, insertLocalRoutine, updateLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
-  getExercises, insertLocalExercise,
+  getExercises, insertLocalExercise, updateLocalExercise,
   getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
@@ -22,8 +22,8 @@ import {
 } from '../db/database'
 import {
   isServerReachable,
-  fetchAllRoutinesFromServer, postRoutineToServer, deleteRoutineFromServer,
-  fetchAllExercisesFromServer, postExerciseToServer, deleteExerciseFromServer,
+  fetchAllRoutinesFromServer, postRoutineToServer, putRoutineToServer, deleteRoutineFromServer,
+  fetchAllExercisesFromServer, postExerciseToServer, putExerciseToServer, deleteExerciseFromServer,
   fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
   fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
   postSessionToServer, postSetToServer,
@@ -47,6 +47,8 @@ export default function GymScreen() {
   const [adding, setAdding] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState(null)
   const [newName, setNewName] = useState('')
+  const [editingRoutineId, setEditingRoutineId] = useState(null)
+  const [editRoutineName, setEditRoutineName] = useState('')
 
   const loadRoutines = useCallback(async () => {
     setRoutines(await getRoutines())
@@ -77,8 +79,13 @@ export default function GymScreen() {
         await purgeLocalRoutine(r.id)
       }
       for (const r of await getUnsyncedRoutines()) {
-        const created = await postRoutineToServer(r)
-        await markRoutineSynced(r.id, created.id)
+        if (r.server_id) {
+          await putRoutineToServer(r.server_id, r)
+          await markRoutineSynced(r.id, r.server_id)
+        } else {
+          const created = await postRoutineToServer(r)
+          await markRoutineSynced(r.id, created.id)
+        }
       }
       const serverRoutines = await fetchAllRoutinesFromServer()
       for (const r of serverRoutines) await upsertRoutineFromServer(r)
@@ -90,8 +97,13 @@ export default function GymScreen() {
         await purgeLocalExercise(ex.id)
       }
       for (const ex of await getUnsyncedExercises()) {
-        const created = await postExerciseToServer(ex)
-        await markExerciseSynced(ex.id, created.id)
+        if (ex.server_id) {
+          await putExerciseToServer(ex.server_id, ex)
+          await markExerciseSynced(ex.id, ex.server_id)
+        } else {
+          const created = await postExerciseToServer(ex)
+          await markExerciseSynced(ex.id, created.id)
+        }
       }
       const serverExercises = await fetchAllExercisesFromServer()
       for (const ex of serverExercises) await upsertExerciseFromServer(ex)
@@ -267,23 +279,58 @@ export default function GymScreen() {
           ) : (
             routines.map(r => {
               const isActive = r.id === activeRoutineId
+              const isEditing = editingRoutineId === r.id
               return (
-                <TouchableOpacity key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]} onPress={() => openRoutine(r)}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.rowText}>{r.name}</Text>
-                    {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    {!isActive && (
-                      <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
-                        <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
+                <View key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]}>
+                  {isEditing ? (
+                    <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        autoFocus
+                        style={[s.input, { flex: 1 }]}
+                        value={editRoutineName}
+                        onChangeText={setEditRoutineName}
+                      />
+                      <TouchableOpacity
+                        style={s.btnPrimary}
+                        onPress={async () => {
+                          if (!editRoutineName.trim()) return
+                          await updateLocalRoutine(r.id, editRoutineName.trim())
+                          setEditingRoutineId(null)
+                          await loadRoutines()
+                          syncGym()
+                        }}
+                      >
+                        <Text style={s.btnPrimaryText}>Guardar</Text>
                       </TouchableOpacity>
-                    )}
-                    <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
-                      <Text style={s.deleteBtn}>×</Text>
+                      <TouchableOpacity style={s.btnCancel} onPress={() => setEditingRoutineId(null)}>
+                        <Text style={s.btnCancelText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                      onPress={() => openRoutine(r)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.rowText}>{r.name}</Text>
+                        {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        {!isActive && (
+                          <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
+                            <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={() => { setEditingRoutineId(r.id); setEditRoutineName(r.name) }} hitSlop={10}>
+                          <Text style={{ color: '#555', fontSize: 16, lineHeight: 18 }}>✎</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
+                          <Text style={s.deleteBtn}>×</Text>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
+                  )}
+                </View>
               )
             })
           )}
@@ -509,6 +556,10 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
   const [newMuscle, setNewMuscle] = useState('')
   const [newSubgroup, setNewSubgroup] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [editingExId, setEditingExId] = useState(null)
+  const [editExName, setEditExName] = useState('')
+  const [editExMuscle, setEditExMuscle] = useState('')
+  const [editExSubgroup, setEditExSubgroup] = useState('')
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
@@ -561,18 +612,51 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
             {Object.keys(grouped).sort().map(group => (
               <View key={group} style={{ marginBottom: 14 }}>
                 <Text style={s.groupLabel}>{group}</Text>
-                {grouped[group].map(ex => (
-                  <View key={ex.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 5 }}>
-                    <Text style={s.exerciseName}>{ex.name}</Text>
-                    {alreadyAdded.has(ex.id) ? (
-                      <Text style={s.addedMark}>✓</Text>
-                    ) : (
-                      <TouchableOpacity style={s.btnPrimarySmall} onPress={() => handleAdd(ex)}>
-                        <Text style={s.btnPrimaryText}>Añadir</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
+                {grouped[group].map(ex => {
+                  if (editingExId === ex.id) {
+                    return (
+                      <View key={ex.id} style={{ paddingVertical: 5, flexDirection: 'row', gap: 6 }}>
+                        <TextInput
+                          autoFocus
+                          style={[s.input, { flex: 1 }]}
+                          value={editExName}
+                          onChangeText={setEditExName}
+                        />
+                        <TouchableOpacity
+                          style={s.btnPrimarySmall}
+                          onPress={async () => {
+                            if (!editExName.trim()) return
+                            await updateLocalExercise(ex.id, editExName.trim(), editExMuscle || null, editExSubgroup || null)
+                            setEditingExId(null)
+                            onAdded()
+                          }}
+                        >
+                          <Text style={s.btnPrimaryText}>✓</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={s.btnCancel} onPress={() => setEditingExId(null)}>
+                          <Text style={s.btnCancelText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  }
+                  return (
+                    <View key={ex.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 5 }}>
+                      <Text style={s.exerciseName}>{ex.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <TouchableOpacity onPress={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }} hitSlop={8}>
+                          <Text style={{ color: '#555', fontSize: 15, lineHeight: 17 }}>✎</Text>
+                        </TouchableOpacity>
+                        {alreadyAdded.has(ex.id) ? (
+                          <Text style={s.addedMark}>✓</Text>
+                        ) : (
+                          <TouchableOpacity style={s.btnPrimarySmall} onPress={() => handleAdd(ex)}>
+                            <Text style={s.btnPrimaryText}>Añadir</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  )
+                })}
               </View>
             ))}
 

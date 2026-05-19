@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
-  getRoutines, insertLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
+  getRoutines, insertLocalRoutine, updateLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
-  getExercises, insertLocalExercise,
+  getExercises, insertLocalExercise, updateLocalExercise,
   getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
   insertRoutineExercise, deleteRoutineExercise,
@@ -17,8 +17,8 @@ import {
 } from './db/database'
 import {
   isServerReachable,
-  fetchAllRoutinesFromServer, postRoutineToServer, deleteRoutineFromServer,
-  fetchAllExercisesFromServer, postExerciseToServer, deleteExerciseFromServer,
+  fetchAllRoutinesFromServer, postRoutineToServer, putRoutineToServer, deleteRoutineFromServer,
+  fetchAllExercisesFromServer, postExerciseToServer, putExerciseToServer, deleteExerciseFromServer,
   fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
   fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
   postSessionToServer, postSetToServer,
@@ -42,6 +42,8 @@ export default function Gym() {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [confirmTarget, setConfirmTarget] = useState(null)
+  const [editingRoutineId, setEditingRoutineId] = useState(null)
+  const [editRoutineName, setEditRoutineName] = useState('')
 
   const loadRoutines = useCallback(async () => {
     setRoutines(await getRoutines())
@@ -72,8 +74,13 @@ export default function Gym() {
         await purgeLocalRoutine(r.id)
       }
       for (const r of await getUnsyncedRoutines()) {
-        const created = await postRoutineToServer(r)
-        await markRoutineSynced(r.id, created.id)
+        if (r.server_id) {
+          await putRoutineToServer(r.server_id, r)
+          await markRoutineSynced(r.id, r.server_id)
+        } else {
+          const created = await postRoutineToServer(r)
+          await markRoutineSynced(r.id, created.id)
+        }
       }
       const serverRoutines = await fetchAllRoutinesFromServer()
       for (const r of serverRoutines) await upsertRoutineFromServer(r)
@@ -85,8 +92,13 @@ export default function Gym() {
         await purgeLocalExercise(ex.id)
       }
       for (const ex of await getUnsyncedExercises()) {
-        const created = await postExerciseToServer(ex)
-        await markExerciseSynced(ex.id, created.id)
+        if (ex.server_id) {
+          await putExerciseToServer(ex.server_id, ex)
+          await markExerciseSynced(ex.id, ex.server_id)
+        } else {
+          const created = await postExerciseToServer(ex)
+          await markExerciseSynced(ex.id, created.id)
+        }
       }
       const serverExercises = await fetchAllExercisesFromServer()
       for (const ex of serverExercises) await upsertExerciseFromServer(ex)
@@ -265,31 +277,64 @@ export default function Gym() {
                 className="card"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginBottom: 0, padding: '1rem 1.25rem', cursor: 'pointer',
+                  marginBottom: 0, padding: '1rem 1.25rem',
+                  cursor: editingRoutineId === r.id ? 'default' : 'pointer',
                   borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
                 }}
-                onClick={() => openRoutine(r)}
+                onClick={() => editingRoutineId !== r.id && openRoutine(r)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  {isActive && (
-                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Activa
-                    </span>
-                  )}
-                  <span style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 500 }}>{r.name}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                  {!isActive && (
-                    <button
-                      className="btn-cancel"
-                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}
-                      onClick={e => handleActivate(e, r)}
-                    >
-                      Activar
-                    </button>
-                  )}
-                  <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}>×</button>
-                </div>
+                {editingRoutineId === r.id ? (
+                  <form
+                    onSubmit={async e => {
+                      e.preventDefault()
+                      if (!editRoutineName.trim()) return
+                      await updateLocalRoutine(r.id, editRoutineName.trim())
+                      setEditingRoutineId(null)
+                      await loadRoutines()
+                      syncGym()
+                    }}
+                    style={{ display: 'flex', gap: '0.5rem', width: '100%' }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <input
+                      autoFocus
+                      value={editRoutineName}
+                      onChange={e => setEditRoutineName(e.target.value)}
+                      style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.65rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none' }}
+                    />
+                    <button type="submit" className="btn-primary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}>Guardar</button>
+                    <button type="button" className="btn-cancel" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }} onClick={e => { e.stopPropagation(); setEditingRoutineId(null) }}>Cancelar</button>
+                  </form>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      {isActive && (
+                        <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Activa
+                        </span>
+                      )}
+                      <span style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 500 }}>{r.name}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      {!isActive && (
+                        <button
+                          className="btn-cancel"
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}
+                          onClick={e => handleActivate(e, r)}
+                        >
+                          Activar
+                        </button>
+                      )}
+                      <button
+                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 0.25rem', lineHeight: 1 }}
+                        onClick={e => { e.stopPropagation(); setEditingRoutineId(r.id); setEditRoutineName(r.name) }}
+                      >
+                        ✎
+                      </button>
+                      <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}>×</button>
+                    </div>
+                  </>
+                )}
               </div>
             )
           })}
@@ -521,6 +566,10 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
   const [newMuscle, setNewMuscle] = useState('')
   const [newSubgroup, setNewSubgroup] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [editingExId, setEditingExId] = useState(null)
+  const [editExName, setEditExName] = useState('')
+  const [editExMuscle, setEditExMuscle] = useState('')
+  const [editExSubgroup, setEditExSubgroup] = useState('')
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
@@ -573,22 +622,57 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
           {Object.keys(grouped).sort().map(group => (
             <div key={group} style={{ marginBottom: '1rem' }}>
               <p style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.35rem' }}>{group}</p>
-              {grouped[group].map(ex => (
-                <div key={ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.3rem 0' }}>
-                  <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{ex.name}</span>
-                  {alreadyAdded.has(ex.id) ? (
-                    <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>✓</span>
-                  ) : (
-                    <button
-                      className="btn-primary"
-                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                      onClick={() => handleAdd(ex)}
-                    >
-                      Añadir
-                    </button>
-                  )}
-                </div>
-              ))}
+              {grouped[group].map(ex => {
+                if (editingExId === ex.id) {
+                  return (
+                    <div key={ex.id} style={{ padding: '0.3rem 0' }}>
+                      <form
+                        onSubmit={async e => {
+                          e.preventDefault()
+                          if (!editExName.trim()) return
+                          await updateLocalExercise(ex.id, editExName.trim(), editExMuscle || null, editExSubgroup || null)
+                          setEditingExId(null)
+                          onAdded()
+                        }}
+                        style={{ display: 'flex', gap: '0.3rem' }}
+                      >
+                        <input
+                          autoFocus
+                          value={editExName}
+                          onChange={e => setEditExName(e.target.value)}
+                          style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.82rem', outline: 'none' }}
+                        />
+                        <button type="submit" className="btn-primary" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>✓</button>
+                        <button type="button" className="btn-cancel" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }} onClick={() => setEditingExId(null)}>✕</button>
+                      </form>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.3rem 0' }}>
+                    <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{ex.name}</span>
+                    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                      <button
+                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '0.8rem', padding: '0 0.15rem', lineHeight: 1 }}
+                        onClick={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }}
+                      >
+                        ✎
+                      </button>
+                      {alreadyAdded.has(ex.id) ? (
+                        <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>✓</span>
+                      ) : (
+                        <button
+                          className="btn-primary"
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
+                          onClick={() => handleAdd(ex)}
+                        >
+                          Añadir
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ))}
 
