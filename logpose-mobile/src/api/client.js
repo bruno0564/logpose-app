@@ -124,7 +124,33 @@ export async function postExerciseToServer(exercise) {
   const res = await fetchWithTimeout(`${SERVER}/exercises/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: exercise.name, muscle_group: exercise.muscle_group || null }),
+    body: JSON.stringify({
+      name: exercise.name,
+      muscle_group: exercise.muscle_group || null,
+      muscle_subgroup: exercise.muscle_subgroup || null,
+    }),
+  })
+  return res.json()
+}
+
+export async function putRoutineToServer(serverId, routine) {
+  const res = await fetchWithTimeout(`${SERVER}/routines/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: routine.name }),
+  })
+  return res.json()
+}
+
+export async function putExerciseToServer(serverId, exercise) {
+  const res = await fetchWithTimeout(`${SERVER}/exercises/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: exercise.name,
+      muscle_group: exercise.muscle_group || null,
+      muscle_subgroup: exercise.muscle_subgroup || null,
+    }),
   })
   return res.json()
 }

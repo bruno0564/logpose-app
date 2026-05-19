@@ -315,6 +315,11 @@ export async function insertLocalRoutine(name) {
   return result.lastInsertId
 }
 
+export async function updateLocalRoutine(id, name) {
+  const db = await openDB()
+  await db.execute('UPDATE routines SET name = ?, synced = 0 WHERE id = ?', [name.trim(), id])
+}
+
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
   const rows = await db.select('SELECT server_id FROM routines WHERE id = ?', [id])
@@ -603,6 +608,14 @@ export async function insertLocalExercise(name, muscleGroup, muscleSubgroup) {
     [name.trim(), muscleGroup || null, muscleSubgroup || null]
   )
   return result.lastInsertId
+}
+
+export async function updateLocalExercise(id, name, muscleGroup, muscleSubgroup) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 0 WHERE id = ?',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null, id]
+  )
 }
 
 export async function deleteLocalExercise(id) {

@@ -313,6 +313,11 @@ export async function insertLocalRoutine(name) {
   return result.lastInsertRowId
 }
 
+export async function updateLocalRoutine(id, name) {
+  const db = await openDB()
+  await db.runAsync('UPDATE routines SET name = ?, synced = 0 WHERE id = ?', [name.trim(), id])
+}
+
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
   const row = await db.getFirstAsync('SELECT server_id FROM routines WHERE id = ?', [id])
@@ -391,6 +396,14 @@ export async function insertLocalExercise(name, muscleGroup, muscleSubgroup) {
     [name.trim(), muscleGroup || null, muscleSubgroup || null]
   )
   return result.lastInsertRowId
+}
+
+export async function updateLocalExercise(id, name, muscleGroup, muscleSubgroup) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 0 WHERE id = ?',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null, id]
+  )
 }
 
 export async function deleteLocalExercise(id) {
@@ -757,7 +770,7 @@ export async function getActiveTrainingDays() {
     SELECT DISTINCT re.day_of_week
     FROM routine_exercises re
     JOIN routines r ON r.id = re.local_routine_id
-    WHERE r.is_active = 1 AND re.pending_delete = 0
+    WHERE r.is_active = 1 AND r.pending_delete = 0 AND re.pending_delete = 0
   `)
 }
 
