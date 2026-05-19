@@ -14,6 +14,7 @@ import {
   fetchAllJournalEntriesFromServer, postJournalEntryToServer, putJournalEntryToServer, deleteJournalEntryFromServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
+import { useLang } from '../LangContext'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -23,13 +24,9 @@ function wordCount(text) {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length
 }
 
-function formatDate(dateStr) {
-  const [y, m, d] = dateStr.split('-')
-  return new Date(+y, +m - 1, +d).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-}
-
 export default function JournalScreen() {
   const { theme: t } = useTheme()
+  const { t: tr, tp, locale } = useLang()
   const s = makeStyles(t)
   const [view, setView] = useState('today')
   const [entry, setEntry] = useState(null)
@@ -38,6 +35,12 @@ export default function JournalScreen() {
   const [saved, setSaved] = useState(false)
   const [streak, setStreak] = useState(0)
   const [history, setHistory] = useState([])
+
+  function formatDate(dateStr) {
+    const [y, m, d] = dateStr.split('-')
+    const str = new Date(+y, +m - 1, +d).toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    return str.charAt(0).toUpperCase() + str.slice(1)
+  }
 
   const loadToday = useCallback(async () => {
     const e = await getTodayJournalEntry()
@@ -105,21 +108,21 @@ export default function JournalScreen() {
     return (
       <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
         <TouchableOpacity onPress={() => setView('today')} style={{ marginBottom: 12 }}>
-          <Text style={s.backBtn}>← Volver</Text>
+          <Text style={s.backBtn}>{tr('journal.back')}</Text>
         </TouchableOpacity>
-        <Text style={s.title}>Historial</Text>
+        <Text style={s.title}>{tr('journal.historyTitle')}</Text>
         <View style={{ height: 16 }} />
 
         {history.length === 0 ? (
-          <Text style={s.hint}>Sin entradas anteriores todavía.</Text>
+          <Text style={s.hint}>{tr('journal.noHistory')}</Text>
         ) : (
           history.map(e => (
             <View key={e.id} style={[s.card, { marginBottom: 12 }]}>
               <Text style={s.dateLabel}>{formatDate(e.date)}</Text>
               <Text style={s.entryText}>
-                {e.content || <Text style={s.emptyText}>Sin contenido</Text>}
+                {e.content || <Text style={s.emptyText}>{tr('journal.noContent')}</Text>}
               </Text>
-              <Text style={s.wordCount}>{wordCount(e.content)} palabras</Text>
+              <Text style={s.wordCount}>{tp('journal.wordCount', wordCount(e.content))}</Text>
             </View>
           ))
         )}
@@ -134,17 +137,17 @@ export default function JournalScreen() {
       <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <View style={s.header}>
           <View>
-            <Text style={s.title}>Diario</Text>
+            <Text style={s.title}>{tr('journal.title')}</Text>
             <Text style={s.dateLabel}>{formatDate(TODAY)}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {streak > 0 && (
               <View style={s.streakBadge}>
-                <Text style={s.streakText}>🔥 {streak} {streak === 1 ? 'día' : 'días'}</Text>
+                <Text style={s.streakText}>{tp('journal.streak', streak)}</Text>
               </View>
             )}
             <TouchableOpacity style={s.btnCancel} onPress={openHistory}>
-              <Text style={s.btnCancelText}>Historial</Text>
+              <Text style={s.btnCancelText}>{tr('journal.historyBtn')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -153,22 +156,22 @@ export default function JournalScreen() {
           style={s.textarea}
           value={draft}
           onChangeText={setDraft}
-          placeholder="Escribe sobre tu día..."
+          placeholder={tr('journal.placeholder')}
           placeholderTextColor={t.text4}
           multiline
           textAlignVertical="top"
         />
 
         <View style={s.footer}>
-          <Text style={s.wordCount}>{words} {words === 1 ? 'palabra' : 'palabras'}</Text>
+          <Text style={s.wordCount}>{tp('journal.wordCount', words)}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {saved && <Text style={{ color: t.success, fontSize: 12 }}>Guardado</Text>}
+            {saved && <Text style={{ color: t.success, fontSize: 12 }}>{tr('journal.saved')}</Text>}
             <TouchableOpacity
               style={[s.btnPrimary, (!draft.trim() || saving) && { opacity: 0.5 }]}
               onPress={handleSave}
               disabled={saving || !draft.trim()}
             >
-              <Text style={s.btnPrimaryText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
+              <Text style={s.btnPrimaryText}>{saving ? tr('journal.saving') : tr('journal.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>

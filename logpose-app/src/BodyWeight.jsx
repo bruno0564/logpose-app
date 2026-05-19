@@ -5,6 +5,7 @@ import {
   deleteLocalEntry, upsertFromServer, getUnsyncedEntries, getPendingDeletes, pruneEntriesDeletedFromServer,
 } from './db/database'
 import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
+import { useLang } from './LangContext.jsx'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -19,6 +20,7 @@ function StatCard({ label, value }) {
 }
 
 function BodyWeight() {
+  const { t: tr, tp } = useLang()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState(null)
@@ -67,7 +69,7 @@ function BodyWeight() {
       try {
         await loadLocal()
       } catch (e) {
-        console.error('BodyWeight: error cargando datos locales', e)
+        console.error('BodyWeight: error loading local data', e)
         setDbError(String(e))
       } finally {
         setLoading(false)
@@ -118,8 +120,8 @@ function BodyWeight() {
     <>
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Body Weight</h1>
-        <p className="page-subtitle">Registro diario de peso corporal</p>
+        <h1 className="page-title">{tr('bodyWeight.title')}</h1>
+        <p className="page-subtitle">{tr('bodyWeight.subtitle')}</p>
       </div>
 
       {dbError && (
@@ -129,49 +131,49 @@ function BodyWeight() {
       )}
 
       <div className="stats-row">
-        <StatCard label="Último registro" value={latest ? `${latest} kg` : '—'} />
-        <StatCard label="Media" value={avg ? `${avg} kg` : '—'} />
-        <StatCard label="Total registros" value={entries.length || '—'} />
+        <StatCard label={tr('bodyWeight.statLatestLong')} value={latest ? `${latest} kg` : '—'} />
+        <StatCard label={tr('bodyWeight.statAvg')} value={avg ? `${avg} kg` : '—'} />
+        <StatCard label={tr('bodyWeight.statTotalLong')} value={entries.length || '—'} />
       </div>
 
       <div className="card">
-        <h2 className="card-title">Nuevo registro</h2>
+        <h2 className="card-title">{tr('bodyWeight.newEntry')}</h2>
         <form onSubmit={handleSubmit} className="form">
           <div className="field">
-            <label>Peso (kg)</label>
+            <label>{tr('bodyWeight.weightPh')}</label>
             <input type="number" step="0.1" placeholder="75.5" value={form.weight}
               onChange={e => setForm(f => ({ ...f, weight: e.target.value }))} required />
           </div>
           <div className="field">
-            <label>Fecha</label>
+            <label>{tr('common.date')}</label>
             <input type="date" value={form.date}
               onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
           </div>
           <div className="field">
-            <label>Nota (opcional)</label>
-            <input type="text" placeholder="Ej: después de entrenar" value={form.note}
+            <label>{tr('bodyWeight.notePh')}</label>
+            <input type="text" placeholder={tr('bodyWeight.notePh2')} value={form.note}
               onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
           </div>
           <div className="field field--action">
-            <button type="submit" className="btn-primary">Añadir</button>
+            <button type="submit" className="btn-primary">{tr('bodyWeight.add')}</button>
           </div>
         </form>
       </div>
 
       <div className="card">
-        <h2 className="card-title">Historial</h2>
+        <h2 className="card-title">{tr('bodyWeight.history')}</h2>
 
         <div className="bw-filter-row">
           <div className="field">
-            <label>Desde</label>
+            <label>{tr('bodyWeight.filterFrom')}</label>
             <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
           </div>
           <div className="field">
-            <label>Hasta</label>
+            <label>{tr('bodyWeight.filterTo')}</label>
             <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
           </div>
           <button className="bw-filter-reset" onClick={() => { setFilterFrom(daysAgo(30)); setFilterTo(today()) }}>
-            Últimos 30 días
+            {tr('bodyWeight.last30Days')}
           </button>
         </div>
 
@@ -200,16 +202,16 @@ function BodyWeight() {
         })()}
 
         {loading ? (
-          <p className="hint">Cargando...</p>
+          <p className="hint">{tr('bodyWeight.loading')}</p>
         ) : displayed.length === 0 ? (
-          <p className="hint">Sin registros en ese rango.</p>
+          <p className="hint">{tr('bodyWeight.noRecordsRange')}</p>
         ) : (
           <table className="table">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Peso</th>
-                <th>Nota</th>
+                <th>{tr('bodyWeight.tableDate')}</th>
+                <th>{tr('bodyWeight.tableWeight')}</th>
+                <th>{tr('bodyWeight.tableNote')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -220,7 +222,7 @@ function BodyWeight() {
                   <td className="weight-cell">{entry.weight} kg</td>
                   <td className="note-cell">{entry.note ?? '—'}</td>
                   <td>
-                    <button className="btn-icon" onClick={() => setEditEntry({ ...entry })} title="Editar">✎</button>
+                    <button className="btn-icon" onClick={() => setEditEntry({ ...entry })} title="Edit">✎</button>
                     <button className="btn-delete" onClick={() => handleDelete(entry)}>×</button>
                   </td>
                 </tr>
@@ -229,7 +231,7 @@ function BodyWeight() {
           </table>
         )}
         {!loading && (filterFrom || filterTo) && displayed.length > 0 && (
-          <p className="hint" style={{ marginTop: '0.75rem' }}>{displayed.length} registro{displayed.length !== 1 ? 's' : ''} en el rango</p>
+          <p className="hint" style={{ marginTop: '0.75rem' }}>{tp('bodyWeight.rangeCount', displayed.length)}</p>
         )}
       </div>
     </div>
@@ -238,26 +240,26 @@ function BodyWeight() {
         <div className="modal-overlay" onClick={() => setEditEntry(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Editar registro</h3>
+              <h3>{tr('bodyWeight.editTitle')}</h3>
               <button className="btn-delete" onClick={() => setEditEntry(null)}>×</button>
             </div>
             <form onSubmit={handleEdit} className="form" style={{ flexDirection: 'column' }}>
               <div className="field">
-                <label>Peso (kg)</label>
+                <label>{tr('bodyWeight.weightPh')}</label>
                 <input type="number" step="0.1" value={editEntry.weight}
                   onChange={e => setEditEntry(v => ({ ...v, weight: e.target.value }))} required />
               </div>
               <div className="field">
-                <label>Fecha</label>
+                <label>{tr('common.date')}</label>
                 <input type="date" value={editEntry.date}
                   onChange={e => setEditEntry(v => ({ ...v, date: e.target.value }))} required />
               </div>
               <div className="field">
-                <label>Nota (opcional)</label>
+                <label>{tr('bodyWeight.notePh')}</label>
                 <input type="text" value={editEntry.note ?? ''}
                   onChange={e => setEditEntry(v => ({ ...v, note: e.target.value }))} />
               </div>
-              <button type="submit" className="btn-primary">Guardar</button>
+              <button type="submit" className="btn-primary">{tr('common.save')}</button>
             </form>
           </div>
         </div>

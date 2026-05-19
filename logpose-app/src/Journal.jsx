@@ -8,6 +8,7 @@ import {
   isServerReachable,
   fetchAllJournalEntriesFromServer, postJournalEntryToServer, putJournalEntryToServer, deleteJournalEntryFromServer,
 } from './api/client'
+import { useLang } from './LangContext.jsx'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -17,12 +18,8 @@ function wordCount(text) {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length
 }
 
-function formatDate(dateStr) {
-  const [y, m, d] = dateStr.split('-')
-  return new Date(+y, +m - 1, +d).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-}
-
 export default function Journal() {
+  const { t: tr, tp, locale } = useLang()
   const [view, setView] = useState('today')
   const [entry, setEntry] = useState(null)
   const [draft, setDraft] = useState('')
@@ -30,6 +27,12 @@ export default function Journal() {
   const [saved, setSaved] = useState(false)
   const [streak, setStreak] = useState(0)
   const [history, setHistory] = useState([])
+
+  function formatDate(dateStr) {
+    const [y, m, d] = dateStr.split('-')
+    const str = new Date(+y, +m - 1, +d).toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    return str.charAt(0).toUpperCase() + str.slice(1)
+  }
 
   const loadToday = useCallback(async () => {
     const e = await getTodayJournalEntry()
@@ -99,13 +102,13 @@ export default function Journal() {
             onClick={() => setView('today')}
             style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '0.75rem' }}
           >
-            ← Volver
+            {tr('journal.back')}
           </button>
-          <h1 className="page-title">Historial</h1>
+          <h1 className="page-title">{tr('journal.historyTitle')}</h1>
         </div>
 
         {history.length === 0 ? (
-          <p className="hint">Sin entradas anteriores todavía.</p>
+          <p className="hint">{tr('journal.noHistory')}</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 640 }}>
             {history.map(e => (
@@ -114,10 +117,10 @@ export default function Journal() {
                   {formatDate(e.date)}
                 </p>
                 <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                  {e.content || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Sin contenido</span>}
+                  {e.content || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>{tr('journal.noContent')}</span>}
                 </p>
                 <p style={{ color: 'var(--text-3)', fontSize: '0.72rem', marginTop: '0.75rem' }}>
-                  {wordCount(e.content)} palabras
+                  {tp('journal.wordCount', wordCount(e.content))}
                 </p>
               </div>
             ))}
@@ -127,18 +130,17 @@ export default function Journal() {
     )
   }
 
-  const isToday = !entry || entry.date === TODAY
   const words = wordCount(draft)
 
   return (
     <div className="page">
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 className="page-title">Diario</h1>
+          <h1 className="page-title">{tr('journal.title')}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {streak > 0 && (
               <span style={{ fontSize: '0.8rem', color: 'var(--text-2)', background: 'var(--surface-2)', padding: '0.25rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-2)' }}>
-                🔥 {streak} {streak === 1 ? 'día' : 'días'}
+                {tp('journal.streak', streak)}
               </span>
             )}
             <button
@@ -146,7 +148,7 @@ export default function Journal() {
               style={{ fontSize: '0.8rem' }}
               onClick={openHistory}
             >
-              Historial
+              {tr('journal.historyBtn')}
             </button>
           </div>
         </div>
@@ -159,7 +161,7 @@ export default function Journal() {
         <textarea
           value={draft}
           onChange={e => setDraft(e.target.value)}
-          placeholder="Escribe sobre tu día..."
+          placeholder={tr('journal.placeholder')}
           style={{
             width: '100%', boxSizing: 'border-box',
             minHeight: 320, resize: 'vertical',
@@ -171,16 +173,16 @@ export default function Journal() {
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.6rem' }}>
           <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>
-            {words} {words === 1 ? 'palabra' : 'palabras'}
+            {tp('journal.wordCount', words)}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {saved && <span style={{ color: '#22c55e', fontSize: '0.78rem' }}>Guardado</span>}
+            {saved && <span style={{ color: '#22c55e', fontSize: '0.78rem' }}>{tr('journal.saved')}</span>}
             <button
               className="btn-primary"
               onClick={handleSave}
               disabled={saving || !draft.trim()}
             >
-              {saving ? 'Guardando...' : 'Guardar'}
+              {saving ? tr('journal.saving') : tr('journal.save')}
             </button>
           </div>
         </div>

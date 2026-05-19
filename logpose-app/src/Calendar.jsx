@@ -12,12 +12,10 @@ import {
   fetchAllCalendarEventsFromServer, postCalendarEventToServer,
   putCalendarEventToServer, deleteCalendarEventFromServer,
 } from './api/client'
+import { useLang } from './LangContext.jsx'
 
 let syncingCalendar = false
 
-const MONTHS   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
-const DAY_SHORT = ['L','M','X','J','V','S','D']
 const HOURS    = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2,'0')}:00`)
 const HOUR_H   = 56
 const COLORS   = ['#7c3aed','#2563eb','#16a34a','#ea580c','#dc2626']
@@ -74,13 +72,14 @@ const EMPTY_FORM = {
 }
 
 export default function Calendar() {
+  const { t: tr, locale } = useLang()
   const now      = new Date()
   const todayStr = toDateStr(now)
   const [view, setView]     = useState('month')
   const [cursor, setCursor] = useState(new Date(now))
   const [gymDays, setGymDays]   = useState(new Set())
   const [events, setEvents]     = useState([])
-  const [modal, setModal]       = useState(null) // null | { mode: 'create'|'edit', event?, prefill? }
+  const [modal, setModal]       = useState(null)
   const [form, setForm]         = useState(EMPTY_FORM)
 
   const loadEvents = useCallback(async () => {
@@ -196,20 +195,26 @@ export default function Calendar() {
     }))
   }
 
+  const loc = locale()
+  const mName = (d) => d.toLocaleDateString(loc, { month: 'long' })
+
   let label
   if (view === 'month') {
-    label = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`
+    const raw = new Date(cursor.getFullYear(), cursor.getMonth(), 1).toLocaleDateString(loc, { month: 'long', year: 'numeric' })
+    label = raw.charAt(0).toUpperCase() + raw.slice(1)
   } else if (view === 'week') {
     const start = startOfWeek(cursor), end = new Date(start)
     end.setDate(end.getDate() + 6)
     const sm = start.getMonth() === end.getMonth()
     label = sm
-      ? `${start.getDate()} – ${end.getDate()} ${MONTHS[start.getMonth()]} ${start.getFullYear()}`
-      : `${start.getDate()} ${MONTHS[start.getMonth()]} – ${end.getDate()} ${MONTHS[end.getMonth()]} ${end.getFullYear()}`
+      ? `${start.getDate()} – ${end.getDate()} ${mName(start)} ${start.getFullYear()}`
+      : `${start.getDate()} ${mName(start)} – ${end.getDate()} ${mName(end)} ${end.getFullYear()}`
   } else {
-    const dow = (cursor.getDay() + 6) % 7
-    label = `${DAY_NAMES[dow]}, ${cursor.getDate()} de ${MONTHS[cursor.getMonth()]} de ${cursor.getFullYear()}`
+    const raw = cursor.toLocaleDateString(loc, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    label = raw.charAt(0).toUpperCase() + raw.slice(1)
   }
+
+  const daysShort = tr('common.daysShort')
 
   return (
     <>
@@ -219,14 +224,14 @@ export default function Calendar() {
             <button className="cal-arrow" onClick={prev}>‹</button>
             <span className="cal-period-label">{label}</span>
             <button className="cal-arrow" onClick={next}>›</button>
-            <button className="cal-today-btn" onClick={goToday}>Hoy</button>
+            <button className="cal-today-btn" onClick={goToday}>{tr('calendar.today')}</button>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button className="btn-primary" style={{ fontSize: '0.78rem' }} onClick={() => openCreate({ date: todayStr })}>
-              + Nueva tarea
+              {tr('calendar.newTask')}
             </button>
             <div className="cal-tabs">
-              {[['day','Día'],['week','Semana'],['month','Mes']].map(([v,name]) => (
+              {[['day', tr('calendar.viewDay')], ['week', tr('calendar.viewWeek')], ['month', tr('calendar.viewMonth')]].map(([v, name]) => (
                 <button key={v} className={`cal-tab${view===v?' cal-tab--active':''}`} onClick={() => setView(v)}>
                   {name}
                 </button>
@@ -256,21 +261,21 @@ export default function Calendar() {
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{modal.mode === 'create' ? 'Nueva tarea' : 'Editar tarea'}</h3>
+              <h3>{modal.mode === 'create' ? tr('calendar.newTaskModal') : tr('calendar.editTaskModal')}</h3>
               <button className="btn-delete" onClick={() => setModal(null)}>×</button>
             </div>
             <form onSubmit={handleSave} className="form" style={{ flexDirection: 'column', gap: '0.85rem' }}>
 
               <div className="field">
-                <label>Título</label>
-                <input type="text" placeholder="Nombre de la tarea" required
+                <label>{tr('calendar.taskTitleLabel')}</label>
+                <input type="text" placeholder={tr('calendar.taskTitlePh')} required
                   value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
               </div>
 
               <div className="field">
-                <label>Frecuencia</label>
+                <label>{tr('calendar.freqLabel')}</label>
                 <div className="cal-tabs" style={{ width: 'fit-content' }}>
-                  {[['none','Una vez'],['daily','Diaria'],['weekly','Semanal']].map(([v,name]) => (
+                  {[['none', tr('calendar.recNone')], ['daily', tr('calendar.recDaily')], ['weekly', tr('calendar.recWeekly')]].map(([v, name]) => (
                     <button key={v} type="button"
                       className={`cal-tab${form.recurrence===v?' cal-tab--active':''}`}
                       onClick={() => setForm(f => ({ ...f, recurrence: v }))}>
@@ -282,7 +287,7 @@ export default function Calendar() {
 
               {form.recurrence === 'none' && (
                 <div className="field">
-                  <label>Fecha</label>
+                  <label>{tr('common.date')}</label>
                   <input type="date" required value={form.date}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
                 </div>
@@ -290,9 +295,9 @@ export default function Calendar() {
 
               {form.recurrence === 'weekly' && (
                 <div className="field">
-                  <label>Días</label>
+                  <label>{tr('calendar.daysLabel')}</label>
                   <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    {DAY_SHORT.map((d, i) => (
+                    {daysShort.map((d, i) => (
                       <button key={i} type="button"
                         onClick={() => toggleDay(i)}
                         style={{
@@ -311,19 +316,19 @@ export default function Calendar() {
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <div className="field" style={{ flex: 1 }}>
-                  <label>Hora inicio</label>
+                  <label>{tr('calendar.startTimeLabel')}</label>
                   <input type="time" value={form.start_time}
                     onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
                 </div>
                 <div className="field" style={{ flex: 1 }}>
-                  <label>Hora fin</label>
+                  <label>{tr('calendar.endTimeLabel')}</label>
                   <input type="time" value={form.end_time}
                     onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
                 </div>
               </div>
 
               <div className="field">
-                <label>Color</label>
+                <label>{tr('calendar.colorLabel')}</label>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                   {COLORS.map(c => (
                     <button key={c} type="button"
@@ -339,7 +344,7 @@ export default function Calendar() {
               </div>
 
               <div className="field">
-                <label>Notas (opcional)</label>
+                <label>{tr('calendar.notesLabel')}</label>
                 <input type="text" placeholder="..." value={form.notes}
                   onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
@@ -347,10 +352,10 @@ export default function Calendar() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
                 {modal.mode === 'edit'
                   ? <button type="button" className="btn-delete" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
-                      onClick={() => handleDelete(modal.event)}>Eliminar</button>
+                      onClick={() => handleDelete(modal.event)}>{tr('common.delete')}</button>
                   : <span />
                 }
-                <button type="submit" className="btn-primary">Guardar</button>
+                <button type="submit" className="btn-primary">{tr('common.save')}</button>
               </div>
             </form>
           </div>
@@ -363,13 +368,15 @@ export default function Calendar() {
 // ── Month View ────────────────────────────────────────────────────────────────
 
 function MonthView({ cursor, todayStr, gymDays, events, onDayClick, onEventClick, onSlotClick }) {
+  const { t: tr } = useLang()
+  const daysShort = tr('common.daysShort')
   const year = cursor.getFullYear(), month = cursor.getMonth()
   const cells = buildMonthCells(year, month)
 
   return (
     <div className="cal-month-view">
       <div className="cal-month-header">
-        {DAY_SHORT.map(d => <div key={d} className="cal-day-name">{d}</div>)}
+        {daysShort.map(d => <div key={d} className="cal-day-name">{d}</div>)}
       </div>
       <div className="cal-month-body">
         {cells.map((day, i) => {
@@ -396,7 +403,7 @@ function MonthView({ cursor, todayStr, gymDays, events, onDayClick, onEventClick
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="cal-event-more">+{dayEvents.length - 3} más</div>
+                  <div className="cal-event-more">{tr('calendar.moreEvents', { n: dayEvents.length - 3 })}</div>
                 )}
               </div>
             </div>
@@ -410,6 +417,8 @@ function MonthView({ cursor, todayStr, gymDays, events, onDayClick, onEventClick
 // ── Week View ─────────────────────────────────────────────────────────────────
 
 function WeekView({ cursor, todayStr, events, onDayClick, onEventClick, onSlotClick }) {
+  const { t: tr } = useLang()
+  const daysShort = tr('common.daysShort')
   const bodyRef = useRef(null)
   const start = startOfWeek(cursor)
   const days  = Array.from({ length: 7 }, (_, i) => {
@@ -433,7 +442,7 @@ function WeekView({ cursor, todayStr, events, onDayClick, onEventClick, onSlotCl
           return (
             <div key={i} className={`cal-week-col-header${isToday?' cal-week-col-header--today':''}`}>
               <div onClick={() => onDayClick(day)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', width: '100%', padding: '0.75rem 0.5rem 0.4rem' }}>
-                <span className="cal-week-day-name">{DAY_SHORT[i]}</span>
+                <span className="cal-week-day-name">{daysShort[i]}</span>
                 <span className={`cal-week-day-num${isToday?' cal-week-day-num--today':''}`}>{day.getDate()}</span>
               </div>
               {allDay.length > 0 && (
@@ -485,6 +494,7 @@ function WeekView({ cursor, todayStr, events, onDayClick, onEventClick, onSlotCl
 // ── Day View ──────────────────────────────────────────────────────────────────
 
 function DayView({ cursor, todayStr, events, onEventClick, onSlotClick }) {
+  const { locale } = useLang()
   const bodyRef = useRef(null)
   const isToday = toDateStr(cursor) === todayStr
   const dow     = (cursor.getDay() + 6) % 7
@@ -493,13 +503,16 @@ function DayView({ cursor, todayStr, events, onEventClick, onSlotClick }) {
   useScrollToHour(bodyRef, dayEvents)
   const allDay = dayEvents.filter(e => !e.start_time)
   const timed  = dayEvents.filter(e => e.start_time)
+  const loc = locale()
 
   return (
     <div className="cal-day-view">
       <div className={`cal-day-view-header${isToday?' cal-day-view-header--today':''}`}>
-        <span className="cal-day-view-name">{DAY_NAMES[dow]}</span>
+        <span className="cal-day-view-name">
+          {cursor.toLocaleDateString(loc, { weekday: 'long' })}
+        </span>
         <span className="cal-day-view-date">
-          {cursor.getDate()} de {MONTHS[cursor.getMonth()]} de {cursor.getFullYear()}
+          {cursor.toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })}
         </span>
         {allDay.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.6rem' }}>

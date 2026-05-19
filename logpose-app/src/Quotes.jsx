@@ -8,10 +8,12 @@ import {
   isServerReachable, fetchAllQuotesFromServer,
   postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from './api/client'
+import { useLang } from './LangContext.jsx'
 
 let syncingQuotes = false
 
 function Quotes() {
+  const { t: tr } = useLang()
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState(null)
@@ -93,8 +95,8 @@ function Quotes() {
     <>
       <div className="page">
         <div className="page-header">
-          <h1 className="page-title">Quotes</h1>
-          <p className="page-subtitle">Frases motivacionales</p>
+          <h1 className="page-title">{tr('quotes.title')}</h1>
+          <p className="page-subtitle">{tr('quotes.subtitle')}</p>
         </div>
 
         {dbError && (
@@ -104,45 +106,45 @@ function Quotes() {
         )}
 
         <div className="card">
-          <h2 className="card-title">Nueva frase</h2>
+          <h2 className="card-title">{tr('quotes.addCard')}</h2>
           <form onSubmit={handleSubmit} className="form">
             <div className="field">
-              <label>Frase</label>
+              <label>{tr('quotes.quoteLabel')}</label>
               <input
                 type="text"
-                placeholder="Introduce la frase..."
+                placeholder={tr('quotes.introQuotePh')}
                 value={form.text}
                 onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
                 required
               />
             </div>
             <div className="field">
-              <label>Autor (opcional)</label>
+              <label>{tr('quotes.authorLabel')}</label>
               <input
                 type="text"
-                placeholder="Ej: Marcus Aurelius"
+                placeholder={tr('quotes.authorExPh')}
                 value={form.author}
                 onChange={e => setForm(f => ({ ...f, author: e.target.value }))}
               />
             </div>
             <div className="field field--action">
-              <button type="submit" className="btn-primary">Añadir</button>
+              <button type="submit" className="btn-primary">{tr('quotes.add')}</button>
             </div>
           </form>
         </div>
 
         <div className="card">
-          <h2 className="card-title">Todas las frases ({quotes.length})</h2>
+          <h2 className="card-title">{tr('quotes.allQuotes', { n: quotes.length })}</h2>
           {loading ? (
-            <p className="hint">Cargando...</p>
+            <p className="hint">{tr('quotes.loading')}</p>
           ) : quotes.length === 0 ? (
-            <p className="hint">No hay frases todavía.</p>
+            <p className="hint">{tr('quotes.noQuotes')}</p>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Frase</th>
-                  <th>Autor</th>
+                  <th>{tr('quotes.quoteLabel')}</th>
+                  <th>{tr('quotes.authorLabel')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -152,7 +154,7 @@ function Quotes() {
                     <td>"{quote.text}"</td>
                     <td className="note-cell">{quote.author ?? '—'}</td>
                     <td>
-                      <button className="btn-icon" onClick={() => setEditQuote({ ...quote })} title="Editar">✎</button>
+                      <button className="btn-icon" onClick={() => setEditQuote({ ...quote })} title="Edit">✎</button>
                       <button className="btn-delete" onClick={() => handleDelete(quote)}>×</button>
                     </td>
                   </tr>
@@ -167,12 +169,12 @@ function Quotes() {
         <div className="modal-overlay" onClick={() => setEditQuote(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Editar frase</h3>
+              <h3>{tr('quotes.editQuote')}</h3>
               <button className="btn-delete" onClick={() => setEditQuote(null)}>×</button>
             </div>
             <form onSubmit={handleEdit} className="form" style={{ flexDirection: 'column' }}>
               <div className="field">
-                <label>Frase</label>
+                <label>{tr('quotes.quoteLabel')}</label>
                 <input
                   type="text"
                   value={editQuote.text}
@@ -181,14 +183,14 @@ function Quotes() {
                 />
               </div>
               <div className="field">
-                <label>Autor (opcional)</label>
+                <label>{tr('quotes.authorLabel')}</label>
                 <input
                   type="text"
                   value={editQuote.author ?? ''}
                   onChange={e => setEditQuote(v => ({ ...v, author: e.target.value }))}
                 />
               </div>
-              <button type="submit" className="btn-primary">Guardar</button>
+              <button type="submit" className="btn-primary">{tr('common.save')}</button>
             </form>
           </div>
         </div>

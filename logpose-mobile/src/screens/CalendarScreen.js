@@ -17,12 +17,8 @@ import {
   putCalendarEventToServer, deleteCalendarEventFromServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
+import { useLang } from '../LangContext'
 
-const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-const DAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-const DAYS_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626']
 
 function toDateStr(d) {
@@ -55,19 +51,22 @@ let syncingCalendar = false
 
 function ConfirmModal({ visible, title, onConfirm, onCancel }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={onCancel}>
         <TouchableOpacity activeOpacity={1} style={[s.modal, { borderRadius: 16 }]}>
-          <Text style={s.modalTitle}>Eliminar evento</Text>
-          <Text style={{ color: t.text2, fontSize: 14, marginBottom: 16 }}>¿Eliminar "{title}"?</Text>
+          <Text style={s.modalTitle}>{tr('calendar.deleteEvent')}</Text>
+          <Text style={{ color: t.text2, fontSize: 14, marginBottom: 16 }}>
+            {tr('calendar.deleteEventMsg', { title })}
+          </Text>
           <View style={s.modalBtns}>
             <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={onCancel}>
-              <Text style={s.btnCancelText}>Cancelar</Text>
+              <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.btn, { backgroundColor: t.dangerBg }]} onPress={onConfirm}>
-              <Text style={[s.btnSaveText, { color: t.dangerText }]}>Eliminar</Text>
+              <Text style={[s.btnSaveText, { color: t.dangerText }]}>{tr('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -80,6 +79,7 @@ const BLANK = { title: '', recurrence: 'none', date: '', start_time: '', end_tim
 
 export default function CalendarScreen() {
   const { theme: t } = useTheme()
+  const { t: tr, locale } = useLang()
   const s = makeStyles(t)
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -178,7 +178,7 @@ export default function CalendarScreen() {
     sync()
   }
 
-  // ── Vista día ────────────────────────────────────────────────────────────────
+  // ── Day view ─────────────────────────────────────────────────────────────────
 
   if (selectedDate) {
     const dateStr = toDateStr(selectedDate)
@@ -188,6 +188,10 @@ export default function CalendarScreen() {
       .sort((a, b) => (a.start_time || '') < (b.start_time || '') ? -1 : 1)
     const isGym = gymDays.includes(dow)
 
+    const days = t => t('common.days')
+    const dayName = tr('common.days')[dow]
+    const daySubtitle = selectedDate.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })
+
     return (
       <View style={s.container}>
         <View style={s.header}>
@@ -195,8 +199,8 @@ export default function CalendarScreen() {
             <Text style={s.backArrow}>‹</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={s.dayTitle}>{DAYS_FULL[dow]}</Text>
-            <Text style={s.daySubtitle}>{selectedDate.getDate()} de {MONTHS_SHORT[selectedDate.getMonth()]} {selectedDate.getFullYear()}</Text>
+            <Text style={s.dayTitle}>{dayName}</Text>
+            <Text style={s.daySubtitle}>{daySubtitle}</Text>
           </View>
           <TouchableOpacity style={s.addBtn} onPress={() => openCreate(dateStr)}>
             <Text style={s.addBtnText}>+</Text>
@@ -205,13 +209,13 @@ export default function CalendarScreen() {
 
         {isGym && (
           <View style={s.gymBanner}>
-            <Text style={s.gymBannerText}>🏋 Día de entreno</Text>
+            <Text style={s.gymBannerText}>{tr('calendar.gymDay')}</Text>
           </View>
         )}
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {dayEvents.length === 0 ? (
-            <Text style={s.emptyText}>Sin eventos. Pulsa + para crear uno.</Text>
+            <Text style={s.emptyText}>{tr('calendar.noEvents')}</Text>
           ) : (
             dayEvents.map(ev => (
               <TouchableOpacity key={ev.id} style={[s.eventCard, { borderLeftColor: ev.color || '#7c3aed' }]} onPress={() => openEdit(ev)}>
@@ -248,10 +252,11 @@ export default function CalendarScreen() {
     )
   }
 
-  // ── Vista mes ────────────────────────────────────────────────────────────────
+  // ── Month view ────────────────────────────────────────────────────────────────
 
   const cells = buildCells(year, month)
   const isThisMonth = year === today.getFullYear() && month === today.getMonth()
+  const monthLabel = new Date(year, month, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' })
 
   function prev() {
     if (month === 0) { setYear(y => y - 1); setMonth(11) }
@@ -262,10 +267,12 @@ export default function CalendarScreen() {
     else setMonth(m => m + 1)
   }
 
+  const daysShort = tr('common.daysShort')
+
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>Calendario</Text>
+        <Text style={s.title}>{tr('calendar.title')}</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => openCreate(toDateStr(today))}>
           <Text style={s.addBtnText}>+</Text>
         </TouchableOpacity>
@@ -276,14 +283,16 @@ export default function CalendarScreen() {
           <TouchableOpacity onPress={prev} style={s.arrowBtn}>
             <Text style={s.arrow}>‹</Text>
           </TouchableOpacity>
-          <Text style={s.monthLabel}>{MONTHS[month]} {year}</Text>
+          <Text style={s.monthLabel}>
+            {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+          </Text>
           <TouchableOpacity onPress={next} style={s.arrowBtn}>
             <Text style={s.arrow}>›</Text>
           </TouchableOpacity>
         </View>
 
         <View style={s.dayRow}>
-          {DAY_LABELS.map(d => <Text key={d} style={s.dayLabel}>{d}</Text>)}
+          {daysShort.map(d => <Text key={d} style={s.dayLabel}>{d}</Text>)}
         </View>
 
         <View style={s.grid}>
@@ -332,13 +341,16 @@ export default function CalendarScreen() {
   )
 }
 
-// ── Modal de crear/editar evento ──────────────────────────────────────────────
+// ── Event modal ───────────────────────────────────────────────────────────────
 
 function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
+  const daysShort = tr('common.daysShort')
+
   const REC = ['none', 'daily', 'weekly']
-  const REC_LABEL = ['Una vez', 'Diaria', 'Semanal']
+  const REC_LABEL = [tr('calendar.recNone'), tr('calendar.recDaily'), tr('calendar.recWeekly')]
 
   function toggleDay(idx) {
     const current = form.days_of_week ? form.days_of_week.split(',').map(Number).filter(n => !isNaN(n)) : []
@@ -352,15 +364,15 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={s.modalOverlay}>
         <ScrollView style={s.modal} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-          <Text style={s.modalTitle}>{editingEvent ? 'Editar evento' : 'Nuevo evento'}</Text>
+          <Text style={s.modalTitle}>{editingEvent ? tr('calendar.editEvent') : tr('calendar.newEvent')}</Text>
 
           <TextInput
             style={s.input}
-            placeholder="Título..."
+            placeholder={tr('calendar.titlePh')}
             placeholderTextColor={t.text3}
             autoFocus
             value={form.title}
-            onChangeText={t => setForm(f => ({ ...f, title: t }))}
+            onChangeText={v => setForm(f => ({ ...f, title: v }))}
           />
 
           <View style={s.recRow}>
@@ -380,16 +392,16 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           {form.recurrence === 'none' && (
             <TextInput
               style={s.input}
-              placeholder="Fecha (YYYY-MM-DD)"
+              placeholder={tr('calendar.datePh')}
               placeholderTextColor={t.text3}
               value={form.date}
-              onChangeText={t => setForm(f => ({ ...f, date: t }))}
+              onChangeText={v => setForm(f => ({ ...f, date: v }))}
             />
           )}
 
           {form.recurrence === 'weekly' && (
             <View style={s.daySelector}>
-              {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((label, idx) => (
+              {daysShort.map((label, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={[s.dayToggle, selectedDays.includes(idx) && s.dayToggleActive]}
@@ -406,17 +418,17 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           <View style={s.timeRow}>
             <TextInput
               style={[s.input, { flex: 1 }]}
-              placeholder="Inicio HH:MM"
+              placeholder={tr('calendar.startTimePh')}
               placeholderTextColor={t.text3}
               value={form.start_time}
-              onChangeText={t => setForm(f => ({ ...f, start_time: t }))}
+              onChangeText={v => setForm(f => ({ ...f, start_time: v }))}
             />
             <TextInput
               style={[s.input, { flex: 1 }]}
-              placeholder="Fin HH:MM"
+              placeholder={tr('calendar.endTimePh')}
               placeholderTextColor={t.text3}
               value={form.end_time}
-              onChangeText={t => setForm(f => ({ ...f, end_time: t }))}
+              onChangeText={v => setForm(f => ({ ...f, end_time: v }))}
             />
           </View>
 
@@ -432,19 +444,19 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
 
           <TextInput
             style={[s.input, { minHeight: 60, textAlignVertical: 'top' }]}
-            placeholder="Notas (opcional)"
+            placeholder={tr('calendar.notesPh')}
             placeholderTextColor={t.text3}
             multiline
             value={form.notes}
-            onChangeText={t => setForm(f => ({ ...f, notes: t }))}
+            onChangeText={v => setForm(f => ({ ...f, notes: v }))}
           />
 
           <View style={s.modalBtns}>
             <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={onClose}>
-              <Text style={s.btnCancelText}>Cancelar</Text>
+              <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.btn, s.btnSave]} onPress={onSave}>
-              <Text style={s.btnSaveText}>Guardar</Text>
+              <Text style={s.btnSaveText}>{tr('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -465,7 +477,6 @@ const makeStyles = (t) => StyleSheet.create({
   daySubtitle:      { color: t.text3, fontSize: 13 },
   gymBanner:        { backgroundColor: t.surface2, marginHorizontal: 16, borderRadius: 8, padding: 10, marginBottom: 4 },
   gymBannerText:    { color: t.text2, fontSize: 13 },
-
   card:             { backgroundColor: t.surface2, borderRadius: 16, marginHorizontal: 16, padding: 20 },
   monthRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   arrowBtn:         { padding: 8 },
@@ -483,14 +494,12 @@ const makeStyles = (t) => StyleSheet.create({
   gymDot:           { fontSize: 9 },
   dotRow:           { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
   dot:              { width: 5, height: 5, borderRadius: 3 },
-
   emptyText:        { color: t.text4, fontSize: 14, textAlign: 'center', marginTop: 60 },
   eventCard:        { backgroundColor: t.surface2, borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderLeftWidth: 3, gap: 10 },
   eventTitle:       { color: t.text, fontSize: 14, fontWeight: '600' },
   eventTime:        { color: t.text2, fontSize: 12, marginTop: 3 },
   eventNotes:       { color: t.text3, fontSize: 12, marginTop: 4, fontStyle: 'italic' },
   deleteIcon:       { color: t.danger, fontSize: 20, lineHeight: 22 },
-
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modal:            { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
   modalTitle:       { color: t.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },

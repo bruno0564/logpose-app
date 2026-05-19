@@ -19,11 +19,13 @@ import {
   fetchTaskItemsFromServer, postTaskItemToServer, putTaskItemToServer, deleteTaskItemFromServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
+import { useLang } from '../LangContext'
 
 let syncingTasks = false
 
 function ListModal({ visible, value, onChange, onClose, onSave }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [kbHeight, setKbHeight] = useState(0)
 
@@ -38,14 +40,14 @@ function ListModal({ visible, value, onChange, onClose, onSave }) {
       <View style={[s.overlay, { paddingBottom: kbHeight }]}>
         <View style={s.modal}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Nueva lista</Text>
+            <Text style={s.modalTitle}>{tr('tasks.newList')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" color={t.text2} size={22} />
             </TouchableOpacity>
           </View>
           <TextInput
             style={s.modalInput}
-            placeholder="Nombre de la lista"
+            placeholder={tr('tasks.listNamePh')}
             placeholderTextColor={t.text3}
             value={value}
             onChangeText={onChange}
@@ -54,7 +56,7 @@ function ListModal({ visible, value, onChange, onClose, onSave }) {
             returnKeyType="done"
           />
           <TouchableOpacity style={s.saveBtn} onPress={onSave}>
-            <Text style={s.saveBtnText}>Crear</Text>
+            <Text style={s.saveBtnText}>{tr('common.create')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -64,26 +66,27 @@ function ListModal({ visible, value, onChange, onClose, onSave }) {
 
 function ConfirmModal({ visible, name, onConfirm, onCancel }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
         <TouchableOpacity activeOpacity={1} style={s.modal}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Eliminar lista</Text>
+            <Text style={s.modalTitle}>{tr('tasks.deleteList')}</Text>
             <TouchableOpacity onPress={onCancel}>
               <Ionicons name="close" color={t.text2} size={20} />
             </TouchableOpacity>
           </View>
           <Text style={{ color: t.text2, fontSize: 14, marginBottom: 20 }}>
-            ¿Eliminar "{name}" y todas sus tareas?
+            {tr('tasks.deleteListMsg', { name })}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
             <TouchableOpacity style={s.saveBtn} onPress={onCancel}>
-              <Text style={[s.saveBtnText, { color: t.text2 }]}>Cancelar</Text>
+              <Text style={[s.saveBtnText, { color: t.text2 }]}>{tr('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.saveBtn, { backgroundColor: t.dangerBg }]} onPress={onConfirm}>
-              <Text style={[s.saveBtnText, { color: t.dangerText }]}>Eliminar</Text>
+              <Text style={[s.saveBtnText, { color: t.dangerText }]}>{tr('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -94,6 +97,7 @@ function ConfirmModal({ visible, name, onConfirm, onCancel }) {
 
 export default function TasksScreen() {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
@@ -121,7 +125,6 @@ export default function TasksScreen() {
     syncingTasks = true
     try {
       if (!await isServerReachable()) return
-
       for (const lst of await getUnsyncedTaskLists()) {
         const created = await postTaskListToServer(lst.name)
         await markTaskListSynced(lst.id, created.id)
@@ -232,15 +235,15 @@ export default function TasksScreen() {
     return (
       <View style={s.container}>
         <View style={s.header}>
-          <Text style={s.title}>To-Do</Text>
+          <Text style={s.title}>{tr('tasks.title')}</Text>
           <TouchableOpacity style={s.addBtn} onPress={() => setListModalVisible(true)}>
             <Ionicons name="add" color={t.text} size={22} />
           </TouchableOpacity>
         </View>
         <View style={s.empty}>
           <Ionicons name="checkmark-done-outline" color={t.text4} size={56} />
-          <Text style={s.emptyText}>Sin listas todavía</Text>
-          <Text style={s.emptySub}>Pulsa + para crear la primera</Text>
+          <Text style={s.emptyText}>{tr('tasks.noLists')}</Text>
+          <Text style={s.emptySub}>{tr('tasks.firstListHint')}</Text>
         </View>
         <ListModal
           visible={listModalVisible}
@@ -267,7 +270,7 @@ export default function TasksScreen() {
             <Ionicons name="chevron-back" color={t.accent} size={22} />
           </TouchableOpacity>
         ) : null}
-        <Text style={s.title}>{activeList ? activeList.name : 'To-Do'}</Text>
+        <Text style={s.title}>{activeList ? activeList.name : tr('tasks.title')}</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => setListModalVisible(true)}>
           <Ionicons name="add" color={t.text} size={22} />
         </TouchableOpacity>
@@ -318,12 +321,12 @@ export default function TasksScreen() {
             keyExtractor={i => String(i.id)}
             contentContainerStyle={[s.itemsContainer, { paddingBottom: kbHeight + 80 }]}
             ListEmptyComponent={
-              <Text style={s.emptyItems}>Sin tareas pendientes.</Text>
+              <Text style={s.emptyItems}>{tr('tasks.emptyItems')}</Text>
             }
             ListFooterComponent={
               done.length > 0 ? (
                 <View>
-                  <Text style={s.doneLabel}>Completadas</Text>
+                  <Text style={s.doneLabel}>{tr('tasks.doneLabel')}</Text>
                   {done.map(item => (
                     <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDeleteItem} />
                   ))}
@@ -338,7 +341,7 @@ export default function TasksScreen() {
           <View style={[s.addItemRow, { bottom: kbHeight }]}>
             <TextInput
               style={s.addItemInput}
-              placeholder="Nueva tarea..."
+              placeholder={tr('tasks.newItemPh')}
               placeholderTextColor={t.text3}
               value={newItemTitle}
               onChangeText={setNewItemTitle}

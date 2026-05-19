@@ -29,13 +29,13 @@ import {
   postSessionToServer, postSetToServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
-
-const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+import { useLang } from '../LangContext'
 
 let syncingGym = false
 
 export default function GymScreen() {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const selectedRoutineRef = useRef(null)
 
@@ -76,7 +76,6 @@ export default function GymScreen() {
     try {
       if (!await isServerReachable()) return
 
-      // 1. Routines
       for (const r of await getPendingDeleteRoutines()) {
         try { await deleteRoutineFromServer(r.server_id) } catch {}
         await purgeLocalRoutine(r.id)
@@ -94,7 +93,6 @@ export default function GymScreen() {
       for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
 
-      // 2. Exercises
       for (const ex of await getPendingDeleteExercises()) {
         try { await deleteExerciseFromServer(ex.server_id) } catch {}
         await purgeLocalExercise(ex.id)
@@ -112,7 +110,6 @@ export default function GymScreen() {
       for (const ex of serverExercises) await upsertExerciseFromServer(ex)
       await pruneStaleExercises(new Set(serverExercises.map(e => e.id)))
 
-      // 3. Routine exercises
       for (const re of await getPendingDeleteRoutineExercises()) {
         try { await deleteRoutineExerciseFromServer(re.server_id) } catch {}
         await purgeLocalRoutineExercise(re.id)
@@ -125,7 +122,6 @@ export default function GymScreen() {
       for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
       await pruneStaleRoutineExercises(new Set(serverREs.map(r => r.id)))
 
-      // 4. Sessions
       for (const s of await getPendingDeleteSessions()) {
         try { await deleteSessionFromServer(s.server_id) } catch {}
         await purgeLocalSession(s.id)
@@ -137,7 +133,6 @@ export default function GymScreen() {
       const serverSessions = await fetchAllSessionsFromServer()
       for (const s of serverSessions) await upsertSessionFromServer(s)
 
-      // 5. Sets
       for (const ws of await getPendingDeleteSets()) {
         try { await deleteSetFromServer(ws.server_id) } catch {}
         await purgeLocalSet(ws.id)
@@ -227,24 +222,24 @@ export default function GymScreen() {
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
       <ConfirmModal
         visible={confirmTarget !== null}
-        message={confirmTarget ? `¿Eliminar la rutina "${confirmTarget.name}"?` : ''}
+        message={confirmTarget ? tr('gym.confirmDeleteRoutine', { name: confirmTarget.name }) : ''}
         onConfirm={confirmDelete}
         onCancel={() => setConfirmTarget(null)}
       />
       <View style={s.header}>
-        <Text style={s.title}>Gym</Text>
+        <Text style={s.title}>{tr('gym.title')}</Text>
         {tab === 'routines' && (
           <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
-            <Text style={s.btnPrimaryText}>+ Rutina</Text>
+            <Text style={s.btnPrimaryText}>{tr('gym.addRoutine')}</Text>
           </TouchableOpacity>
         )}
       </View>
 
       <View style={s.tabBar}>
-        {['routines', 'stats'].map(t => (
-          <TouchableOpacity key={t} style={[s.tabBtn, tab === t && s.tabBtnActive]} onPress={() => setTab(t)}>
-            <Text style={[s.tabBtnText, tab === t && s.tabBtnTextActive]}>
-              {t === 'routines' ? 'Rutinas' : 'Estadísticas'}
+        {['routines', 'stats'].map(tabKey => (
+          <TouchableOpacity key={tabKey} style={[s.tabBtn, tab === tabKey && s.tabBtnActive]} onPress={() => setTab(tabKey)}>
+            <Text style={[s.tabBtnText, tab === tabKey && s.tabBtnTextActive]}>
+              {tabKey === 'routines' ? tr('gym.tabRoutines') : tr('gym.tabStats')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -254,31 +249,29 @@ export default function GymScreen() {
 
       {tab === 'routines' && (
         <>
-          <Text style={s.subtitle}>Tus rutinas de entrenamiento</Text>
-
           {adding && (
             <View style={s.card}>
               <TextInput
                 autoFocus
                 style={s.input}
-                placeholder="Nombre de la rutina..."
+                placeholder={tr('gym.routineNamePh')}
                 placeholderTextColor={t.text3}
                 value={newName}
                 onChangeText={setNewName}
               />
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                 <TouchableOpacity style={[s.btnPrimary, { flex: 1 }]} onPress={handleAdd}>
-                  <Text style={s.btnPrimaryText}>Crear</Text>
+                  <Text style={s.btnPrimaryText}>{tr('common.create')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.btnCancel, { flex: 1 }]} onPress={() => { setAdding(false); setNewName('') }}>
-                  <Text style={s.btnCancelText}>Cancelar</Text>
+                  <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
           {routines.length === 0 ? (
-            <Text style={s.hint}>Sin rutinas todavía. Crea la primera arriba.</Text>
+            <Text style={s.hint}>{tr('gym.noRoutines')}</Text>
           ) : (
             routines.map(r => {
               const isActive = r.id === activeRoutineId
@@ -303,7 +296,7 @@ export default function GymScreen() {
                           syncGym()
                         }}
                       >
-                        <Text style={s.btnPrimaryText}>Guardar</Text>
+                        <Text style={s.btnPrimaryText}>{tr('common.save')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={s.btnCancel} onPress={() => setEditingRoutineId(null)}>
                         <Text style={s.btnCancelText}>✕</Text>
@@ -316,12 +309,12 @@ export default function GymScreen() {
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={s.rowText}>{r.name}</Text>
-                        {isActive && <Text style={{ color: t.accent, fontSize: 11, marginTop: 2 }}>Activa</Text>}
+                        {isActive && <Text style={{ color: t.accent, fontSize: 11, marginTop: 2 }}>{tr('gym.activeBadge')}</Text>}
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         {!isActive && (
                           <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
-                            <Text style={{ color: t.text3, fontSize: 12 }}>Activar</Text>
+                            <Text style={{ color: t.text3, fontSize: 12 }}>{tr('gym.activateBtn')}</Text>
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity onPress={() => { setEditingRoutineId(r.id); setEditRoutineName(r.name) }} hitSlop={10}>
@@ -347,6 +340,7 @@ export default function GymScreen() {
 
 function StatsView({ exercises }) {
   const { theme: t } = useTheme()
+  const { t: tr, tp } = useLang()
   const s = makeStyles(t)
   const [sessions, setSessions] = useState([])
   const [expanded, setExpanded] = useState(null)
@@ -374,6 +368,7 @@ function StatsView({ exercises }) {
   }
 
   const screenWidth = Dimensions.get('window').width - 32
+  const days = tr('common.days')
 
   const chartData = progression.length > 0 ? {
     labels: progression.map(p => p.date.slice(5)),
@@ -383,7 +378,7 @@ function StatsView({ exercises }) {
   return (
     <View>
       {sessions.length === 0 && (
-        <Text style={[s.hint, { marginTop: 8 }]}>Sin sesiones todavía. Empieza a entrenar desde Rutinas.</Text>
+        <Text style={[s.hint, { marginTop: 8 }]}>{tr('gym.noSessions')}</Text>
       )}
 
       {sessions.map(session => {
@@ -405,12 +400,12 @@ function StatsView({ exercises }) {
                 <Text style={{ color: t.text, fontWeight: '600', fontSize: 14 }}>{session.date}</Text>
                 {session.routine_name && (
                   <Text style={{ color: t.text3, fontSize: 11, marginTop: 2 }}>
-                    {session.routine_name}{session.day_of_week != null ? ` · ${DAYS[session.day_of_week]}` : ''}
+                    {session.routine_name}{session.day_of_week != null ? ` · ${days[session.day_of_week]}` : ''}
                   </Text>
                 )}
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ color: t.text3, fontSize: 11 }}>{session.set_count} series</Text>
+                <Text style={{ color: t.text3, fontSize: 11 }}>{tp('gym.sets', session.set_count)}</Text>
                 <Text style={{ color: t.text3, fontSize: 13 }}>{isOpen ? '▲' : '▼'}</Text>
               </View>
             </TouchableOpacity>
@@ -422,7 +417,7 @@ function StatsView({ exercises }) {
                     <Text style={{ color: t.text2, fontSize: 12, fontWeight: '600', marginBottom: 4 }}>{name}</Text>
                     {exSets.map(ws => (
                       <View key={ws.id} style={{ flexDirection: 'row', gap: 16, paddingLeft: 8, paddingVertical: 2 }}>
-                        <Text style={{ color: t.text3, fontSize: 12 }}>Serie {ws.set_number}</Text>
+                        <Text style={{ color: t.text3, fontSize: 12 }}>{tr('gym.serieLabel', { n: ws.set_number })}</Text>
                         <Text style={{ color: t.text3, fontSize: 12 }}>{ws.weight} kg</Text>
                         <Text style={{ color: t.text3, fontSize: 12 }}>{ws.reps} reps</Text>
                       </View>
@@ -437,7 +432,7 @@ function StatsView({ exercises }) {
 
       {exercises.length > 0 && (
         <View style={{ marginTop: 20 }}>
-          <Text style={{ color: t.text2, fontSize: 13, fontWeight: '600', marginBottom: 10 }}>Progresión por ejercicio</Text>
+          <Text style={{ color: t.text2, fontSize: 13, fontWeight: '600', marginBottom: 10 }}>{tr('gym.progressionTitle')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {exercises.map(ex => (
               <TouchableOpacity
@@ -451,11 +446,11 @@ function StatsView({ exercises }) {
           </View>
 
           {selectedExercise && progression.length === 0 && (
-            <Text style={s.hint}>Sin datos para {selectedExercise.name} todavía.</Text>
+            <Text style={s.hint}>{tr('gym.noDataExercise', { name: selectedExercise.name })}</Text>
           )}
           {selectedExercise && chartData && (
             <View style={s.card}>
-              <Text style={{ color: t.text2, fontSize: 12, marginBottom: 10 }}>{selectedExercise.name} — peso máximo (kg)</Text>
+              <Text style={{ color: t.text2, fontSize: 12, marginBottom: 10 }}>{tr('gym.maxWeight', { name: selectedExercise.name })}</Text>
               <LineChart
                 data={chartData}
                 width={screenWidth - 28}
@@ -485,8 +480,10 @@ function StatsView({ exercises }) {
 
 function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [pickerDay, setPickerDay] = useState(null)
+  const days = tr('common.days')
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -501,12 +498,12 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
       />
 
       <TouchableOpacity onPress={onBack} style={{ marginBottom: 12 }}>
-        <Text style={s.backBtn}>← Volver</Text>
+        <Text style={s.backBtn}>{tr('common.back')}</Text>
       </TouchableOpacity>
       <Text style={s.title}>{routine.name}</Text>
       <View style={{ height: 16 }} />
 
-      {DAYS.map((dayName, idx) => {
+      {days.map((dayName, idx) => {
         const dayExs = routineExercises.filter(re => re.day_of_week === idx)
         return (
           <View key={idx} style={[s.card, { marginBottom: 10 }]}>
@@ -515,7 +512,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {dayExs.length > 0 && (
                   <TouchableOpacity style={s.btnPrimary} onPress={() => onTrain(idx)}>
-                    <Text style={s.btnPrimaryText}>Entrenar</Text>
+                    <Text style={s.btnPrimaryText}>{tr('gym.trainBtn')}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity style={s.btnOutline} onPress={() => setPickerDay(idx)}>
@@ -525,7 +522,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
             </View>
 
             {dayExs.length === 0 ? (
-              <Text style={s.restText}>Descanso</Text>
+              <Text style={s.restText}>{tr('gym.restDay')}</Text>
             ) : (
               dayExs.map(re => (
                 <View key={re.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 3 }}>
@@ -560,6 +557,7 @@ const MUSCLE_SUBGROUPS = {
 
 function ExercisePickerModal({ visible, day, routine, exercises, routineExercises, onClose, onAdded }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
@@ -578,12 +576,15 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
   if (day === null) return null
 
+  const days = tr('common.days')
+  const noGroup = tr('gym.noGroup')
+
   const alreadyAdded = new Set(
     routineExercises.filter(re => re.day_of_week === day).map(re => re.local_exercise_id)
   )
 
   const grouped = exercises.reduce((acc, ex) => {
-    const g = ex.muscle_group || 'Sin grupo'
+    const g = ex.muscle_group || noGroup
     if (!acc[g]) acc[g] = []
     acc[g].push(ex)
     return acc
@@ -611,7 +612,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
       <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} style={s.modal}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Añadir — {DAYS[day]}</Text>
+            <Text style={s.modalTitle}>{tr('gym.addTitle', { day: days[day] })}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <Text style={s.closeBtn}>×</Text>
             </TouchableOpacity>
@@ -659,7 +660,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                           <Text style={s.addedMark}>✓</Text>
                         ) : (
                           <TouchableOpacity style={s.btnPrimarySmall} onPress={() => handleAdd(ex)}>
-                            <Text style={s.btnPrimaryText}>Añadir</Text>
+                            <Text style={s.btnPrimaryText}>{tr('gym.addExercise')}</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -670,21 +671,21 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
             ))}
 
             {exercises.length === 0 && (
-              <Text style={s.hint}>Sin ejercicios todavía.</Text>
+              <Text style={s.hint}>{tr('gym.noExercisesYet')}</Text>
             )}
 
             <View style={s.divider} />
-            <Text style={[s.hint, { marginBottom: 6 }]}>Nuevo ejercicio</Text>
+            <Text style={[s.hint, { marginBottom: 6 }]}>{tr('gym.newExercise')}</Text>
             <TextInput
               style={s.input}
-              placeholder="Nombre"
+              placeholder={tr('gym.exerciseNamePh')}
               placeholderTextColor={t.text3}
               value={newName}
               onChangeText={setNewName}
             />
             <TextInput
               style={[s.input, { marginTop: 6 }]}
-              placeholder="Músculo (opcional)"
+              placeholder={tr('gym.musclePh')}
               placeholderTextColor={t.text3}
               value={newMuscle}
               onChangeText={v => { setNewMuscle(v); setNewSubgroup(''); setShowSuggestions(true) }}
@@ -721,7 +722,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
               </View>
             )}
             <TouchableOpacity style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
-              <Text style={s.btnPrimaryText}>Crear y añadir</Text>
+              <Text style={s.btnPrimaryText}>{tr('gym.createAndAdd')}</Text>
             </TouchableOpacity>
           </ScrollView>
         </TouchableOpacity>
@@ -734,6 +735,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
 function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [sets, setSets] = useState(() => {
@@ -748,6 +750,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
     return init
   })
   const [saving, setSaving] = useState(false)
+  const days = tr('common.days')
 
   function updateSet(exerciseId, setIdx, field, value) {
     setSets(prev => ({
@@ -780,14 +783,14 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={onBack} style={{ marginBottom: 12 }}>
-          <Text style={s.backBtn}>← Volver</Text>
+          <Text style={s.backBtn}>{tr('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={s.title}>{DAYS[day]}</Text>
+        <Text style={s.title}>{days[day]}</Text>
         <Text style={s.subtitle}>{routine.name}</Text>
         <View style={{ height: 16 }} />
 
         <View style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }]}>
-          <Text style={s.hint}>Fecha</Text>
+          <Text style={s.hint}>{tr('common.date')}</Text>
           <TextInput
             style={[s.input, { flex: 1 }]}
             value={date}
@@ -805,13 +808,13 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 
             <View style={{ flexDirection: 'row', marginTop: 10, marginBottom: 4 }}>
               <View style={{ width: 60 }} />
-              <Text style={[s.colHeader, { flex: 1 }]}>Reps</Text>
-              <Text style={[s.colHeader, { flex: 1 }]}>Kg</Text>
+              <Text style={[s.colHeader, { flex: 1 }]}>{tr('gym.reps')}</Text>
+              <Text style={[s.colHeader, { flex: 1 }]}>{tr('gym.kg')}</Text>
             </View>
 
             {(sets[ex.local_exercise_id] || []).map((setData, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={[s.restText, { width: 60 }]}>Serie {i + 1}</Text>
+                <Text style={[s.restText, { width: 60 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
                 <TextInput
                   style={[s.input, { flex: 1, marginRight: 6 }]}
                   keyboardType="number-pad"
@@ -834,7 +837,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
         ))}
 
         {dayExercises.length === 0 && (
-          <Text style={s.hint}>Sin ejercicios en este día.</Text>
+          <Text style={s.hint}>{tr('gym.noExercisesDay')}</Text>
         )}
 
         <TouchableOpacity
@@ -843,7 +846,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
           disabled={saving || dayExercises.length === 0}
         >
           <Text style={[s.btnPrimaryText, { textAlign: 'center', fontSize: 15 }]}>
-            {saving ? 'Guardando...' : 'Guardar sesión'}
+            {saving ? tr('gym.savingSession') : tr('gym.saveSession')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -855,13 +858,14 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 
 function ConfirmModal({ visible, message, onConfirm, onCancel }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
         <TouchableOpacity activeOpacity={1} style={s.modal}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Confirmar</Text>
+            <Text style={s.modalTitle}>{tr('common.confirm')}</Text>
             <TouchableOpacity onPress={onCancel} hitSlop={10}>
               <Text style={s.closeBtn}>×</Text>
             </TouchableOpacity>
@@ -869,10 +873,10 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
           <Text style={{ color: t.text2, fontSize: 14, padding: 16, paddingTop: 8 }}>{message}</Text>
           <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingTop: 0, justifyContent: 'flex-end' }}>
             <TouchableOpacity style={s.btnCancel} onPress={onCancel}>
-              <Text style={s.btnCancelText}>Cancelar</Text>
+              <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={{ backgroundColor: t.dangerBg, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 }} onPress={onConfirm}>
-              <Text style={{ color: t.dangerText, fontSize: 13, fontWeight: '600' }}>Eliminar</Text>
+              <Text style={{ color: t.dangerText, fontSize: 13, fontWeight: '600' }}>{tr('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

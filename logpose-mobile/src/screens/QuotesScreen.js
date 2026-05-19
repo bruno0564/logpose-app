@@ -14,11 +14,13 @@ import {
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
+import { useLang } from '../LangContext'
 
 let syncingQuotes = false
 
 export default function QuotesScreen() {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [quotes, setQuotes] = useState([])
   const [editingQuote, setEditingQuote] = useState(null)
@@ -99,7 +101,7 @@ export default function QuotesScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>Frases</Text>
+        <Text style={s.title}>{tr('quotes.title')}</Text>
         <TouchableOpacity style={s.addBtn} onPress={openAdd}>
           <Text style={s.addBtnText}>+</Text>
         </TouchableOpacity>
@@ -107,7 +109,7 @@ export default function QuotesScreen() {
 
       <ScrollView contentContainerStyle={s.content}>
         {quotes.length === 0 && (
-          <Text style={s.emptyText}>Sin frases todavía. Pulsa + para añadir.</Text>
+          <Text style={s.emptyText}>{tr('quotes.noQuotesMobile')}</Text>
         )}
         {quotes.map(q => (
           <View key={q.id} style={s.card}>
@@ -131,30 +133,30 @@ export default function QuotesScreen() {
         <View style={s.modalOverlay}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>
-              {editingQuote === 'new' ? 'Nueva frase' : 'Editar frase'}
+              {editingQuote === 'new' ? tr('quotes.newQuote') : tr('quotes.editQuote')}
             </Text>
             <TextInput
               style={[s.input, { minHeight: 80, textAlignVertical: 'top' }]}
-              placeholder="Escribe la frase..."
+              placeholder={tr('quotes.quotePh')}
               placeholderTextColor={t.text3}
               multiline
               autoFocus
               value={form.text}
-              onChangeText={t => setForm(f => ({ ...f, text: t }))}
+              onChangeText={v => setForm(f => ({ ...f, text: v }))}
             />
             <TextInput
               style={s.input}
-              placeholder="Autor (opcional)"
+              placeholder={tr('quotes.authorPh')}
               placeholderTextColor={t.text3}
               value={form.author}
-              onChangeText={t => setForm(f => ({ ...f, author: t }))}
+              onChangeText={v => setForm(f => ({ ...f, author: v }))}
             />
             <View style={s.modalBtns}>
               <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={() => setEditingQuote(null)}>
-                <Text style={s.btnCancelText}>Cancelar</Text>
+                <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, s.btnSave]} onPress={handleSave}>
-                <Text style={s.btnSaveText}>Guardar</Text>
+                <Text style={s.btnSaveText}>{tr('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -164,14 +166,14 @@ export default function QuotesScreen() {
       <Modal visible={confirmTarget !== null} transparent animationType="fade" onRequestClose={() => setConfirmTarget(null)}>
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setConfirmTarget(null)}>
           <TouchableOpacity activeOpacity={1} style={[s.modal, { borderRadius: 16 }]}>
-            <Text style={s.modalTitle}>Eliminar frase</Text>
-            <Text style={{ color: t.text2, fontSize: 14, marginBottom: 4 }}>¿Eliminar esta frase?</Text>
+            <Text style={s.modalTitle}>{tr('quotes.deleteQuote')}</Text>
+            <Text style={{ color: t.text2, fontSize: 14, marginBottom: 4 }}>{tr('quotes.deleteConfirm')}</Text>
             <View style={s.modalBtns}>
               <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={() => setConfirmTarget(null)}>
-                <Text style={s.btnCancelText}>Cancelar</Text>
+                <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, { backgroundColor: t.dangerBg }]} onPress={confirmDelete}>
-                <Text style={[s.btnSaveText, { color: t.dangerText }]}>Eliminar</Text>
+                <Text style={[s.btnSaveText, { color: t.dangerText }]}>{tr('common.delete')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>

@@ -23,12 +23,12 @@ import {
   fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
   postSessionToServer, postSetToServer,
 } from './api/client'
-
-const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+import { useLang } from './LangContext.jsx'
 
 let syncingGym = false
 
 export default function Gym() {
+  const { t: tr } = useLang()
   const selectedRoutineRef = useRef(null)
 
   const [view, setView] = useState('routines')
@@ -68,7 +68,6 @@ export default function Gym() {
     try {
       if (!await isServerReachable()) return
 
-      // 1. Routines
       for (const r of await getPendingDeleteRoutines()) {
         try { await deleteRoutineFromServer(r.server_id) } catch {}
         await purgeLocalRoutine(r.id)
@@ -86,7 +85,6 @@ export default function Gym() {
       for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
 
-      // 2. Exercises
       for (const ex of await getPendingDeleteExercises()) {
         try { await deleteExerciseFromServer(ex.server_id) } catch {}
         await purgeLocalExercise(ex.id)
@@ -104,7 +102,6 @@ export default function Gym() {
       for (const ex of serverExercises) await upsertExerciseFromServer(ex)
       await pruneStaleExercises(new Set(serverExercises.map(e => e.id)))
 
-      // 3. Routine exercises
       for (const re of await getPendingDeleteRoutineExercises()) {
         try { await deleteRoutineExerciseFromServer(re.server_id) } catch {}
         await purgeLocalRoutineExercise(re.id)
@@ -117,7 +114,6 @@ export default function Gym() {
       for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
       await pruneStaleRoutineExercises(new Set(serverREs.map(r => r.id)))
 
-      // 4. Sessions
       for (const s of await getPendingDeleteSessions()) {
         try { await deleteSessionFromServer(s.server_id) } catch {}
         await purgeLocalSession(s.id)
@@ -129,7 +125,6 @@ export default function Gym() {
       const serverSessions = await fetchAllSessionsFromServer()
       for (const s of serverSessions) await upsertSessionFromServer(s)
 
-      // 5. Sets
       for (const ws of await getPendingDeleteSets()) {
         try { await deleteSetFromServer(ws.server_id) } catch {}
         await purgeLocalSet(ws.id)
@@ -219,20 +214,20 @@ export default function Gym() {
     <div className="page">
       {confirmTarget && (
         <ConfirmModal
-          message={`¿Eliminar la rutina "${confirmTarget.name}"?`}
+          message={tr('gym.confirmDeleteRoutine', { name: confirmTarget.name })}
           onConfirm={confirmDelete}
           onCancel={() => setConfirmTarget(null)}
         />
       )}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 className="page-title">Gym</h1>
-          {tab === 'routines' && <button className="btn-primary" onClick={() => setAdding(a => !a)}>+ Rutina</button>}
+          <h1 className="page-title">{tr('gym.title')}</h1>
+          {tab === 'routines' && <button className="btn-primary" onClick={() => setAdding(a => !a)}>{tr('gym.addRoutine')}</button>}
         </div>
         <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '0.2rem', width: 'fit-content' }}>
-          {['routines', 'stats'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: '0.3rem 1rem', fontSize: '0.82rem', fontWeight: 500, border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: tab === t ? 'var(--accent)' : 'transparent', color: tab === t ? '#fff' : 'var(--text-2)', transition: 'all 0.15s' }}>
-              {t === 'routines' ? 'Rutinas' : 'Estadísticas'}
+          {['routines', 'stats'].map(tabKey => (
+            <button key={tabKey} onClick={() => setTab(tabKey)} style={{ padding: '0.3rem 1rem', fontSize: '0.82rem', fontWeight: 500, border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: tab === tabKey ? 'var(--accent)' : 'transparent', color: tab === tabKey ? '#fff' : 'var(--text-2)', transition: 'all 0.15s' }}>
+              {tabKey === 'routines' ? tr('gym.tabRoutines') : tr('gym.tabStats')}
             </button>
           ))}
         </div>
@@ -246,7 +241,7 @@ export default function Gym() {
             <input
               autoFocus
               type="text"
-              placeholder="Nombre de la rutina..."
+              placeholder={tr('gym.routineNamePh')}
               value={newName}
               onChange={e => setNewName(e.target.value)}
               style={{
@@ -256,16 +251,16 @@ export default function Gym() {
                 fontSize: '0.85rem', outline: 'none',
               }}
             />
-            <button type="submit" className="btn-primary">Crear</button>
+            <button type="submit" className="btn-primary">{tr('common.create')}</button>
             <button type="button" className="btn-cancel" onClick={() => { setAdding(false); setNewName('') }}>
-              Cancelar
+              {tr('common.cancel')}
             </button>
           </form>
         </div>
       )}
 
       {tab === 'routines' && routines.length === 0 && (
-        <p className="hint">Sin rutinas todavía. Crea la primera arriba.</p>
+        <p className="hint">{tr('gym.noRoutines')}</p>
       )}
       {tab === 'routines' && routines.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 480 }}>
@@ -302,15 +297,15 @@ export default function Gym() {
                       onChange={e => setEditRoutineName(e.target.value)}
                       style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.65rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none' }}
                     />
-                    <button type="submit" className="btn-primary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}>Guardar</button>
-                    <button type="button" className="btn-cancel" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }} onClick={e => { e.stopPropagation(); setEditingRoutineId(null) }}>Cancelar</button>
+                    <button type="submit" className="btn-primary" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}>{tr('common.save')}</button>
+                    <button type="button" className="btn-cancel" style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }} onClick={e => { e.stopPropagation(); setEditingRoutineId(null) }}>{tr('common.cancel')}</button>
                   </form>
                 ) : (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       {isActive && (
                         <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          Activa
+                          {tr('gym.activeBadge')}
                         </span>
                       )}
                       <span style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 500 }}>{r.name}</span>
@@ -322,7 +317,7 @@ export default function Gym() {
                           style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', height: 'auto' }}
                           onClick={e => handleActivate(e, r)}
                         >
-                          Activar
+                          {tr('gym.activateBtn')}
                         </button>
                       )}
                       <button
@@ -347,11 +342,13 @@ export default function Gym() {
 // ── Stats View ────────────────────────────────────────────────────────────────
 
 function StatsView({ exercises }) {
+  const { t: tr, tp } = useLang()
   const [sessions, setSessions] = useState([])
   const [expanded, setExpanded] = useState(null)
   const [sessionSets, setSessionSets] = useState({})
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [progression, setProgression] = useState([])
+  const days = tr('common.days')
 
   useEffect(() => {
     getAllSessions().then(setSessions)
@@ -372,12 +369,10 @@ function StatsView({ exercises }) {
     setProgression(data)
   }
 
-  const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-
   return (
     <div>
       {sessions.length === 0 && (
-        <p className="hint">Sin sesiones todavía. Empieza a entrenar desde la pestaña Rutinas.</p>
+        <p className="hint">{tr('gym.noSessions')}</p>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: 520, marginBottom: '2rem' }}>
@@ -398,10 +393,10 @@ function StatsView({ exercises }) {
               >
                 <div>
                   <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem' }}>{s.date}</span>
-                  {s.routine_name && <span style={{ color: 'var(--text-3)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{s.routine_name}{s.day_of_week != null ? ` · ${DAYS[s.day_of_week]}` : ''}</span>}
+                  {s.routine_name && <span style={{ color: 'var(--text-3)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{s.routine_name}{s.day_of_week != null ? ` · ${days[s.day_of_week]}` : ''}</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>{s.set_count} series</span>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>{tp('gym.sets', s.set_count)}</span>
                   <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{isOpen ? '▲' : '▼'}</span>
                 </div>
               </div>
@@ -413,7 +408,7 @@ function StatsView({ exercises }) {
                       <p style={{ color: 'var(--text-2)', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.3rem' }}>{name}</p>
                       {exSets.map(ws => (
                         <div key={ws.id} style={{ display: 'flex', gap: '1rem', color: 'var(--text-3)', fontSize: '0.78rem', paddingLeft: '0.5rem' }}>
-                          <span>Serie {ws.set_number}</span>
+                          <span>{tr('gym.serieLabel', { n: ws.set_number })}</span>
                           <span>{ws.weight} kg</span>
                           <span>{ws.reps} reps</span>
                         </div>
@@ -429,7 +424,7 @@ function StatsView({ exercises }) {
 
       {exercises.length > 0 && (
         <div style={{ maxWidth: 520 }}>
-          <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem' }}>Progresión por ejercicio</p>
+          <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem' }}>{tr('gym.progressionTitle')}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
             {exercises.map(ex => (
               <button
@@ -443,16 +438,16 @@ function StatsView({ exercises }) {
           </div>
 
           {selectedExercise && progression.length === 0 && (
-            <p className="hint">Sin datos para {selectedExercise.name} todavía.</p>
+            <p className="hint">{tr('gym.noDataExercise', { name: selectedExercise.name })}</p>
           )}
           {selectedExercise && progression.length > 0 && (
             <div className="card" style={{ padding: '1rem' }}>
-              <p style={{ color: 'var(--text-2)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{selectedExercise.name} — peso máximo (kg)</p>
+              <p style={{ color: 'var(--text-2)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{tr('gym.maxWeight', { name: selectedExercise.name })}</p>
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={progression}>
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={35} />
-                  <Tooltip contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 12 }} formatter={(v) => [`${v} kg`, 'Máx']} />
+                  <Tooltip contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 12 }} formatter={(v) => [`${v} kg`, 'Max']} />
                   <Line type="monotone" dataKey="max_weight" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3, fill: 'var(--accent)' }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -467,7 +462,9 @@ function StatsView({ exercises }) {
 // ── Routine Detail ────────────────────────────────────────────────────────────
 
 function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange }) {
+  const { t: tr } = useLang()
   const [pickerDay, setPickerDay] = useState(null)
+  const days = tr('common.days')
 
   return (
     <div className="page">
@@ -487,13 +484,13 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
           onClick={onBack}
           style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
         >
-          ← Volver
+          {tr('common.back')}
         </button>
         <h1 className="page-title">{routine.name}</h1>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 480 }}>
-        {DAYS.map((dayName, idx) => {
+        {days.map((dayName, idx) => {
           const dayExs = routineExercises.filter(re => re.day_of_week === idx)
           return (
             <div key={idx} className="card" style={{ marginBottom: 0, padding: '1rem 1.25rem' }}>
@@ -506,7 +503,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                       style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
                       onClick={() => onTrain(idx)}
                     >
-                      Entrenar
+                      {tr('gym.trainBtn')}
                     </button>
                   )}
                   <button
@@ -519,7 +516,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
               </div>
 
               {dayExs.length === 0 ? (
-                <span style={{ color: 'var(--text-3)', fontSize: '0.78rem' }}>Descanso</span>
+                <span style={{ color: 'var(--text-3)', fontSize: '0.78rem' }}>{tr('gym.restDay')}</span>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   {dayExs.map(re => (
@@ -562,6 +559,7 @@ const MUSCLE_SUBGROUPS = {
 }
 
 function ExercisePickerModal({ day, routine, exercises, routineExercises, onClose, onAdded }) {
+  const { t: tr } = useLang()
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
   const [newSubgroup, setNewSubgroup] = useState('')
@@ -576,13 +574,15 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
     g.toLowerCase().includes(newMuscle.toLowerCase()) && g.toLowerCase() !== newMuscle.toLowerCase()
   )
   const subgroups = MUSCLE_SUBGROUPS[newMuscle] ?? []
+  const days = tr('common.days')
+  const noGroup = tr('gym.noGroup')
 
   const alreadyAdded = new Set(
     routineExercises.filter(re => re.day_of_week === day).map(re => re.local_exercise_id)
   )
 
   const grouped = exercises.reduce((acc, ex) => {
-    const g = ex.muscle_group || 'Sin grupo'
+    const g = ex.muscle_group || noGroup
     if (!acc[g]) acc[g] = []
     acc[g].push(ex)
     return acc
@@ -614,7 +614,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
         onClick={e => e.stopPropagation()}
       >
         <div className="modal-header">
-          <span>Añadir — {DAYS[day]}</span>
+          <span>{tr('gym.addTitle', { day: days[day] })}</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
         </div>
 
@@ -666,7 +666,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                           style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
                           onClick={() => handleAdd(ex)}
                         >
-                          Añadir
+                          {tr('gym.addExercise')}
                         </button>
                       )}
                     </div>
@@ -677,15 +677,15 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
           ))}
 
           {exercises.length === 0 && (
-            <p style={{ color: 'var(--text-3)', fontSize: '0.83rem', marginBottom: '1rem' }}>Sin ejercicios todavía.</p>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.83rem', marginBottom: '1rem' }}>{tr('gym.noExercisesYet')}</p>
           )}
 
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.85rem', marginTop: '0.25rem' }}>
-            <p style={{ color: 'var(--text-2)', fontSize: '0.78rem', marginBottom: '0.5rem' }}>Nuevo ejercicio</p>
+            <p style={{ color: 'var(--text-2)', fontSize: '0.78rem', marginBottom: '0.5rem' }}>{tr('gym.newExercise')}</p>
             <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               <input
                 type="text"
-                placeholder="Nombre"
+                placeholder={tr('gym.exerciseNamePh')}
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 style={{ padding: '0.4rem 0.6rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.83rem', outline: 'none' }}
@@ -693,7 +693,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
               <div style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  placeholder="Músculo (opcional)"
+                  placeholder={tr('gym.musclePh')}
                   value={newMuscle}
                   onChange={e => { setNewMuscle(e.target.value); setNewSubgroup(''); setShowSuggestions(true) }}
                   onFocus={() => setShowSuggestions(true)}
@@ -736,7 +736,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                   ))}
                 </div>
               )}
-              <button type="submit" className="btn-primary" style={{ marginTop: '0.1rem' }}>Crear y añadir</button>
+              <button type="submit" className="btn-primary" style={{ marginTop: '0.1rem' }}>{tr('gym.createAndAdd')}</button>
             </form>
           </div>
         </div>
@@ -748,6 +748,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
 // ── Train View ────────────────────────────────────────────────────────────────
 
 function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
+  const { t: tr } = useLang()
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [sets, setSets] = useState(() => {
     const init = {}
@@ -761,6 +762,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
     return init
   })
   const [saving, setSaving] = useState(false)
+  const days = tr('common.days')
 
   function updateSet(exerciseId, setIdx, field, value) {
     setSets(prev => ({
@@ -796,15 +798,15 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
           onClick={onBack}
           style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
         >
-          ← Volver
+          {tr('common.back')}
         </button>
-        <h1 className="page-title">{DAYS[day]}</h1>
+        <h1 className="page-title">{days[day]}</h1>
         <p className="page-subtitle">{routine.name}</p>
       </div>
 
       <div style={{ maxWidth: 480 }}>
         <div className="card" style={{ marginBottom: '1rem', padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ color: 'var(--text-2)', fontSize: '0.85rem', minWidth: 'fit-content' }}>Fecha</span>
+          <span style={{ color: 'var(--text-2)', fontSize: '0.85rem', minWidth: 'fit-content' }}>{tr('common.date')}</span>
           <input
             type="date"
             value={date}
@@ -824,13 +826,13 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem' }}>
               <span />
-              <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reps</span>
-              <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Kg</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tr('gym.reps')}</span>
+              <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tr('gym.kg')}</span>
             </div>
 
             {(sets[ex.local_exercise_id] || []).map((s, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Serie {i + 1}</span>
+                <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{tr('gym.serieLabel', { n: i + 1 })}</span>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -853,7 +855,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
         ))}
 
         {dayExercises.length === 0 && (
-          <p className="hint">Sin ejercicios en este día.</p>
+          <p className="hint">{tr('gym.noExercisesDay')}</p>
         )}
 
         <button
@@ -862,7 +864,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
           onClick={handleSave}
           disabled={saving || dayExercises.length === 0}
         >
-          {saving ? 'Guardando...' : 'Guardar sesión'}
+          {saving ? tr('gym.savingSession') : tr('gym.saveSession')}
         </button>
       </div>
     </div>
@@ -872,17 +874,18 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 // ── Confirm Modal ─────────────────────────────────────────────────────────────
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
+  const { t: tr } = useLang()
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" style={{ maxWidth: 340 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Confirmar</span>
+          <span>{tr('common.confirm')}</span>
           <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
         </div>
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', padding: '1rem 1rem 0' }}>{message}</p>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', padding: '1rem' }}>
-          <button className="btn-cancel" onClick={onCancel}>Cancelar</button>
-          <button className="btn-delete" onClick={onConfirm}>Eliminar</button>
+          <button className="btn-cancel" onClick={onCancel}>{tr('common.cancel')}</button>
+          <button className="btn-delete" onClick={onConfirm}>{tr('common.delete')}</button>
         </div>
       </div>
     </div>

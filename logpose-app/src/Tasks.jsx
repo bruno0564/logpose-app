@@ -12,10 +12,12 @@ import {
   fetchAllTaskListsFromServer, postTaskListToServer, deleteTaskListFromServer,
   fetchTaskItemsFromServer, postTaskItemToServer, putTaskItemToServer, deleteTaskItemFromServer,
 } from './api/client'
+import { useLang } from './LangContext.jsx'
 
 let syncingTasks = false
 
 export default function Tasks() {
+  const { t: tr } = useLang()
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
   const activeListRef = useRef(null)
@@ -147,28 +149,28 @@ export default function Tasks() {
         <div className="modal-overlay" onClick={() => setConfirmTarget(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Confirmar</h3>
+              <h3 className="modal-title">{tr('common.confirm')}</h3>
               <button className="modal-close" onClick={() => setConfirmTarget(null)}>×</button>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-              ¿Eliminar la lista "{confirmTarget.name}" y todas sus tareas?
+              {tr('tasks.deleteListMsg', { name: confirmTarget.name })}
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button className="btn-cancel" onClick={() => setConfirmTarget(null)}>Cancelar</button>
-              <button className="btn-danger" onClick={confirmDeleteList}>Eliminar</button>
+              <button className="btn-cancel" onClick={() => setConfirmTarget(null)}>{tr('common.cancel')}</button>
+              <button className="btn-danger" onClick={confirmDeleteList}>{tr('common.delete')}</button>
             </div>
           </div>
         </div>
       )}
       <div className="page-header">
-        <h1 className="page-title">To-Do</h1>
-        <p className="page-subtitle">Listas de tareas</p>
+        <h1 className="page-title">{tr('tasks.title')}</h1>
+        <p className="page-subtitle">{tr('tasks.subtitle')}</p>
       </div>
 
       <div className="todo-layout">
         <div className="todo-sidebar">
           <div className="card" style={{ marginBottom: 0, padding: '1.25rem' }}>
-            <h2 className="card-title">Listas</h2>
+            <h2 className="card-title">{tr('tasks.listsTitle')}</h2>
 
             {lists.map(list => (
               <div
@@ -184,17 +186,17 @@ export default function Tasks() {
 
             {addingList ? (
               <form onSubmit={handleAddList} className="todo-new-list">
-                <input autoFocus type="text" placeholder="Nombre de la lista"
+                <input autoFocus type="text" placeholder={tr('tasks.listNamePh')}
                   value={newListName} onChange={e => setNewListName(e.target.value)} />
                 <div className="todo-new-list-actions">
-                  <button type="submit" className="btn-primary">Crear</button>
+                  <button type="submit" className="btn-primary">{tr('common.create')}</button>
                   <button type="button" className="btn-cancel"
-                    onClick={() => { setAddingList(false); setNewListName('') }}>Cancelar</button>
+                    onClick={() => { setAddingList(false); setNewListName('') }}>{tr('common.cancel')}</button>
                 </div>
               </form>
             ) : (
               <button className="btn-primary todo-add-list-btn" onClick={() => setAddingList(true)}>
-                + Nueva lista
+                {tr('tasks.newListBtn')}
               </button>
             )}
           </div>
@@ -203,20 +205,20 @@ export default function Tasks() {
         <div className="todo-content">
           {!activeList ? (
             lists.length === 0
-              ? <p className="hint">Crea una lista para empezar.</p>
-              : <p className="hint">Selecciona una lista.</p>
+              ? <p className="hint">{tr('tasks.createList')}</p>
+              : <p className="hint">{tr('tasks.selectList')}</p>
           ) : (
             <div className="card" style={{ marginBottom: 0 }}>
               <h2 className="card-title" style={{ marginBottom: '1rem' }}>{activeList.name}</h2>
 
               <form onSubmit={handleAddItem} className="todo-add-item">
-                <input type="text" placeholder="Nueva tarea..." value={newItemTitle}
+                <input type="text" placeholder={tr('tasks.newItemPh')} value={newItemTitle}
                   onChange={e => setNewItemTitle(e.target.value)} />
-                <button type="submit" className="btn-primary">Añadir</button>
+                <button type="submit" className="btn-primary">{tr('tasks.addBtn')}</button>
               </form>
 
               {items.length === 0 ? (
-                <p className="hint">Sin tareas todavía.</p>
+                <p className="hint">{tr('tasks.noItemsYet')}</p>
               ) : (
                 <>
                   {pending.map(item => (
@@ -228,7 +230,7 @@ export default function Tasks() {
                   ))}
                   {done.length > 0 && (
                     <>
-                      <p className="todo-done-label">Completadas</p>
+                      <p className="todo-done-label">{tr('tasks.doneLabel')}</p>
                       {done.map(item => (
                         <div key={item.id} className="todo-item todo-item--done">
                           <button className="todo-check todo-check--done" onClick={() => handleToggle(item)}>✓</button>
