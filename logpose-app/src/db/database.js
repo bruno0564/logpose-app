@@ -673,18 +673,6 @@ export async function upsertExerciseFromServer(serverEx) {
 
 // ── Routine Exercises ─────────────────────────────────────────────────────────
 
-export async function getRoutineExercisesForDay(localRoutineId, dayOfWeek) {
-  const db = await openDB()
-  return db.select(`
-    SELECT re.id, re.local_exercise_id, re.position,
-           e.name as exercise_name, e.muscle_group
-    FROM routine_exercises re
-    JOIN exercises e ON e.id = re.local_exercise_id
-    WHERE re.local_routine_id = ? AND re.day_of_week = ? AND re.pending_delete = 0
-    ORDER BY re.position
-  `, [localRoutineId, dayOfWeek])
-}
-
 export async function getAllRoutineExercises(localRoutineId) {
   const db = await openDB()
   return db.select(`
@@ -887,14 +875,6 @@ export async function getExerciseProgression(localExerciseId) {
   `, [localExerciseId])
 }
 
-export async function getSessionsForRoutineDay(localRoutineId, dayOfWeek) {
-  const db = await openDB()
-  return db.select(
-    'SELECT * FROM workout_sessions WHERE local_routine_id = ? AND day_of_week = ? AND pending_delete = 0 ORDER BY date DESC',
-    [localRoutineId, dayOfWeek]
-  )
-}
-
 // ── Workout Sets ──────────────────────────────────────────────────────────────
 
 export async function getUnsyncedSets() {
@@ -964,17 +944,6 @@ export async function getSetsForSession(localSessionId) {
     'SELECT ws.*, e.name as exercise_name FROM workout_sets ws JOIN exercises e ON e.id = ws.local_exercise_id WHERE ws.local_session_id = ? AND ws.pending_delete = 0 ORDER BY ws.local_exercise_id, ws.set_number',
     [localSessionId]
   )
-}
-
-export async function getSetsForExercise(localExerciseId) {
-  const db = await openDB()
-  return db.select(`
-    SELECT ws.*, s.date, s.day_of_week
-    FROM workout_sets ws
-    JOIN workout_sessions s ON s.id = ws.local_session_id
-    WHERE ws.local_exercise_id = ? AND ws.pending_delete = 0
-    ORDER BY s.date DESC, ws.set_number
-  `, [localExerciseId])
 }
 
 // ── Calendar Events ───────────────────────────────────────────────────────────
