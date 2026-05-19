@@ -27,3 +27,19 @@
   --radius:    10px;
   --radius-lg: 14px;
 }
+
+[data-theme="light"] {
+  --bg:        #f8f8f8;
+  --surface:   #ffffff;
+  --surface-2: #f0f0f0;
+  --border:    #e0e0e0;
+  --border-2:  #d0d0d0;
+  --accent:       #818cf8;
+  --accent-hover: #6366f1;
+  --text:   #111111;
+  --text-2: #555555;
+  --text-3: #999999;
+  --text-4: #cccccc;
+  --danger:  #ef4444;
+  --success: #22c55e;
+}

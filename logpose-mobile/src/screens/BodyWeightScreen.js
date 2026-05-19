@@ -14,10 +14,13 @@ import {
 import {
   isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 const SCREEN_W = Dimensions.get('window').width
 
 export default function BodyWeightScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -163,7 +166,7 @@ export default function BodyWeightScreen() {
         <TextInput
           style={s.input}
           placeholder="Peso (kg)"
-          placeholderTextColor="#666"
+          placeholderTextColor={t.text3}
           keyboardType="decimal-pad"
           value={weight}
           onChangeText={setWeight}
@@ -186,7 +189,7 @@ export default function BodyWeightScreen() {
         <TextInput
           style={s.input}
           placeholder="Nota (opcional)"
-          placeholderTextColor="#666"
+          placeholderTextColor={t.text3}
           value={note}
           onChangeText={setNote}
         />
@@ -239,7 +242,7 @@ export default function BodyWeightScreen() {
         )}
 
         {loading ? (
-          <ActivityIndicator color="#7c3aed" style={{ marginTop: 16 }} />
+          <ActivityIndicator color={t.accent} style={{ marginTop: 16 }} />
         ) : hasChart ? (
           <View style={s.chartWrap}>
             <LineChart
@@ -247,14 +250,14 @@ export default function BodyWeightScreen() {
               width={SCREEN_W - 64}
               height={180}
               chartConfig={{
-                backgroundColor: '#1a1a1a',
-                backgroundGradientFrom: '#1a1a1a',
-                backgroundGradientTo: '#1a1a1a',
+                backgroundColor: t.surface2,
+                backgroundGradientFrom: t.surface2,
+                backgroundGradientTo: t.surface2,
                 decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(124, 58, 237, ${opacity})`,
-                labelColor: () => '#555',
-                propsForDots: { r: '3', strokeWidth: '1', stroke: '#7c3aed' },
-                propsForBackgroundLines: { stroke: '#222' },
+                color: (opacity = 1) => `rgba(129, 140, 248, ${opacity})`,
+                labelColor: () => t.text3,
+                propsForDots: { r: '3', strokeWidth: '1', stroke: t.accent },
+                propsForBackgroundLines: { stroke: t.border },
               }}
               bezier
               withInnerLines={true}
@@ -308,7 +311,7 @@ export default function BodyWeightScreen() {
             <TextInput
               style={s.input}
               placeholder="Peso (kg)"
-              placeholderTextColor="#666"
+              placeholderTextColor={t.text3}
               keyboardType="decimal-pad"
               value={editEntry?.weight ?? ''}
               onChangeText={v => setEditEntry(e => ({ ...e, weight: v }))}
@@ -331,13 +334,13 @@ export default function BodyWeightScreen() {
             <TextInput
               style={s.input}
               placeholder="Nota (opcional)"
-              placeholderTextColor="#666"
+              placeholderTextColor={t.text3}
               value={editEntry?.note ?? ''}
               onChangeText={v => setEditEntry(e => ({ ...e, note: v }))}
             />
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-              <TouchableOpacity style={[s.btn, { flex: 1, backgroundColor: '#2a2a2a' }]} onPress={() => setEditEntry(null)}>
-                <Text style={[s.btnText, { color: '#888' }]}>Cancelar</Text>
+              <TouchableOpacity style={[s.btn, { flex: 1, backgroundColor: t.border2 }]} onPress={() => setEditEntry(null)}>
+                <Text style={[s.btnText, { color: t.text2 }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, { flex: 1 }]} onPress={handleEditSave}>
                 <Text style={s.btnText}>Guardar</Text>
@@ -350,43 +353,43 @@ export default function BodyWeightScreen() {
   )
 }
 
-const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#0f0f0f' },
+const makeStyles = (t) => StyleSheet.create({
+  container:    { flex: 1, backgroundColor: t.bg },
   content:      { padding: 16, paddingTop: 56, paddingBottom: 32 },
-  title:        { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
+  title:        { color: t.text, fontSize: 22, fontWeight: '700', marginBottom: 8 },
   statsRow:     { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  stat:         { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 10, padding: 12, alignItems: 'center' },
-  statVal:      { color: '#fff', fontSize: 18, fontWeight: '700' },
-  statLbl:      { color: '#888', fontSize: 11, marginTop: 2 },
-  card:         { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 16, marginBottom: 16 },
-  cardTitle:    { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 12 },
-  input:        { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 8, padding: 10, marginBottom: 8 },
-  datePicker:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2a2a2a', borderRadius: 8, padding: 10, marginBottom: 8 },
-  datePickerText: { color: '#fff' },
+  stat:         { flex: 1, backgroundColor: t.surface2, borderRadius: 10, padding: 12, alignItems: 'center' },
+  statVal:      { color: t.text, fontSize: 18, fontWeight: '700' },
+  statLbl:      { color: t.text2, fontSize: 11, marginTop: 2 },
+  card:         { backgroundColor: t.surface2, borderRadius: 10, padding: 16, marginBottom: 16 },
+  cardTitle:    { color: t.text, fontSize: 15, fontWeight: '600', marginBottom: 12 },
+  input:        { backgroundColor: t.border2, color: t.text, borderRadius: 8, padding: 10, marginBottom: 8 },
+  datePicker:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: t.border2, borderRadius: 8, padding: 10, marginBottom: 8 },
+  datePickerText: { color: t.text },
   datePickerIcon: { fontSize: 16 },
-  btn:          { backgroundColor: '#7c3aed', borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
-  btnText:      { color: '#fff', fontWeight: '600' },
+  btn:          { backgroundColor: t.accent, borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
+  btnText:      { color: t.text, fontWeight: '600' },
   filterRow:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  filterBtn:    { flex: 1, backgroundColor: '#2a2a2a', borderRadius: 8, padding: 10 },
-  filterLabel:  { color: '#555', fontSize: 10, marginBottom: 2 },
-  filterValue:  { color: '#fff', fontSize: 13 },
+  filterBtn:    { flex: 1, backgroundColor: t.border2, borderRadius: 8, padding: 10 },
+  filterLabel:  { color: t.text3, fontSize: 10, marginBottom: 2 },
+  filterValue:  { color: t.text, fontSize: 13 },
   clearBtn:     { padding: 8 },
-  clearBtnText: { color: '#555', fontSize: 16 },
+  clearBtnText: { color: t.text3, fontSize: 16 },
   chartWrap:    { marginVertical: 12, alignItems: 'center' },
-  tableHeader:  { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#2a2a2a', paddingBottom: 6, marginBottom: 4, marginTop: 8 },
-  headerText:   { color: '#555', fontSize: 11, fontWeight: '600' },
-  row:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1f1f1f' },
-  col:          { color: '#aaa', fontSize: 13 },
+  tableHeader:  { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.border2, paddingBottom: 6, marginBottom: 4, marginTop: 8 },
+  headerText:   { color: t.text3, fontSize: 11, fontWeight: '600' },
+  row:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: t.border },
+  col:          { color: t.text2, fontSize: 13 },
   colDate:      { width: 95 },
   colWeight:    { width: 65 },
   colNote:      { flex: 1 },
   colAction:    { width: 32, alignItems: 'center' },
-  weightText:   { color: '#fff', fontWeight: '600' },
-  noteText:     { color: '#666', fontSize: 12 },
-  del:          { color: '#ef4444', fontSize: 14 },
-  editBtn:      { color: '#555', fontSize: 14 },
-  hint:         { color: '#555', fontSize: 13, marginTop: 8, textAlign: 'center' },
+  weightText:   { color: t.text, fontWeight: '600' },
+  noteText:     { color: t.text3, fontSize: 12 },
+  del:          { color: t.danger, fontSize: 14 },
+  editBtn:      { color: t.text3, fontSize: 14 },
+  hint:         { color: t.text3, fontSize: 13, marginTop: 8, textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal:        { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, gap: 10 },
-  modalTitle:   { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  modal:        { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, gap: 10 },
+  modalTitle:   { color: t.text, fontSize: 15, fontWeight: '600', marginBottom: 4 },
 })

@@ -28,12 +28,15 @@ import {
   fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
   postSessionToServer, postSetToServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 let syncingGym = false
 
 export default function GymScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const selectedRoutineRef = useRef(null)
 
   const [view, setView] = useState('routines')
@@ -259,7 +262,7 @@ export default function GymScreen() {
                 autoFocus
                 style={s.input}
                 placeholder="Nombre de la rutina..."
-                placeholderTextColor="#444"
+                placeholderTextColor={t.text3}
                 value={newName}
                 onChangeText={setNewName}
               />
@@ -281,7 +284,7 @@ export default function GymScreen() {
               const isActive = r.id === activeRoutineId
               const isEditing = editingRoutineId === r.id
               return (
-                <View key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? '#818cf8' : 'transparent' }]}>
+                <View key={r.id} style={[s.rowCard, { borderLeftWidth: 3, borderLeftColor: isActive ? t.accent : 'transparent' }]}>
                   {isEditing ? (
                     <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
                       <TextInput
@@ -313,16 +316,16 @@ export default function GymScreen() {
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={s.rowText}>{r.name}</Text>
-                        {isActive && <Text style={{ color: '#818cf8', fontSize: 11, marginTop: 2 }}>Activa</Text>}
+                        {isActive && <Text style={{ color: t.accent, fontSize: 11, marginTop: 2 }}>Activa</Text>}
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         {!isActive && (
                           <TouchableOpacity onPress={() => handleActivate(r)} hitSlop={10}>
-                            <Text style={{ color: '#444', fontSize: 12 }}>Activar</Text>
+                            <Text style={{ color: t.text3, fontSize: 12 }}>Activar</Text>
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity onPress={() => { setEditingRoutineId(r.id); setEditRoutineName(r.name) }} hitSlop={10}>
-                          <Text style={{ color: '#555', fontSize: 16, lineHeight: 18 }}>✎</Text>
+                          <Text style={{ color: t.text3, fontSize: 16, lineHeight: 18 }}>✎</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
                           <Text style={s.deleteBtn}>×</Text>
@@ -343,6 +346,8 @@ export default function GymScreen() {
 // ── Stats View ────────────────────────────────────────────────────────────────
 
 function StatsView({ exercises }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [sessions, setSessions] = useState([])
   const [expanded, setExpanded] = useState(null)
   const [sessionSets, setSessionSets] = useState({})
@@ -397,29 +402,29 @@ function StatsView({ exercises }) {
               onPress={() => toggleSession(session.id)}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#f0f0f0', fontWeight: '600', fontSize: 14 }}>{session.date}</Text>
+                <Text style={{ color: t.text, fontWeight: '600', fontSize: 14 }}>{session.date}</Text>
                 {session.routine_name && (
-                  <Text style={{ color: '#444', fontSize: 11, marginTop: 2 }}>
+                  <Text style={{ color: t.text3, fontSize: 11, marginTop: 2 }}>
                     {session.routine_name}{session.day_of_week != null ? ` · ${DAYS[session.day_of_week]}` : ''}
                   </Text>
                 )}
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ color: '#444', fontSize: 11 }}>{session.set_count} series</Text>
-                <Text style={{ color: '#444', fontSize: 13 }}>{isOpen ? '▲' : '▼'}</Text>
+                <Text style={{ color: t.text3, fontSize: 11 }}>{session.set_count} series</Text>
+                <Text style={{ color: t.text3, fontSize: 13 }}>{isOpen ? '▲' : '▼'}</Text>
               </View>
             </TouchableOpacity>
 
             {isOpen && (
-              <View style={{ borderTopWidth: 1, borderTopColor: '#1e1e1e', padding: 14, paddingTop: 10 }}>
+              <View style={{ borderTopWidth: 1, borderTopColor: t.border, padding: 14, paddingTop: 10 }}>
                 {Object.entries(exGroups).map(([name, exSets]) => (
                   <View key={name} style={{ marginBottom: 10 }}>
-                    <Text style={{ color: '#888', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>{name}</Text>
+                    <Text style={{ color: t.text2, fontSize: 12, fontWeight: '600', marginBottom: 4 }}>{name}</Text>
                     {exSets.map(ws => (
                       <View key={ws.id} style={{ flexDirection: 'row', gap: 16, paddingLeft: 8, paddingVertical: 2 }}>
-                        <Text style={{ color: '#444', fontSize: 12 }}>Serie {ws.set_number}</Text>
-                        <Text style={{ color: '#444', fontSize: 12 }}>{ws.weight} kg</Text>
-                        <Text style={{ color: '#444', fontSize: 12 }}>{ws.reps} reps</Text>
+                        <Text style={{ color: t.text3, fontSize: 12 }}>Serie {ws.set_number}</Text>
+                        <Text style={{ color: t.text3, fontSize: 12 }}>{ws.weight} kg</Text>
+                        <Text style={{ color: t.text3, fontSize: 12 }}>{ws.reps} reps</Text>
                       </View>
                     ))}
                   </View>
@@ -432,15 +437,15 @@ function StatsView({ exercises }) {
 
       {exercises.length > 0 && (
         <View style={{ marginTop: 20 }}>
-          <Text style={{ color: '#888', fontSize: 13, fontWeight: '600', marginBottom: 10 }}>Progresión por ejercicio</Text>
+          <Text style={{ color: t.text2, fontSize: 13, fontWeight: '600', marginBottom: 10 }}>Progresión por ejercicio</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {exercises.map(ex => (
               <TouchableOpacity
                 key={ex.id}
-                style={[s.btnCancel, { paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: selectedExercise?.id === ex.id ? '#818cf8' : '#2a2a2a', backgroundColor: selectedExercise?.id === ex.id ? '#818cf8' : '#181818' }]}
+                style={[s.btnCancel, { paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: selectedExercise?.id === ex.id ? t.accent : t.border2, backgroundColor: selectedExercise?.id === ex.id ? t.accent : t.inputBg }]}
                 onPress={() => handleSelectExercise(ex)}
               >
-                <Text style={{ color: selectedExercise?.id === ex.id ? '#fff' : '#888', fontSize: 12 }}>{ex.name}</Text>
+                <Text style={{ color: selectedExercise?.id === ex.id ? t.text : t.text2, fontSize: 12 }}>{ex.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -450,19 +455,19 @@ function StatsView({ exercises }) {
           )}
           {selectedExercise && chartData && (
             <View style={s.card}>
-              <Text style={{ color: '#888', fontSize: 12, marginBottom: 10 }}>{selectedExercise.name} — peso máximo (kg)</Text>
+              <Text style={{ color: t.text2, fontSize: 12, marginBottom: 10 }}>{selectedExercise.name} — peso máximo (kg)</Text>
               <LineChart
                 data={chartData}
                 width={screenWidth - 28}
                 height={160}
                 chartConfig={{
-                  backgroundColor: '#111',
-                  backgroundGradientFrom: '#111',
-                  backgroundGradientTo: '#111',
+                  backgroundColor: t.surface,
+                  backgroundGradientFrom: t.surface,
+                  backgroundGradientTo: t.surface,
                   decimalPlaces: 1,
-                  color: () => '#818cf8',
-                  labelColor: () => '#444',
-                  propsForDots: { r: '3', strokeWidth: '1', stroke: '#818cf8' },
+                  color: () => t.accent,
+                  labelColor: () => t.text3,
+                  propsForDots: { r: '3', strokeWidth: '1', stroke: t.accent },
                 }}
                 bezier
                 style={{ borderRadius: 8, marginLeft: -16 }}
@@ -479,6 +484,8 @@ function StatsView({ exercises }) {
 // ── Routine Detail ────────────────────────────────────────────────────────────
 
 function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [pickerDay, setPickerDay] = useState(null)
 
   return (
@@ -552,6 +559,8 @@ const MUSCLE_SUBGROUPS = {
 }
 
 function ExercisePickerModal({ visible, day, routine, exercises, routineExercises, onClose, onAdded }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
   const [newSubgroup, setNewSubgroup] = useState('')
@@ -644,7 +653,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                       <Text style={s.exerciseName}>{ex.name}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <TouchableOpacity onPress={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }} hitSlop={8}>
-                          <Text style={{ color: '#555', fontSize: 15, lineHeight: 17 }}>✎</Text>
+                          <Text style={{ color: t.text3, fontSize: 15, lineHeight: 17 }}>✎</Text>
                         </TouchableOpacity>
                         {alreadyAdded.has(ex.id) ? (
                           <Text style={s.addedMark}>✓</Text>
@@ -669,28 +678,28 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
             <TextInput
               style={s.input}
               placeholder="Nombre"
-              placeholderTextColor="#444"
+              placeholderTextColor={t.text3}
               value={newName}
               onChangeText={setNewName}
             />
             <TextInput
               style={[s.input, { marginTop: 6 }]}
               placeholder="Músculo (opcional)"
-              placeholderTextColor="#444"
+              placeholderTextColor={t.text3}
               value={newMuscle}
               onChangeText={v => { setNewMuscle(v); setNewSubgroup(''); setShowSuggestions(true) }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setShowSuggestions(false)}
             />
             {showSuggestions && suggestions.length > 0 && (
-              <View style={{ borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 6, marginTop: 2, overflow: 'hidden' }}>
+              <View style={{ borderWidth: 1, borderColor: t.border2, borderRadius: 6, marginTop: 2, overflow: 'hidden' }}>
                 {suggestions.map(g => (
                   <TouchableOpacity
                     key={g}
                     onPress={() => { setNewMuscle(g); setNewSubgroup(''); setShowSuggestions(false) }}
-                    style={{ paddingHorizontal: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e1e' }}
+                    style={{ paddingHorizontal: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.border }}
                   >
-                    <Text style={{ color: '#888', fontSize: 13 }}>{g}</Text>
+                    <Text style={{ color: t.text2, fontSize: 13 }}>{g}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -703,10 +712,10 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                     onPress={() => setNewSubgroup(newSubgroup === sg ? '' : sg)}
                     style={{
                       paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-                      backgroundColor: newSubgroup === sg ? '#7c3aed' : '#2a2a2a',
+                      backgroundColor: newSubgroup === sg ? t.accent : t.border2,
                     }}
                   >
-                    <Text style={{ color: newSubgroup === sg ? '#fff' : '#666', fontSize: 12, fontWeight: '600' }}>{sg}</Text>
+                    <Text style={{ color: newSubgroup === sg ? t.text : t.text3, fontSize: 12, fontWeight: '600' }}>{sg}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -724,6 +733,8 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 // ── Train View ────────────────────────────────────────────────────────────────
 
 function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [sets, setSets] = useState(() => {
     const init = {}
@@ -782,7 +793,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
             value={date}
             onChangeText={setDate}
             placeholder="YYYY-MM-DD"
-            placeholderTextColor="#444"
+            placeholderTextColor={t.text3}
           />
         </View>
 
@@ -805,7 +816,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
                   style={[s.input, { flex: 1, marginRight: 6 }]}
                   keyboardType="number-pad"
                   placeholder="—"
-                  placeholderTextColor="#444"
+                  placeholderTextColor={t.text3}
                   value={setData.reps}
                   onChangeText={v => updateSet(ex.local_exercise_id, i, 'reps', v)}
                 />
@@ -813,7 +824,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
                   style={[s.input, { flex: 1 }]}
                   keyboardType="decimal-pad"
                   placeholder="—"
-                  placeholderTextColor="#444"
+                  placeholderTextColor={t.text3}
                   value={setData.weight}
                   onChangeText={v => updateSet(ex.local_exercise_id, i, 'weight', v)}
                 />
@@ -843,6 +854,8 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 // ── Confirm Modal ─────────────────────────────────────────────────────────────
 
 function ConfirmModal({ visible, message, onConfirm, onCancel }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
@@ -853,13 +866,13 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
               <Text style={s.closeBtn}>×</Text>
             </TouchableOpacity>
           </View>
-          <Text style={{ color: '#888', fontSize: 14, padding: 16, paddingTop: 8 }}>{message}</Text>
+          <Text style={{ color: t.text2, fontSize: 14, padding: 16, paddingTop: 8 }}>{message}</Text>
           <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingTop: 0, justifyContent: 'flex-end' }}>
             <TouchableOpacity style={s.btnCancel} onPress={onCancel}>
               <Text style={s.btnCancelText}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: '#7f1d1d', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 }} onPress={onConfirm}>
-              <Text style={{ color: '#fca5a5', fontSize: 13, fontWeight: '600' }}>Eliminar</Text>
+            <TouchableOpacity style={{ backgroundColor: t.dangerBg, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 }} onPress={onConfirm}>
+              <Text style={{ color: t.dangerText, fontSize: 13, fontWeight: '600' }}>Eliminar</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -870,41 +883,41 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
-  screen:          { flex: 1, backgroundColor: '#0a0a0a', padding: 16, paddingTop: 54 },
+const makeStyles = (t) => StyleSheet.create({
+  screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  tabBar:          { flexDirection: 'row', backgroundColor: '#111', borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: 1, borderColor: '#1e1e1e' },
+  tabBar:          { flexDirection: 'row', backgroundColor: t.surface, borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: 1, borderColor: t.border },
   tabBtn:          { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },
-  tabBtnActive:    { backgroundColor: '#818cf8' },
-  tabBtnText:      { color: '#444', fontSize: 13, fontWeight: '500' },
-  tabBtnTextActive:{ color: '#fff', fontWeight: '600' },
-  title:           { color: '#f0f0f0', fontSize: 22, fontWeight: '700' },
-  subtitle:        { color: '#888', fontSize: 13, marginBottom: 20 },
-  hint:            { color: '#444', fontSize: 13 },
-  backBtn:         { color: '#818cf8', fontSize: 14, marginBottom: 2 },
-  card:            { backgroundColor: '#111', borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: '#1e1e1e' },
-  rowCard:         { backgroundColor: '#111', borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: '#1e1e1e', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowText:         { color: '#f0f0f0', fontSize: 14, fontWeight: '500' },
-  deleteBtn:       { color: '#444', fontSize: 20, lineHeight: 22 },
-  deleteSmall:     { color: '#444', fontSize: 18, lineHeight: 20, paddingHorizontal: 4 },
-  dayName:         { color: '#f0f0f0', fontSize: 14, fontWeight: '600' },
-  restText:        { color: '#444', fontSize: 12 },
-  exerciseName:    { color: '#888', fontSize: 13, flex: 1, marginRight: 8 },
-  groupLabel:      { color: '#444', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  addedMark:       { color: '#444', fontSize: 13 },
-  colHeader:       { color: '#444', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
-  input:           { backgroundColor: '#181818', borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 6, color: '#f0f0f0', paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 },
-  btnPrimary:      { backgroundColor: '#818cf8', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
-  btnPrimarySmall: { backgroundColor: '#818cf8', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  btnPrimaryText:  { color: '#fff', fontSize: 13, fontWeight: '600' },
-  btnCancel:       { backgroundColor: '#1e1e1e', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
-  btnCancelText:   { color: '#888', fontSize: 13 },
-  btnOutline:      { borderWidth: 1, borderColor: '#2a2a2a', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
-  btnOutlineText:  { color: '#888', fontSize: 16, lineHeight: 18 },
+  tabBtnActive:    { backgroundColor: t.accent },
+  tabBtnText:      { color: t.text3, fontSize: 13, fontWeight: '500' },
+  tabBtnTextActive:{ color: t.text, fontWeight: '600' },
+  title:           { color: t.text, fontSize: 22, fontWeight: '700' },
+  subtitle:        { color: t.text2, fontSize: 13, marginBottom: 20 },
+  hint:            { color: t.text3, fontSize: 13 },
+  backBtn:         { color: t.accent, fontSize: 14, marginBottom: 2 },
+  card:            { backgroundColor: t.surface, borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: t.border },
+  rowCard:         { backgroundColor: t.surface, borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: t.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowText:         { color: t.text, fontSize: 14, fontWeight: '500' },
+  deleteBtn:       { color: t.text3, fontSize: 20, lineHeight: 22 },
+  deleteSmall:     { color: t.text3, fontSize: 18, lineHeight: 20, paddingHorizontal: 4 },
+  dayName:         { color: t.text, fontSize: 14, fontWeight: '600' },
+  restText:        { color: t.text3, fontSize: 12 },
+  exerciseName:    { color: t.text2, fontSize: 13, flex: 1, marginRight: 8 },
+  groupLabel:      { color: t.text3, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  addedMark:       { color: t.text3, fontSize: 13 },
+  colHeader:       { color: t.text3, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
+  input:           { backgroundColor: t.inputBg, borderWidth: 1, borderColor: t.border2, borderRadius: 6, color: t.text, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 },
+  btnPrimary:      { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
+  btnPrimarySmall: { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
+  btnPrimaryText:  { color: t.text, fontSize: 13, fontWeight: '600' },
+  btnCancel:       { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
+  btnCancelText:   { color: t.text2, fontSize: 13 },
+  btnOutline:      { borderWidth: 1, borderColor: t.border2, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
+  btnOutlineText:  { color: t.text2, fontSize: 16, lineHeight: 18 },
   overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modal:           { backgroundColor: '#111', borderRadius: 12, padding: 16, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: '#1e1e1e' },
+  modal:           { backgroundColor: t.surface, borderRadius: 12, padding: 16, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: t.border },
   modalHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  modalTitle:      { color: '#f0f0f0', fontSize: 15, fontWeight: '600' },
-  closeBtn:        { color: '#888', fontSize: 22, lineHeight: 24 },
-  divider:         { height: 1, backgroundColor: '#1e1e1e', marginVertical: 12 },
+  modalTitle:      { color: t.text, fontSize: 15, fontWeight: '600' },
+  closeBtn:        { color: t.text2, fontSize: 22, lineHeight: 24 },
+  divider:         { height: 1, backgroundColor: t.border, marginVertical: 12 },
 })

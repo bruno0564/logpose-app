@@ -13,10 +13,13 @@ import {
   isServerReachable,
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 let syncingQuotes = false
 
 export default function QuotesScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [quotes, setQuotes] = useState([])
   const [editingQuote, setEditingQuote] = useState(null)
   const [confirmTarget, setConfirmTarget] = useState(null)
@@ -133,7 +136,7 @@ export default function QuotesScreen() {
             <TextInput
               style={[s.input, { minHeight: 80, textAlignVertical: 'top' }]}
               placeholder="Escribe la frase..."
-              placeholderTextColor="#555"
+              placeholderTextColor={t.text3}
               multiline
               autoFocus
               value={form.text}
@@ -142,7 +145,7 @@ export default function QuotesScreen() {
             <TextInput
               style={s.input}
               placeholder="Autor (opcional)"
-              placeholderTextColor="#555"
+              placeholderTextColor={t.text3}
               value={form.author}
               onChangeText={t => setForm(f => ({ ...f, author: t }))}
             />
@@ -162,13 +165,13 @@ export default function QuotesScreen() {
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setConfirmTarget(null)}>
           <TouchableOpacity activeOpacity={1} style={[s.modal, { borderRadius: 16 }]}>
             <Text style={s.modalTitle}>Eliminar frase</Text>
-            <Text style={{ color: '#888', fontSize: 14, marginBottom: 4 }}>¿Eliminar esta frase?</Text>
+            <Text style={{ color: t.text2, fontSize: 14, marginBottom: 4 }}>¿Eliminar esta frase?</Text>
             <View style={s.modalBtns}>
               <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={() => setConfirmTarget(null)}>
                 <Text style={s.btnCancelText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.btn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={confirmDelete}>
-                <Text style={[s.btnSaveText, { color: '#fca5a5' }]}>Eliminar</Text>
+              <TouchableOpacity style={[s.btn, { backgroundColor: t.dangerBg }]} onPress={confirmDelete}>
+                <Text style={[s.btnSaveText, { color: t.dangerText }]}>Eliminar</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -178,29 +181,29 @@ export default function QuotesScreen() {
   )
 }
 
-const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#0f0f0f' },
+const makeStyles = (t) => StyleSheet.create({
+  container:    { flex: 1, backgroundColor: t.bg },
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 },
-  title:        { color: '#fff', fontSize: 22, fontWeight: '700' },
-  addBtn:       { backgroundColor: '#7c3aed', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  addBtnText:   { color: '#fff', fontSize: 24, lineHeight: 28, fontWeight: '300' },
+  title:        { color: t.text, fontSize: 22, fontWeight: '700' },
+  addBtn:       { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  addBtnText:   { color: t.text, fontSize: 24, lineHeight: 28, fontWeight: '300' },
   content:      { paddingHorizontal: 16, paddingBottom: 40 },
-  emptyText:    { color: '#333', fontSize: 14, textAlign: 'center', marginTop: 60 },
-  card:         { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  quoteText:    { color: '#ddd', fontSize: 15, fontStyle: 'italic', lineHeight: 22 },
-  authorText:   { color: '#555', fontSize: 12, marginTop: 8, textAlign: 'right' },
+  emptyText:    { color: t.text4, fontSize: 14, textAlign: 'center', marginTop: 60 },
+  card:         { backgroundColor: t.surface2, borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  quoteText:    { color: t.text, fontSize: 15, fontStyle: 'italic', lineHeight: 22 },
+  authorText:   { color: t.text3, fontSize: 12, marginTop: 8, textAlign: 'right' },
   actions:      { flexDirection: 'column', gap: 8, alignItems: 'center', paddingTop: 2 },
   actionBtn:    { padding: 4 },
-  editIcon:     { color: '#555', fontSize: 16 },
-  deleteIcon:   { color: '#ef4444', fontSize: 18, lineHeight: 20 },
+  editIcon:     { color: t.text3, fontSize: 16 },
+  deleteIcon:   { color: t.danger, fontSize: 18, lineHeight: 20 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal:        { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 44, gap: 12 },
-  modalTitle:   { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  input:        { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 10, padding: 12, fontSize: 15 },
+  modal:        { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 44, gap: 12 },
+  modalTitle:   { color: t.text, fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  input:        { backgroundColor: t.border2, color: t.text, borderRadius: 10, padding: 12, fontSize: 15 },
   modalBtns:    { flexDirection: 'row', gap: 10, marginTop: 4 },
   btn:          { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
-  btnCancel:    { backgroundColor: '#2a2a2a' },
-  btnCancelText:{ color: '#888', fontWeight: '600' },
-  btnSave:      { backgroundColor: '#7c3aed' },
-  btnSaveText:  { color: '#fff', fontWeight: '700' },
+  btnCancel:    { backgroundColor: t.border2 },
+  btnCancelText:{ color: t.text2, fontWeight: '600' },
+  btnSave:      { backgroundColor: t.accent },
+  btnSaveText:  { color: t.text, fontWeight: '700' },
 })

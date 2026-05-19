@@ -9,6 +9,7 @@ import {
   isServerReachable,
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 let syncingHome = false
 
@@ -29,6 +30,8 @@ function formatDate() {
 }
 
 export default function HomeScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [current, setCurrent] = useState(null)
 
   const load = useCallback(async () => {
@@ -86,13 +89,13 @@ export default function HomeScreen() {
   )
 }
 
-const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: '#0f0f0f' },
+const makeStyles = (t) => StyleSheet.create({
+  container:   { flex: 1, backgroundColor: t.bg },
   content:     { padding: 20, paddingTop: 60, paddingBottom: 40 },
   header:      { marginBottom: 28 },
-  greeting:    { color: '#fff', fontSize: 26, fontWeight: '700' },
-  date:        { color: '#555', fontSize: 13, marginTop: 4 },
-  quoteCard:   { backgroundColor: '#1a1a1a', borderRadius: 16, padding: 24, marginBottom: 12 },
-  quoteText:   { color: '#ddd', fontSize: 18, fontStyle: 'italic', lineHeight: 28 },
-  quoteAuthor: { color: '#555', fontSize: 12, marginTop: 12, textAlign: 'right' },
+  greeting:    { color: t.text, fontSize: 26, fontWeight: '700' },
+  date:        { color: t.text3, fontSize: 13, marginTop: 4 },
+  quoteCard:   { backgroundColor: t.surface2, borderRadius: 16, padding: 24, marginBottom: 12 },
+  quoteText:   { color: t.text, fontSize: 18, fontStyle: 'italic', lineHeight: 28 },
+  quoteAuthor: { color: t.text3, fontSize: 12, marginTop: 12, textAlign: 'right' },
 })

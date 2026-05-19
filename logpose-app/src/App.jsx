@@ -6,6 +6,7 @@ import Calendar from './Calendar.jsx'
 import Tasks from './Tasks.jsx'
 import Quotes from './Quotes.jsx'
 import Journal from './Journal.jsx'
+import Settings from './Settings.jsx'
 
 const API = 'http://localhost:8000'
 
@@ -40,6 +41,14 @@ function Sidebar({ active, onNav, online }) {
           </button>
         ))}
       </nav>
+      <div className="sidebar-footer">
+        <button
+          className={`nav-item ${active === 'settings' ? 'nav-item--active' : ''}`}
+          onClick={() => onNav('settings')}
+        >
+          Ajustes
+        </button>
+      </div>
     </aside>
   )
 }
@@ -47,6 +56,12 @@ function Sidebar({ active, onNav, online }) {
 function App() {
   const [page, setPage] = useState('home')
   const [online, setOnline] = useState(false)
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }, [dark])
 
   useEffect(() => {
     async function check() {
@@ -73,6 +88,7 @@ function App() {
         {page === 'todo'        && <Tasks />}
         {page === 'quotes'      && <Quotes />}
         {page === 'journal'     && <Journal />}
+        {page === 'settings'    && <Settings dark={dark} onToggle={() => setDark(d => !d)} />}
       </main>
     </div>
   )

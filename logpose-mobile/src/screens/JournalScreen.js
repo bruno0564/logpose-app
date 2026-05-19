@@ -13,6 +13,7 @@ import {
   isServerReachable,
   fetchAllJournalEntriesFromServer, postJournalEntryToServer, putJournalEntryToServer, deleteJournalEntryFromServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -28,6 +29,8 @@ function formatDate(dateStr) {
 }
 
 export default function JournalScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [view, setView] = useState('today')
   const [entry, setEntry] = useState(null)
   const [draft, setDraft] = useState('')
@@ -151,7 +154,7 @@ export default function JournalScreen() {
           value={draft}
           onChangeText={setDraft}
           placeholder="Escribe sobre tu día..."
-          placeholderTextColor="#333"
+          placeholderTextColor={t.text4}
           multiline
           textAlignVertical="top"
         />
@@ -159,7 +162,7 @@ export default function JournalScreen() {
         <View style={s.footer}>
           <Text style={s.wordCount}>{words} {words === 1 ? 'palabra' : 'palabras'}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {saved && <Text style={{ color: '#22c55e', fontSize: 12 }}>Guardado</Text>}
+            {saved && <Text style={{ color: t.success, fontSize: 12 }}>Guardado</Text>}
             <TouchableOpacity
               style={[s.btnPrimary, (!draft.trim() || saving) && { opacity: 0.5 }]}
               onPress={handleSave}
@@ -174,23 +177,23 @@ export default function JournalScreen() {
   )
 }
 
-const s = StyleSheet.create({
-  screen:      { flex: 1, backgroundColor: '#0a0a0a', padding: 16, paddingTop: 54 },
+const makeStyles = (t) => StyleSheet.create({
+  screen:      { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
   header:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
-  title:       { color: '#f0f0f0', fontSize: 22, fontWeight: '700' },
-  dateLabel:   { color: '#444', fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
-  backBtn:     { color: '#818cf8', fontSize: 14, marginBottom: 12 },
-  hint:        { color: '#444', fontSize: 13 },
-  card:        { backgroundColor: '#111', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#1e1e1e' },
-  entryText:   { color: '#888', fontSize: 14, lineHeight: 22 },
-  emptyText:   { color: '#333', fontStyle: 'italic' },
-  wordCount:   { color: '#333', fontSize: 11, marginTop: 8 },
-  streakBadge: { backgroundColor: '#1e1e1e', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#2a2a2a' },
-  streakText:  { color: '#888', fontSize: 12 },
-  textarea:    { backgroundColor: '#111', borderWidth: 1, borderColor: '#1e1e1e', borderRadius: 10, color: '#f0f0f0', padding: 14, fontSize: 15, lineHeight: 24, minHeight: 300 },
+  title:       { color: t.text, fontSize: 22, fontWeight: '700' },
+  dateLabel:   { color: t.text3, fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
+  backBtn:     { color: t.accent, fontSize: 14, marginBottom: 12 },
+  hint:        { color: t.text3, fontSize: 13 },
+  card:        { backgroundColor: t.surface, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: t.border },
+  entryText:   { color: t.text2, fontSize: 14, lineHeight: 22 },
+  emptyText:   { color: t.text4, fontStyle: 'italic' },
+  wordCount:   { color: t.text4, fontSize: 11, marginTop: 8 },
+  streakBadge: { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: t.border2 },
+  streakText:  { color: t.text2, fontSize: 12 },
+  textarea:    { backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, borderRadius: 10, color: t.text, padding: 14, fontSize: 15, lineHeight: 24, minHeight: 300 },
   footer:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  btnPrimary:  { backgroundColor: '#818cf8', borderRadius: 6, paddingHorizontal: 16, paddingVertical: 9 },
-  btnPrimaryText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  btnCancel:   { backgroundColor: '#1e1e1e', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
-  btnCancelText: { color: '#888', fontSize: 13 },
+  btnPrimary:  { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 16, paddingVertical: 9 },
+  btnPrimaryText: { color: t.text, fontSize: 14, fontWeight: '600' },
+  btnCancel:   { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
+  btnCancelText: { color: t.text2, fontSize: 13 },
 })

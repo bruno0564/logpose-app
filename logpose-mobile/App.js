@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
+import { ThemeProvider, useTheme } from './src/ThemeContext'
 import BodyWeightScreen from './src/screens/BodyWeightScreen'
 import HomeScreen from './src/screens/HomeScreen'
 import GymScreen from './src/screens/GymScreen'
@@ -11,11 +12,14 @@ import CalendarScreen from './src/screens/CalendarScreen'
 import TasksScreen from './src/screens/TasksScreen'
 import QuotesScreen from './src/screens/QuotesScreen'
 import JournalScreen from './src/screens/JournalScreen'
+import SettingsScreen from './src/screens/SettingsScreen'
 import { isServerReachable } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
 
 function ServerStatus({ online }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   return (
     <View style={s.statusBar}>
       <View style={[s.dot, online ? s.online : s.offline]} />
@@ -26,8 +30,10 @@ function ServerStatus({ online }) {
   )
 }
 
-export default function App() {
+function AppContent() {
   const [online, setOnline] = useState(false)
+  const { theme: t, dark } = useTheme()
+  const s = makeStyles(t)
 
   useEffect(() => {
     async function check() {
@@ -40,7 +46,7 @@ export default function App() {
 
   return (
     <View style={s.container}>
-      <StatusBar style="light" />
+      <StatusBar style={dark ? 'light' : 'dark'} />
       <ServerStatus online={online} />
       <NavigationContainer>
         <Tab.Navigator
@@ -49,11 +55,11 @@ export default function App() {
             headerShown: false,
             tabBarShowLabel: false,
             tabBarStyle: {
-              backgroundColor: '#111',
-              borderTopColor: '#1a1a1a',
+              backgroundColor: t.surface,
+              borderTopColor: t.surface2,
             },
-            tabBarActiveTintColor: '#7c3aed',
-            tabBarInactiveTintColor: '#444',
+            tabBarActiveTintColor: t.accent,
+            tabBarInactiveTintColor: t.text3,
           }}
         >
           <Tab.Screen
@@ -126,17 +132,35 @@ export default function App() {
               ),
             }}
           />
+          <Tab.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              title: 'Ajustes',
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="settings-outline" color={color} size={size} />
+              ),
+            }}
+          />
         </Tab.Navigator>
       </NavigationContainer>
     </View>
   )
 }
 
-const s = StyleSheet.create({
-  container:  { flex: 1, backgroundColor: '#0f0f0f' },
-  statusBar:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 52, paddingBottom: 8, backgroundColor: '#0f0f0f' },
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  )
+}
+
+const makeStyles = (t) => StyleSheet.create({
+  container:  { flex: 1, backgroundColor: t.bg },
+  statusBar:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 52, paddingBottom: 8, backgroundColor: t.bg },
   dot:        { width: 7, height: 7, borderRadius: 4, marginRight: 7 },
-  online:     { backgroundColor: '#22c55e' },
-  offline:    { backgroundColor: '#ef4444' },
-  statusText: { color: '#444', fontSize: 11 },
+  online:     { backgroundColor: t.success },
+  offline:    { backgroundColor: t.danger },
+  statusText: { color: t.text3, fontSize: 11 },
 })

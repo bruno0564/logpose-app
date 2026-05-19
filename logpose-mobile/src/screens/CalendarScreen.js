@@ -16,6 +16,7 @@ import {
   fetchAllCalendarEventsFromServer, postCalendarEventToServer,
   putCalendarEventToServer, deleteCalendarEventFromServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -53,18 +54,20 @@ function buildCells(year, month) {
 let syncingCalendar = false
 
 function ConfirmModal({ visible, title, onConfirm, onCancel }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={onCancel}>
         <TouchableOpacity activeOpacity={1} style={[s.modal, { borderRadius: 16 }]}>
           <Text style={s.modalTitle}>Eliminar evento</Text>
-          <Text style={{ color: '#888', fontSize: 14, marginBottom: 16 }}>¿Eliminar "{title}"?</Text>
+          <Text style={{ color: t.text2, fontSize: 14, marginBottom: 16 }}>¿Eliminar "{title}"?</Text>
           <View style={s.modalBtns}>
             <TouchableOpacity style={[s.btn, s.btnCancel]} onPress={onCancel}>
               <Text style={s.btnCancelText}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.btn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={onConfirm}>
-              <Text style={[s.btnSaveText, { color: '#fca5a5' }]}>Eliminar</Text>
+            <TouchableOpacity style={[s.btn, { backgroundColor: t.dangerBg }]} onPress={onConfirm}>
+              <Text style={[s.btnSaveText, { color: t.dangerText }]}>Eliminar</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -76,6 +79,8 @@ function ConfirmModal({ visible, title, onConfirm, onCancel }) {
 const BLANK = { title: '', recurrence: 'none', date: '', start_time: '', end_time: '', days_of_week: '', notes: '', color: '#7c3aed' }
 
 export default function CalendarScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -330,6 +335,8 @@ export default function CalendarScreen() {
 // ── Modal de crear/editar evento ──────────────────────────────────────────────
 
 function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const REC = ['none', 'daily', 'weekly']
   const REC_LABEL = ['Una vez', 'Diaria', 'Semanal']
 
@@ -350,7 +357,7 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           <TextInput
             style={s.input}
             placeholder="Título..."
-            placeholderTextColor="#555"
+            placeholderTextColor={t.text3}
             autoFocus
             value={form.title}
             onChangeText={t => setForm(f => ({ ...f, title: t }))}
@@ -374,7 +381,7 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             <TextInput
               style={s.input}
               placeholder="Fecha (YYYY-MM-DD)"
-              placeholderTextColor="#555"
+              placeholderTextColor={t.text3}
               value={form.date}
               onChangeText={t => setForm(f => ({ ...f, date: t }))}
             />
@@ -400,14 +407,14 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             <TextInput
               style={[s.input, { flex: 1 }]}
               placeholder="Inicio HH:MM"
-              placeholderTextColor="#555"
+              placeholderTextColor={t.text3}
               value={form.start_time}
               onChangeText={t => setForm(f => ({ ...f, start_time: t }))}
             />
             <TextInput
               style={[s.input, { flex: 1 }]}
               placeholder="Fin HH:MM"
-              placeholderTextColor="#555"
+              placeholderTextColor={t.text3}
               value={form.end_time}
               onChangeText={t => setForm(f => ({ ...f, end_time: t }))}
             />
@@ -426,7 +433,7 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           <TextInput
             style={[s.input, { minHeight: 60, textAlignVertical: 'top' }]}
             placeholder="Notas (opcional)"
-            placeholderTextColor="#555"
+            placeholderTextColor={t.text3}
             multiline
             value={form.notes}
             onChangeText={t => setForm(f => ({ ...f, notes: t }))}
@@ -446,66 +453,66 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
   )
 }
 
-const s = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#0f0f0f' },
+const makeStyles = (t) => StyleSheet.create({
+  container:        { flex: 1, backgroundColor: t.bg },
   header:           { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 60, gap: 12 },
-  title:            { color: '#fff', fontSize: 22, fontWeight: '700', flex: 1 },
-  addBtn:           { backgroundColor: '#7c3aed', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  addBtnText:       { color: '#fff', fontSize: 24, lineHeight: 28, fontWeight: '300' },
+  title:            { color: t.text, fontSize: 22, fontWeight: '700', flex: 1 },
+  addBtn:           { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  addBtnText:       { color: t.text, fontSize: 24, lineHeight: 28, fontWeight: '300' },
   backBtn:          { padding: 4 },
-  backArrow:        { color: '#7c3aed', fontSize: 32, lineHeight: 36 },
-  dayTitle:         { color: '#fff', fontSize: 18, fontWeight: '700' },
-  daySubtitle:      { color: '#666', fontSize: 13 },
-  gymBanner:        { backgroundColor: '#1a1a1a', marginHorizontal: 16, borderRadius: 8, padding: 10, marginBottom: 4 },
-  gymBannerText:    { color: '#888', fontSize: 13 },
+  backArrow:        { color: t.accent, fontSize: 32, lineHeight: 36 },
+  dayTitle:         { color: t.text, fontSize: 18, fontWeight: '700' },
+  daySubtitle:      { color: t.text3, fontSize: 13 },
+  gymBanner:        { backgroundColor: t.surface2, marginHorizontal: 16, borderRadius: 8, padding: 10, marginBottom: 4 },
+  gymBannerText:    { color: t.text2, fontSize: 13 },
 
-  card:             { backgroundColor: '#1a1a1a', borderRadius: 16, marginHorizontal: 16, padding: 20 },
+  card:             { backgroundColor: t.surface2, borderRadius: 16, marginHorizontal: 16, padding: 20 },
   monthRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   arrowBtn:         { padding: 8 },
-  arrow:            { color: '#7c3aed', fontSize: 28, lineHeight: 30 },
-  monthLabel:       { color: '#fff', fontSize: 17, fontWeight: '600' },
+  arrow:            { color: t.accent, fontSize: 28, lineHeight: 30 },
+  monthLabel:       { color: t.text, fontSize: 17, fontWeight: '600' },
   dayRow:           { flexDirection: 'row', marginBottom: 6 },
-  dayLabel:         { flex: 1, textAlign: 'center', color: '#444', fontSize: 12, fontWeight: '600' },
+  dayLabel:         { flex: 1, textAlign: 'center', color: t.text3, fontSize: 12, fontWeight: '600' },
   grid:             { flexDirection: 'row', flexWrap: 'wrap' },
   cell:             { width: '14.2857%', alignItems: 'center', paddingVertical: 2 },
   cellTop:          { flexDirection: 'row', alignItems: 'center', gap: 1 },
   dayWrap:          { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  todayWrap:        { backgroundColor: '#7c3aed' },
-  dayNum:           { color: '#888', fontSize: 13 },
-  todayNum:         { color: '#fff', fontWeight: '700', fontSize: 13 },
+  todayWrap:        { backgroundColor: t.accent },
+  dayNum:           { color: t.text2, fontSize: 13 },
+  todayNum:         { color: t.text, fontWeight: '700', fontSize: 13 },
   gymDot:           { fontSize: 9 },
   dotRow:           { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
   dot:              { width: 5, height: 5, borderRadius: 3 },
 
-  emptyText:        { color: '#333', fontSize: 14, textAlign: 'center', marginTop: 60 },
-  eventCard:        { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderLeftWidth: 3, gap: 10 },
-  eventTitle:       { color: '#fff', fontSize: 14, fontWeight: '600' },
-  eventTime:        { color: '#888', fontSize: 12, marginTop: 3 },
-  eventNotes:       { color: '#555', fontSize: 12, marginTop: 4, fontStyle: 'italic' },
-  deleteIcon:       { color: '#ef4444', fontSize: 20, lineHeight: 22 },
+  emptyText:        { color: t.text4, fontSize: 14, textAlign: 'center', marginTop: 60 },
+  eventCard:        { backgroundColor: t.surface2, borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderLeftWidth: 3, gap: 10 },
+  eventTitle:       { color: t.text, fontSize: 14, fontWeight: '600' },
+  eventTime:        { color: t.text2, fontSize: 12, marginTop: 3 },
+  eventNotes:       { color: t.text3, fontSize: 12, marginTop: 4, fontStyle: 'italic' },
+  deleteIcon:       { color: t.danger, fontSize: 20, lineHeight: 22 },
 
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal:            { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  modalTitle:       { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 16 },
-  input:            { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 10 },
+  modal:            { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
+  modalTitle:       { color: t.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
+  input:            { backgroundColor: t.border2, color: t.text, borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 10 },
   recRow:           { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  recBtn:           { flex: 1, borderRadius: 8, padding: 9, alignItems: 'center', backgroundColor: '#2a2a2a' },
-  recBtnActive:     { backgroundColor: '#7c3aed' },
-  recBtnText:       { color: '#666', fontSize: 13, fontWeight: '600' },
-  recBtnTextActive: { color: '#fff' },
+  recBtn:           { flex: 1, borderRadius: 8, padding: 9, alignItems: 'center', backgroundColor: t.border2 },
+  recBtnActive:     { backgroundColor: t.accent },
+  recBtnText:       { color: t.text3, fontSize: 13, fontWeight: '600' },
+  recBtnTextActive: { color: t.text },
   daySelector:      { flexDirection: 'row', gap: 6, marginBottom: 10 },
-  dayToggle:        { flex: 1, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2a2a2a' },
-  dayToggleActive:  { backgroundColor: '#7c3aed' },
-  dayToggleText:    { color: '#555', fontSize: 12, fontWeight: '700' },
-  dayToggleTextActive: { color: '#fff' },
+  dayToggle:        { flex: 1, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: t.border2 },
+  dayToggleActive:  { backgroundColor: t.accent },
+  dayToggleText:    { color: t.text3, fontSize: 12, fontWeight: '700' },
+  dayToggleTextActive: { color: t.text },
   timeRow:          { flexDirection: 'row', gap: 10, marginBottom: 0 },
   colorRow:         { flexDirection: 'row', gap: 12, marginBottom: 10, marginTop: 4 },
   colorDot:         { width: 28, height: 28, borderRadius: 14 },
-  colorDotActive:   { borderWidth: 3, borderColor: '#fff' },
+  colorDotActive:   { borderWidth: 3, borderColor: t.text },
   modalBtns:        { flexDirection: 'row', gap: 10, marginTop: 8 },
   btn:              { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
-  btnCancel:        { backgroundColor: '#2a2a2a' },
-  btnCancelText:    { color: '#888', fontWeight: '600' },
-  btnSave:          { backgroundColor: '#7c3aed' },
-  btnSaveText:      { color: '#fff', fontWeight: '700' },
+  btnCancel:        { backgroundColor: t.border2 },
+  btnCancelText:    { color: t.text2, fontWeight: '600' },
+  btnSave:          { backgroundColor: t.accent },
+  btnSaveText:      { color: t.text, fontWeight: '700' },
 })

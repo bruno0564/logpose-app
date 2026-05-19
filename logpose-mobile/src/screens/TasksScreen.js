@@ -18,10 +18,13 @@ import {
   fetchAllTaskListsFromServer, postTaskListToServer, deleteTaskListFromServer,
   fetchTaskItemsFromServer, postTaskItemToServer, putTaskItemToServer, deleteTaskItemFromServer,
 } from '../api/client'
+import { useTheme } from '../ThemeContext'
 
 let syncingTasks = false
 
 function ListModal({ visible, value, onChange, onClose, onSave }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [kbHeight, setKbHeight] = useState(0)
 
   useEffect(() => {
@@ -37,13 +40,13 @@ function ListModal({ visible, value, onChange, onClose, onSave }) {
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Nueva lista</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" color="#aaa" size={22} />
+              <Ionicons name="close" color={t.text2} size={22} />
             </TouchableOpacity>
           </View>
           <TextInput
             style={s.modalInput}
             placeholder="Nombre de la lista"
-            placeholderTextColor="#444"
+            placeholderTextColor={t.text3}
             value={value}
             onChangeText={onChange}
             autoFocus
@@ -60,6 +63,8 @@ function ListModal({ visible, value, onChange, onClose, onSave }) {
 }
 
 function ConfirmModal({ visible, name, onConfirm, onCancel }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCancel}>
@@ -67,18 +72,18 @@ function ConfirmModal({ visible, name, onConfirm, onCancel }) {
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Eliminar lista</Text>
             <TouchableOpacity onPress={onCancel}>
-              <Ionicons name="close" color="#aaa" size={20} />
+              <Ionicons name="close" color={t.text2} size={20} />
             </TouchableOpacity>
           </View>
-          <Text style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
+          <Text style={{ color: t.text2, fontSize: 14, marginBottom: 20 }}>
             ¿Eliminar "{name}" y todas sus tareas?
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
             <TouchableOpacity style={s.saveBtn} onPress={onCancel}>
-              <Text style={[s.saveBtnText, { color: '#aaa' }]}>Cancelar</Text>
+              <Text style={[s.saveBtnText, { color: t.text2 }]}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, { backgroundColor: 'rgba(127,29,29,0.8)' }]} onPress={onConfirm}>
-              <Text style={[s.saveBtnText, { color: '#fca5a5' }]}>Eliminar</Text>
+            <TouchableOpacity style={[s.saveBtn, { backgroundColor: t.dangerBg }]} onPress={onConfirm}>
+              <Text style={[s.saveBtnText, { color: t.dangerText }]}>Eliminar</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -88,6 +93,8 @@ function ConfirmModal({ visible, name, onConfirm, onCancel }) {
 }
 
 export default function TasksScreen() {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
   const activeListRef = useRef(null)
@@ -227,11 +234,11 @@ export default function TasksScreen() {
         <View style={s.header}>
           <Text style={s.title}>To-Do</Text>
           <TouchableOpacity style={s.addBtn} onPress={() => setListModalVisible(true)}>
-            <Ionicons name="add" color="#fff" size={22} />
+            <Ionicons name="add" color={t.text} size={22} />
           </TouchableOpacity>
         </View>
         <View style={s.empty}>
-          <Ionicons name="checkmark-done-outline" color="#2a2a2a" size={56} />
+          <Ionicons name="checkmark-done-outline" color={t.text4} size={56} />
           <Text style={s.emptyText}>Sin listas todavía</Text>
           <Text style={s.emptySub}>Pulsa + para crear la primera</Text>
         </View>
@@ -257,12 +264,12 @@ export default function TasksScreen() {
       <View style={s.header}>
         {activeList ? (
           <TouchableOpacity onPress={() => setActiveList(null)}>
-            <Ionicons name="chevron-back" color="#7c3aed" size={22} />
+            <Ionicons name="chevron-back" color={t.accent} size={22} />
           </TouchableOpacity>
         ) : null}
         <Text style={s.title}>{activeList ? activeList.name : 'To-Do'}</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => setListModalVisible(true)}>
-          <Ionicons name="add" color="#fff" size={22} />
+          <Ionicons name="add" color={t.text} size={22} />
         </TouchableOpacity>
       </View>
 
@@ -274,11 +281,11 @@ export default function TasksScreen() {
           renderItem={({ item: list }) => (
             <TouchableOpacity style={s.listCard} onPress={() => setActiveList(list)}>
               <View style={s.listCardLeft}>
-                <Ionicons name="list-outline" color="#7c3aed" size={18} />
+                <Ionicons name="list-outline" color={t.accent} size={18} />
                 <Text style={s.listCardName}>{list.name}</Text>
               </View>
               <TouchableOpacity onPress={() => handleDeleteList(list)}>
-                <Ionicons name="trash-outline" color="#ef4444" size={16} />
+                <Ionicons name="trash-outline" color={t.danger} size={16} />
               </TouchableOpacity>
             </TouchableOpacity>
           )}
@@ -332,14 +339,14 @@ export default function TasksScreen() {
             <TextInput
               style={s.addItemInput}
               placeholder="Nueva tarea..."
-              placeholderTextColor="#444"
+              placeholderTextColor={t.text3}
               value={newItemTitle}
               onChangeText={setNewItemTitle}
               onSubmitEditing={handleAddItem}
               returnKeyType="done"
             />
             <TouchableOpacity style={s.addItemBtn} onPress={handleAddItem}>
-              <Ionicons name="arrow-up" color="#fff" size={18} />
+              <Ionicons name="arrow-up" color={t.text} size={18} />
             </TouchableOpacity>
           </View>
         </View>
@@ -363,57 +370,59 @@ export default function TasksScreen() {
 }
 
 function ItemRow({ item, onToggle, onDelete }) {
+  const { theme: t } = useTheme()
+  const s = makeStyles(t)
   return (
     <View style={s.itemRow}>
       <TouchableOpacity style={s.checkBtn} onPress={() => onToggle(item)}>
         <View style={[s.checkCircle, item.done === 1 && s.checkCircleDone]}>
-          {item.done === 1 && <Ionicons name="checkmark" color="#fff" size={12} />}
+          {item.done === 1 && <Ionicons name="checkmark" color={t.text} size={12} />}
         </View>
       </TouchableOpacity>
       <Text style={[s.itemTitle, item.done === 1 && s.itemTitleDone]}>{item.title}</Text>
       <TouchableOpacity onPress={() => onDelete(item)} style={s.deleteBtn}>
-        <Ionicons name="close" color="#333" size={16} />
+        <Ionicons name="close" color={t.text4} size={16} />
       </TouchableOpacity>
     </View>
   )
 }
 
-const s = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#0f0f0f' },
+const makeStyles = (t) => StyleSheet.create({
+  container:       { flex: 1, backgroundColor: t.bg },
   header:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 },
-  title:           { color: '#fff', fontSize: 22, fontWeight: '700', flex: 1, marginHorizontal: 8 },
-  addBtn:          { backgroundColor: '#7c3aed', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  title:           { color: t.text, fontSize: 22, fontWeight: '700', flex: 1, marginHorizontal: 8 },
+  addBtn:          { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   empty:           { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText:       { color: '#333', fontSize: 16, fontWeight: '600' },
-  emptySub:        { color: '#2a2a2a', fontSize: 13 },
+  emptyText:       { color: t.text4, fontSize: 16, fontWeight: '600' },
+  emptySub:        { color: t.text4, fontSize: 13 },
   listContainer:   { paddingHorizontal: 16, paddingBottom: 32 },
-  listCard:        { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  listCard:        { backgroundColor: t.surface2, borderRadius: 12, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   listCardLeft:    { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  listCardName:    { color: '#e8e8e8', fontSize: 15, fontWeight: '600' },
-  tabsRow:         { maxHeight: 44, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
+  listCardName:    { color: t.text, fontSize: 15, fontWeight: '600' },
+  tabsRow:         { maxHeight: 44, borderBottomWidth: 1, borderBottomColor: t.surface2 },
   tabsContent:     { paddingHorizontal: 16, gap: 8 },
   tab:             { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 },
-  tabActive:       { backgroundColor: '#1a1a1a' },
-  tabText:         { color: '#444', fontSize: 13, fontWeight: '500' },
-  tabTextActive:   { color: '#7c3aed' },
+  tabActive:       { backgroundColor: t.surface2 },
+  tabText:         { color: t.text3, fontSize: 13, fontWeight: '500' },
+  tabTextActive:   { color: t.accent },
   itemsContainer:  { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 },
-  emptyItems:      { color: '#2a2a2a', fontSize: 14, textAlign: 'center', marginTop: 40 },
-  doneLabel:       { color: '#333', fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
-  itemRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a', gap: 12 },
+  emptyItems:      { color: t.text4, fontSize: 14, textAlign: 'center', marginTop: 40 },
+  doneLabel:       { color: t.text4, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
+  itemRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: t.surface2, gap: 12 },
   checkBtn:        { padding: 2 },
-  checkCircle:     { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#333', alignItems: 'center', justifyContent: 'center' },
-  checkCircleDone: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
-  itemTitle:       { flex: 1, color: '#ccc', fontSize: 15 },
-  itemTitleDone:   { color: '#333', textDecorationLine: 'line-through' },
+  checkCircle:     { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: t.text4, alignItems: 'center', justifyContent: 'center' },
+  checkCircleDone: { backgroundColor: t.accent, borderColor: t.accent },
+  itemTitle:       { flex: 1, color: t.text, fontSize: 15 },
+  itemTitleDone:   { color: t.text4, textDecorationLine: 'line-through' },
   deleteBtn:       { padding: 4 },
-  addItemRow:      { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: 32, backgroundColor: '#0f0f0f', borderTopWidth: 1, borderTopColor: '#1a1a1a', gap: 10 },
-  addItemInput:    { flex: 1, backgroundColor: '#1a1a1a', color: '#fff', borderRadius: 10, padding: 12, fontSize: 15 },
-  addItemBtn:      { backgroundColor: '#7c3aed', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  addItemRow:      { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: 32, backgroundColor: t.bg, borderTopWidth: 1, borderTopColor: t.surface2, gap: 10 },
+  addItemInput:    { flex: 1, backgroundColor: t.surface2, color: t.text, borderRadius: 10, padding: 12, fontSize: 15 },
+  addItemBtn:      { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal:           { backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
+  modal:           { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
   modalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle:      { color: '#fff', fontSize: 16, fontWeight: '700' },
-  modalInput:      { backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 10, padding: 12, fontSize: 15 },
-  saveBtn:         { backgroundColor: '#7c3aed', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 16 },
-  saveBtnText:     { color: '#fff', fontWeight: '700', fontSize: 15 },
+  modalTitle:      { color: t.text, fontSize: 16, fontWeight: '700' },
+  modalInput:      { backgroundColor: t.border2, color: t.text, borderRadius: 10, padding: 12, fontSize: 15 },
+  saveBtn:         { backgroundColor: t.accent, borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 16 },
+  saveBtnText:     { color: t.text, fontWeight: '700', fontSize: 15 },
 })
