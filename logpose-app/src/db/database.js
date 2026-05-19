@@ -1133,17 +1133,38 @@ export async function purgeLocalJournalEntry(id) {
   await db.execute('DELETE FROM journal_entries WHERE id = ?', [id])
 }
 
+function mergeJournalContent(local, remote) {
+  const l = local?.trim() ?? ''
+  const r = remote?.trim() ?? ''
+  if (!l) return r
+  if (!r) return l
+  if (l === r) return l
+  return `${l}\n\n---\n\n${r}`
+}
+
 export async function upsertJournalEntryFromServer(entry) {
   const db = await openDB()
-  const existing = await db.select('SELECT id FROM journal_entries WHERE server_id = ?', [entry.id])
-  if (existing.length > 0) {
+  const byId = await db.select('SELECT * FROM journal_entries WHERE server_id = ?', [entry.id])
+  if (byId.length > 0) {
+    const merged = mergeJournalContent(byId[0].content, entry.content)
+    const needsSync = merged !== entry.content ? 0 : 1
     await db.execute(
-      'UPDATE journal_entries SET date = ?, content = ?, synced = 1 WHERE server_id = ?',
-      [entry.date, entry.content, entry.id]
+      'UPDATE journal_entries SET date = ?, content = ?, synced = ? WHERE server_id = ?',
+      [entry.date, merged, needsSync, entry.id]
+    )
+    return
+  }
+  const byDate = await db.select('SELECT * FROM journal_entries WHERE date = ?', [entry.date])
+  if (byDate.length > 0) {
+    const merged = mergeJournalContent(byDate[0].content, entry.content)
+    const needsSync = merged !== entry.content ? 0 : 1
+    await db.execute(
+      'UPDATE journal_entries SET server_id = ?, content = ?, synced = ? WHERE id = ?',
+      [entry.id, merged, needsSync, byDate[0].id]
     )
   } else {
     await db.execute(
-      'INSERT OR IGNORE INTO journal_entries (server_id, date, content, synced) VALUES (?, ?, ?, 1)',
+      'INSERT INTO journal_entries (server_id, date, content, synced) VALUES (?, ?, ?, 1)',
       [entry.id, entry.date, entry.content]
     )
   }

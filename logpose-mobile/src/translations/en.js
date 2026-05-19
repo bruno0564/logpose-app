@@ -180,7 +180,7 @@ export default {
     title: 'Journal',
     historyBtn: 'History',
     historyTitle: 'History',
-    streak: { one: '🔥 {n} day', other: '🔥 {n} days' },
+    streak: { one: '{n} day streak', other: '{n} day streak' },
     placeholder: 'Write about your day...',
     saved: 'Saved',
     save: 'Save',
