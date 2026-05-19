@@ -54,13 +54,15 @@ export default function Journal() {
         await purgeLocalJournalEntry(e.id)
       }
       for (const e of await getUnsyncedJournalEntries()) {
-        if (e.server_id) {
-          await putJournalEntryToServer(e.server_id, e)
-          await markJournalEntrySynced(e.id, e.server_id)
-        } else {
-          const created = await postJournalEntryToServer(e)
-          await markJournalEntrySynced(e.id, created.id)
-        }
+        try {
+          if (e.server_id) {
+            await putJournalEntryToServer(e.server_id, e)
+            await markJournalEntrySynced(e.id, e.server_id)
+          } else {
+            const created = await postJournalEntryToServer(e)
+            await markJournalEntrySynced(e.id, created.id)
+          }
+        } catch {}
       }
       const serverEntries = await fetchAllJournalEntriesFromServer()
       for (const e of serverEntries) await upsertJournalEntryFromServer(e)

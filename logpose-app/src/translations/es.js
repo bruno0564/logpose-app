@@ -177,7 +177,7 @@ export default {
     title: 'Diario',
     historyBtn: 'Historial',
     historyTitle: 'Historial',
-    streak: { one: '🔥 {n} día', other: '🔥 {n} días' },
+    streak: { one: '{n} día de racha', other: '{n} días de racha' },
     placeholder: 'Escribe sobre tu día...',
     saved: 'Guardado',
     save: 'Guardar',
