@@ -10,29 +10,28 @@ import {
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
+import { useLang } from '../LangContext'
 
 let syncingHome = false
 
-const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-
-function greeting() {
-  const h = new Date().getHours()
-  if (h < 13) return 'Buenos días'
-  if (h < 21) return 'Buenas tardes'
-  return 'Buenas noches'
-}
-
-function formatDate() {
-  const d = new Date()
-  return `${DAYS[d.getDay()]}, ${d.getDate()} de ${MONTHS[d.getMonth()]} de ${d.getFullYear()}`
-}
-
 export default function HomeScreen() {
   const { theme: t } = useTheme()
+  const { t: tr, locale } = useLang()
   const s = makeStyles(t)
   const [current, setCurrent] = useState(null)
+
+  function greeting() {
+    const h = new Date().getHours()
+    if (h < 13) return tr('home.greetingMorning')
+    if (h < 21) return tr('home.greetingAfternoon')
+    return tr('home.greetingEvening')
+  }
+
+  function formatDate() {
+    const d = new Date()
+    const str = d.toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    return str.charAt(0).toUpperCase() + str.slice(1)
+  }
 
   const load = useCallback(async () => {
     const qs = await getQuotes()

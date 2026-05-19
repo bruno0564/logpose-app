@@ -7,37 +7,42 @@ import Tasks from './Tasks.jsx'
 import Quotes from './Quotes.jsx'
 import Journal from './Journal.jsx'
 import Settings from './Settings.jsx'
+import { LangProvider, useLang } from './LangContext.jsx'
 
 const API = 'http://localhost:8000'
 
-const NAV = [
-  { id: 'home',         label: 'Inicio' },
-  { id: 'body-weight',  label: 'Peso' },
-  { id: 'gym',          label: 'Gym' },
-  { id: 'calendar',     label: 'Calendario' },
-  { id: 'todo',         label: 'To-Do' },
-  { id: 'quotes',       label: 'Quotes' },
-  { id: 'journal',      label: 'Diario' },
-]
+const NAV_IDS = ['home', 'body-weight', 'gym', 'calendar', 'todo', 'quotes', 'journal']
 
 function Sidebar({ active, onNav, online }) {
+  const { t: tr } = useLang()
+
+  const navLabel = {
+    'home':        tr('nav.home'),
+    'body-weight': tr('nav.weight'),
+    'gym':         tr('nav.gym'),
+    'calendar':    tr('nav.calendar'),
+    'todo':        tr('nav.todo'),
+    'quotes':      tr('nav.quotes'),
+    'journal':     tr('nav.journal'),
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
         <span className="brand-name">Logpose</span>
         <div className="brand-status">
           <span className={`brand-dot ${online ? 'brand-dot--online' : 'brand-dot--offline'}`} />
-          <span className="brand-status-text">{online ? 'Servidor conectado' : 'Sin servidor'}</span>
+          <span className="brand-status-text">{online ? tr('nav.serverOnline') : tr('nav.serverOffline')}</span>
         </div>
       </div>
       <nav className="sidebar-nav">
-        {NAV.map(item => (
+        {NAV_IDS.map(id => (
           <button
-            key={item.id}
-            className={`nav-item ${active === item.id ? 'nav-item--active' : ''}`}
-            onClick={() => onNav(item.id)}
+            key={id}
+            className={`nav-item ${active === id ? 'nav-item--active' : ''}`}
+            onClick={() => onNav(id)}
           >
-            {item.label}
+            {navLabel[id]}
           </button>
         ))}
       </nav>
@@ -46,14 +51,14 @@ function Sidebar({ active, onNav, online }) {
           className={`nav-item ${active === 'settings' ? 'nav-item--active' : ''}`}
           onClick={() => onNav('settings')}
         >
-          Ajustes
+          {tr('nav.settings')}
         </button>
       </div>
     </aside>
   )
 }
 
-function App() {
+function AppContent() {
   const [page, setPage] = useState('home')
   const [online, setOnline] = useState(false)
   const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
@@ -91,6 +96,14 @@ function App() {
         {page === 'settings'    && <Settings dark={dark} onToggle={() => setDark(d => !d)} />}
       </main>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <LangProvider>
+      <AppContent />
+    </LangProvider>
   )
 }
 

@@ -15,11 +15,13 @@ import {
   isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer,
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
+import { useLang } from '../LangContext'
 
 const SCREEN_W = Dimensions.get('window').width
 
 export default function BodyWeightScreen() {
   const { theme: t } = useTheme()
+  const { t: tr, tp } = useLang()
   const s = makeStyles(t)
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
@@ -140,7 +142,6 @@ export default function BodyWeightScreen() {
 
   const chartLabels = chartSource.map((e, i) => {
     if (!labelIndices.has(i)) return ''
-    // Multi-year: show MM/YY — same year: show DD/MM
     if (multiYear) return `${e.date.slice(5, 7)}/${e.date.slice(2, 4)}`
     return `${e.date.slice(8)}/${e.date.slice(5, 7)}`
   })
@@ -153,19 +154,19 @@ export default function BodyWeightScreen() {
   return (
     <>
     <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-      <Text style={s.title}>Body Weight</Text>
+      <Text style={s.title}>{tr('bodyWeight.title')}</Text>
 
       <View style={s.statsRow}>
-        <View style={s.stat}><Text style={s.statVal}>{latest ? `${latest} kg` : '—'}</Text><Text style={s.statLbl}>Último</Text></View>
-        <View style={s.stat}><Text style={s.statVal}>{avg ? `${avg} kg` : '—'}</Text><Text style={s.statLbl}>Media</Text></View>
-        <View style={s.stat}><Text style={s.statVal}>{entries.length || '—'}</Text><Text style={s.statLbl}>Total</Text></View>
+        <View style={s.stat}><Text style={s.statVal}>{latest ? `${latest} kg` : '—'}</Text><Text style={s.statLbl}>{tr('bodyWeight.statLatest')}</Text></View>
+        <View style={s.stat}><Text style={s.statVal}>{avg ? `${avg} kg` : '—'}</Text><Text style={s.statLbl}>{tr('bodyWeight.statAvg')}</Text></View>
+        <View style={s.stat}><Text style={s.statVal}>{entries.length || '—'}</Text><Text style={s.statLbl}>{tr('bodyWeight.statTotal')}</Text></View>
       </View>
 
       <View style={s.card}>
-        <Text style={s.cardTitle}>Nuevo registro</Text>
+        <Text style={s.cardTitle}>{tr('bodyWeight.newEntry')}</Text>
         <TextInput
           style={s.input}
-          placeholder="Peso (kg)"
+          placeholder={tr('bodyWeight.weightPh')}
           placeholderTextColor={t.text3}
           keyboardType="decimal-pad"
           value={weight}
@@ -188,26 +189,26 @@ export default function BodyWeightScreen() {
         )}
         <TextInput
           style={s.input}
-          placeholder="Nota (opcional)"
+          placeholder={tr('bodyWeight.notePh')}
           placeholderTextColor={t.text3}
           value={note}
           onChangeText={setNote}
         />
         <TouchableOpacity style={s.btn} onPress={handleAdd}>
-          <Text style={s.btnText}>Añadir</Text>
+          <Text style={s.btnText}>{tr('bodyWeight.add')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={s.card}>
-        <Text style={s.cardTitle}>Historial</Text>
+        <Text style={s.cardTitle}>{tr('bodyWeight.history')}</Text>
 
         <View style={s.filterRow}>
           <TouchableOpacity style={s.filterBtn} onPress={() => setShowFromPicker(true)}>
-            <Text style={s.filterLabel}>Desde</Text>
+            <Text style={s.filterLabel}>{tr('bodyWeight.filterFrom')}</Text>
             <Text style={s.filterValue}>{filterFrom || '—'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.filterBtn} onPress={() => setShowToPicker(true)}>
-            <Text style={s.filterLabel}>Hasta</Text>
+            <Text style={s.filterLabel}>{tr('bodyWeight.filterTo')}</Text>
             <Text style={s.filterValue}>{filterTo || '—'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => {
@@ -268,17 +269,17 @@ export default function BodyWeightScreen() {
             />
           </View>
         ) : displayed.length === 1 ? (
-          <Text style={s.hint}>Añade al menos 2 registros para ver la gráfica.</Text>
+          <Text style={s.hint}>{tr('bodyWeight.chartHint')}</Text>
         ) : null}
 
         {!loading && displayed.length === 0 ? (
-          <Text style={s.hint}>Sin registros{filterFrom || filterTo ? ' en ese rango' : ''}.</Text>
+          <Text style={s.hint}>{filterFrom || filterTo ? tr('bodyWeight.noRecordsRange') : tr('bodyWeight.noRecords')}</Text>
         ) : (
           <>
             <View style={s.tableHeader}>
-              <Text style={[s.col, s.colDate, s.headerText]}>Fecha</Text>
-              <Text style={[s.col, s.colWeight, s.headerText]}>Peso</Text>
-              <Text style={[s.col, s.colNote, s.headerText]}>Nota</Text>
+              <Text style={[s.col, s.colDate, s.headerText]}>{tr('bodyWeight.tableDate')}</Text>
+              <Text style={[s.col, s.colWeight, s.headerText]}>{tr('bodyWeight.tableWeight')}</Text>
+              <Text style={[s.col, s.colNote, s.headerText]}>{tr('bodyWeight.tableNote')}</Text>
               <Text style={s.colAction} />
             </View>
             {displayed.map(item => (
@@ -297,7 +298,7 @@ export default function BodyWeightScreen() {
               </View>
             ))}
             {(filterFrom || filterTo) && (
-              <Text style={s.hint}>{displayed.length} registro{displayed.length !== 1 ? 's' : ''} en el rango</Text>
+              <Text style={s.hint}>{tp('bodyWeight.rangeCount', displayed.length)}</Text>
             )}
           </>
         )}
@@ -307,10 +308,10 @@ export default function BodyWeightScreen() {
       <Modal visible={!!editEntry} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modal}>
-            <Text style={s.modalTitle}>Editar registro</Text>
+            <Text style={s.modalTitle}>{tr('bodyWeight.editTitle')}</Text>
             <TextInput
               style={s.input}
-              placeholder="Peso (kg)"
+              placeholder={tr('bodyWeight.weightPh')}
               placeholderTextColor={t.text3}
               keyboardType="decimal-pad"
               value={editEntry?.weight ?? ''}
@@ -333,17 +334,17 @@ export default function BodyWeightScreen() {
             )}
             <TextInput
               style={s.input}
-              placeholder="Nota (opcional)"
+              placeholder={tr('bodyWeight.notePh')}
               placeholderTextColor={t.text3}
               value={editEntry?.note ?? ''}
               onChangeText={v => setEditEntry(e => ({ ...e, note: v }))}
             />
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               <TouchableOpacity style={[s.btn, { flex: 1, backgroundColor: t.border2 }]} onPress={() => setEditEntry(null)}>
-                <Text style={[s.btnText, { color: t.text2 }]}>Cancelar</Text>
+                <Text style={[s.btnText, { color: t.text2 }]}>{tr('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, { flex: 1 }]} onPress={handleEditSave}>
-                <Text style={s.btnText}>Guardar</Text>
+                <Text style={s.btnText}>{tr('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

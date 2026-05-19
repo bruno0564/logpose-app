@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
 import { ThemeProvider, useTheme } from './src/ThemeContext'
+import { LangProvider, useLang } from './src/LangContext'
 import BodyWeightScreen from './src/screens/BodyWeightScreen'
 import HomeScreen from './src/screens/HomeScreen'
 import GymScreen from './src/screens/GymScreen'
@@ -19,12 +20,13 @@ const Tab = createBottomTabNavigator()
 
 function ServerStatus({ online }) {
   const { theme: t } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   return (
     <View style={s.statusBar}>
       <View style={[s.dot, online ? s.online : s.offline]} />
       <Text style={s.statusText}>
-        {online ? 'Servidor conectado' : 'Sin servidor — modo local'}
+        {online ? tr('server.online') : tr('server.offline')}
       </Text>
     </View>
   )
@@ -150,9 +152,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <LangProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </LangProvider>
   )
 }
 
