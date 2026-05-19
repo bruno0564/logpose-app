@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
+import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter'
 import { ThemeProvider, useTheme } from './src/ThemeContext'
 import { LangProvider, useLang } from './src/LangContext'
 import BodyWeightScreen from './src/screens/BodyWeightScreen'
@@ -36,6 +37,7 @@ function AppContent() {
   const [online, setOnline] = useState(false)
   const { theme: t, dark } = useTheme()
   const s = makeStyles(t)
+  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_600SemiBold, Inter_700Bold })
 
   useEffect(() => {
     async function check() {
@@ -58,10 +60,18 @@ function AppContent() {
             tabBarShowLabel: false,
             tabBarStyle: {
               backgroundColor: t.surface,
-              borderTopColor: t.surface2,
+              borderTopColor: t.border,
+              borderTopWidth: 1,
+              height: 62,
+              paddingBottom: 10,
+              paddingTop: 6,
             },
             tabBarActiveTintColor: t.accent,
             tabBarInactiveTintColor: t.text3,
+            tabBarLabelStyle: {
+              fontFamily: fontsLoaded ? 'Inter_600SemiBold' : undefined,
+              fontSize: 10,
+            },
           }}
         >
           <Tab.Screen
