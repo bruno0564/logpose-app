@@ -763,7 +763,7 @@ export async function updateLocalQuote(id, text, author) {
 
 export async function getActiveRoutine() {
   const db = await openDB()
-  return db.getFirstAsync('SELECT * FROM routines WHERE is_active = 1 LIMIT 1')
+  return db.getFirstAsync('SELECT * FROM routines WHERE is_active = 1 AND pending_delete = 0 LIMIT 1')
 }
 
 export async function setActiveRoutine(localId) {
@@ -1059,7 +1059,7 @@ export async function saveJournalEntry(content) {
       'INSERT INTO journal_entries (date, content, synced) VALUES (?, ?, 0)',
       [today, content]
     )
-    return result.lastInsertId
+    return result.lastInsertRowId
   }
 }
 
