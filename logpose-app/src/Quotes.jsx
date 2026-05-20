@@ -9,6 +9,7 @@ import {
   postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
 } from './api/client'
 import { useLang } from './LangContext.jsx'
+import { IconEdit, IconClose } from './Icons.jsx'
 
 let syncingQuotes = false
 
@@ -154,8 +155,8 @@ function Quotes() {
                     <td>"{quote.text}"</td>
                     <td className="note-cell">{quote.author ?? '—'}</td>
                     <td>
-                      <button className="btn-icon" onClick={() => setEditQuote({ ...quote })} title="Edit">✎</button>
-                      <button className="btn-delete" onClick={() => handleDelete(quote)}>×</button>
+                      <button className="btn-icon" onClick={() => setEditQuote({ ...quote })} title="Edit"><IconEdit /></button>
+                      <button className="btn-delete" onClick={() => handleDelete(quote)}><IconClose /></button>
                     </td>
                   </tr>
                 ))}
@@ -170,7 +171,7 @@ function Quotes() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{tr('quotes.editQuote')}</h3>
-              <button className="btn-delete" onClick={() => setEditQuote(null)}>×</button>
+              <button className="btn-delete" onClick={() => setEditQuote(null)}><IconClose /></button>
             </div>
             <form onSubmit={handleEdit} className="form" style={{ flexDirection: 'column' }}>
               <div className="field">

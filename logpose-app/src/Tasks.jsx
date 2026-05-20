@@ -13,6 +13,7 @@ import {
   fetchTaskItemsFromServer, postTaskItemToServer, putTaskItemToServer, deleteTaskItemFromServer,
 } from './api/client'
 import { useLang } from './LangContext.jsx'
+import { IconClose, IconCheck } from './Icons.jsx'
 
 let syncingTasks = false
 
@@ -150,7 +151,7 @@ export default function Tasks() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{tr('common.confirm')}</h3>
-              <button className="modal-close" onClick={() => setConfirmTarget(null)}>×</button>
+              <button className="modal-close" onClick={() => setConfirmTarget(null)}><IconClose size={14} /></button>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
               {tr('tasks.deleteListMsg', { name: confirmTarget.name })}
@@ -180,7 +181,7 @@ export default function Tasks() {
               >
                 <span className="todo-list-name">{list.name}</span>
                 <button className="btn-delete"
-                  onClick={e => { e.stopPropagation(); handleDeleteList(list) }}>×</button>
+                  onClick={e => { e.stopPropagation(); handleDeleteList(list) }}><IconClose size={12} /></button>
               </div>
             ))}
 
@@ -225,7 +226,7 @@ export default function Tasks() {
                     <div key={item.id} className="todo-item">
                       <button className="todo-check" onClick={() => handleToggle(item)} />
                       <span className="todo-item-title">{item.title}</span>
-                      <button className="btn-delete" onClick={() => handleDeleteItem(item)}>×</button>
+                      <button className="btn-delete" onClick={() => handleDeleteItem(item)}><IconClose size={12} /></button>
                     </div>
                   ))}
                   {done.length > 0 && (
@@ -233,9 +234,9 @@ export default function Tasks() {
                       <p className="todo-done-label">{tr('tasks.doneLabel')}</p>
                       {done.map(item => (
                         <div key={item.id} className="todo-item todo-item--done">
-                          <button className="todo-check todo-check--done" onClick={() => handleToggle(item)}>✓</button>
+                          <button className="todo-check todo-check--done" onClick={() => handleToggle(item)}><IconCheck size={10} /></button>
                           <span className="todo-item-title">{item.title}</span>
-                          <button className="btn-delete" onClick={() => handleDeleteItem(item)}>×</button>
+                          <button className="btn-delete" onClick={() => handleDeleteItem(item)}><IconClose size={12} /></button>
                         </div>
                       ))}
                     </>

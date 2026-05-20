@@ -8,10 +8,24 @@ import Quotes from './Quotes.jsx'
 import Journal from './Journal.jsx'
 import Settings from './Settings.jsx'
 import { LangProvider, useLang } from './LangContext.jsx'
+import {
+  IconHome, IconWeight, IconGym, IconCalendar,
+  IconList, IconQuote, IconJournal, IconSettings,
+} from './Icons.jsx'
 
 const API = 'http://localhost:8000'
 
 const NAV_IDS = ['home', 'body-weight', 'gym', 'calendar', 'todo', 'quotes', 'journal']
+
+const NAV_ICONS = {
+  'home':        <IconHome />,
+  'body-weight': <IconWeight />,
+  'gym':         <IconGym />,
+  'calendar':    <IconCalendar />,
+  'todo':        <IconList />,
+  'quotes':      <IconQuote />,
+  'journal':     <IconJournal />,
+}
 
 function Sidebar({ active, onNav, online }) {
   const { t: tr } = useLang()
@@ -42,6 +56,7 @@ function Sidebar({ active, onNav, online }) {
             className={`nav-item ${active === id ? 'nav-item--active' : ''}`}
             onClick={() => onNav(id)}
           >
+            {NAV_ICONS[id]}
             {navLabel[id]}
           </button>
         ))}
@@ -51,6 +66,7 @@ function Sidebar({ active, onNav, online }) {
           className={`nav-item ${active === 'settings' ? 'nav-item--active' : ''}`}
           onClick={() => onNav('settings')}
         >
+          <IconSettings />
           {tr('nav.settings')}
         </button>
       </div>

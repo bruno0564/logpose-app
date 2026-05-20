@@ -13,6 +13,7 @@ import {
   putCalendarEventToServer, deleteCalendarEventFromServer,
 } from './api/client'
 import { useLang } from './LangContext.jsx'
+import { IconClose, IconChevronLeft, IconChevronRight } from './Icons.jsx'
 
 let syncingCalendar = false
 
@@ -221,9 +222,9 @@ export default function Calendar() {
       <div className="cal-page">
         <div className="cal-header">
           <div className="cal-nav">
-            <button className="cal-arrow" onClick={prev}>‹</button>
+            <button className="cal-arrow" onClick={prev}><IconChevronLeft /></button>
             <span className="cal-period-label">{label}</span>
-            <button className="cal-arrow" onClick={next}>›</button>
+            <button className="cal-arrow" onClick={next}><IconChevronRight /></button>
             <button className="cal-today-btn" onClick={goToday}>{tr('calendar.today')}</button>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -262,7 +263,7 @@ export default function Calendar() {
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{modal.mode === 'create' ? tr('calendar.newTaskModal') : tr('calendar.editTaskModal')}</h3>
-              <button className="btn-delete" onClick={() => setModal(null)}>×</button>
+              <button className="btn-delete" onClick={() => setModal(null)}><IconClose /></button>
             </div>
             <form onSubmit={handleSave} className="form" style={{ flexDirection: 'column', gap: '0.85rem' }}>
 

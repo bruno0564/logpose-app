@@ -6,6 +6,7 @@ import {
 } from './db/database'
 import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
 import { useLang } from './LangContext.jsx'
+import { IconEdit, IconClose } from './Icons.jsx'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -222,8 +223,8 @@ function BodyWeight() {
                   <td className="weight-cell">{entry.weight} kg</td>
                   <td className="note-cell">{entry.note ?? '—'}</td>
                   <td>
-                    <button className="btn-icon" onClick={() => setEditEntry({ ...entry })} title="Edit">✎</button>
-                    <button className="btn-delete" onClick={() => handleDelete(entry)}>×</button>
+                    <button className="btn-icon" onClick={() => setEditEntry({ ...entry })} title="Edit"><IconEdit /></button>
+                    <button className="btn-delete" onClick={() => handleDelete(entry)}><IconClose /></button>
                   </td>
                 </tr>
               ))}
@@ -241,7 +242,7 @@ function BodyWeight() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{tr('bodyWeight.editTitle')}</h3>
-              <button className="btn-delete" onClick={() => setEditEntry(null)}>×</button>
+              <button className="btn-delete" onClick={() => setEditEntry(null)}><IconClose /></button>
             </div>
             <form onSubmit={handleEdit} className="form" style={{ flexDirection: 'column' }}>
               <div className="field">

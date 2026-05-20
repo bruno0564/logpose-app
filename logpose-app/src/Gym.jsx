@@ -24,6 +24,7 @@ import {
   postSessionToServer, postSetToServer,
 } from './api/client'
 import { useLang } from './LangContext.jsx'
+import { IconEdit, IconClose, IconCheck, IconChevronDown, IconChevronUp } from './Icons.jsx'
 
 let syncingGym = false
 
@@ -321,12 +322,12 @@ export default function Gym() {
                         </button>
                       )}
                       <button
-                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 0.25rem', lineHeight: 1 }}
+                        className="btn-icon"
                         onClick={e => { e.stopPropagation(); setEditingRoutineId(r.id); setEditRoutineName(r.name) }}
                       >
-                        ✎
+                        <IconEdit />
                       </button>
-                      <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}>×</button>
+                      <button className="btn-delete" onClick={e => { e.stopPropagation(); handleDelete(r) }}><IconClose /></button>
                     </div>
                   </>
                 )}
@@ -397,7 +398,7 @@ function StatsView({ exercises }) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>{tp('gym.sets', s.set_count)}</span>
-                  <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{isOpen ? '▲' : '▼'}</span>
+                  {isOpen ? <IconChevronUp /> : <IconChevronDown />}
                 </div>
               </div>
 
@@ -528,10 +529,10 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                         {re.exercise_name}
                       </span>
                       <button
+                        className="btn-delete"
                         onClick={async () => { await deleteRoutineExercise(re.id); onExercisesChange() }}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '1rem', padding: '0 0.2rem', lineHeight: 1 }}
                       >
-                        ×
+                        <IconClose size={12} />
                       </button>
                     </div>
                   ))}
@@ -615,7 +616,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
       >
         <div className="modal-header">
           <span>{tr('gym.addTitle', { day: days[day] })}</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
+          <button onClick={onClose} className="btn-delete"><IconClose /></button>
         </div>
 
         <div style={{ padding: '1rem' }}>
@@ -642,8 +643,8 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                           onChange={e => setEditExName(e.target.value)}
                           style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.82rem', outline: 'none' }}
                         />
-                        <button type="submit" className="btn-primary" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>✓</button>
-                        <button type="button" className="btn-cancel" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }} onClick={() => setEditingExId(null)}>✕</button>
+                        <button type="submit" className="btn-primary" style={{ padding: '0.2rem 0.5rem' }}><IconCheck size={12} /></button>
+                        <button type="button" className="btn-cancel" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setEditingExId(null)}><IconClose size={12} /></button>
                       </form>
                     </div>
                   )
@@ -653,13 +654,13 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                     <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{ex.name}</span>
                     <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
                       <button
-                        style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '0.8rem', padding: '0 0.15rem', lineHeight: 1 }}
+                        className="btn-icon"
                         onClick={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }}
                       >
-                        ✎
+                        <IconEdit size={13} />
                       </button>
                       {alreadyAdded.has(ex.id) ? (
-                        <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>✓</span>
+                        <IconCheck size={13} style={{ color: 'var(--success)' }} />
                       ) : (
                         <button
                           className="btn-primary"
@@ -880,7 +881,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
       <div className="modal" style={{ maxWidth: 340 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span>{tr('common.confirm')}</span>
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
+          <button onClick={onCancel} className="btn-delete"><IconClose /></button>
         </div>
         <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', padding: '1rem 1rem 0' }}>{message}</p>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', padding: '1rem' }}>
