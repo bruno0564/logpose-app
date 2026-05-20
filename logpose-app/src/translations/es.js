@@ -6,6 +6,7 @@ export default {
     save: 'Guardar',
     saving: 'Guardando...',
     saved: 'Guardado',
+    deleted: 'Eliminado',
     delete: 'Eliminar',
     confirm: 'Confirmar',
     back: '← Volver',

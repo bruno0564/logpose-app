@@ -7,6 +7,7 @@ import {
 import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer, putBodyWeightToServer, deleteBodyWeightFromServer } from './api/client'
 import { useLang } from './LangContext.jsx'
 import { IconEdit, IconClose } from './Icons.jsx'
+import { useToast } from './Toast.jsx'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -22,6 +23,7 @@ function StatCard({ label, value }) {
 
 function BodyWeight() {
   const { t: tr, tp } = useLang()
+  const toast = useToast()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState(null)
@@ -86,6 +88,7 @@ function BodyWeight() {
     setForm({ weight: '', date: today(), note: '' })
     await loadLocal()
     sync()
+    toast(tr('common.saved'))
   }
 
   async function handleDelete(entry) {
@@ -96,6 +99,7 @@ function BodyWeight() {
     }
     await loadLocal()
     sync()
+    toast(tr('common.deleted'))
   }
 
   async function handleEdit(e) {
@@ -104,6 +108,7 @@ function BodyWeight() {
     setEditEntry(null)
     await loadLocal()
     sync()
+    toast(tr('common.saved'))
   }
 
   const displayed = entries.filter(e => {

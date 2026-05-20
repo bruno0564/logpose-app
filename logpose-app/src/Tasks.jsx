@@ -14,11 +14,13 @@ import {
 } from './api/client'
 import { useLang } from './LangContext.jsx'
 import { IconClose, IconCheck } from './Icons.jsx'
+import { useToast } from './Toast.jsx'
 
 let syncingTasks = false
 
 export default function Tasks() {
   const { t: tr } = useLang()
+  const toast = useToast()
   const [lists, setLists] = useState([])
   const [activeList, setActiveList] = useState(null)
   const activeListRef = useRef(null)
@@ -105,6 +107,7 @@ export default function Tasks() {
     const rows = await loadLists()
     setActiveList(rows.find(l => l.id === localId) ?? rows[0])
     sync()
+    toast(tr('common.saved'))
   }
 
   function handleDeleteList(list) {
@@ -118,6 +121,7 @@ export default function Tasks() {
     const updated = await loadLists()
     setActiveList(updated.length > 0 ? updated[0] : null)
     sync()
+    toast(tr('common.deleted'))
   }
 
   async function handleAddItem(e) {
@@ -127,6 +131,7 @@ export default function Tasks() {
     setNewItemTitle('')
     await loadItems(activeList.id)
     sync()
+    toast(tr('common.saved'))
   }
 
   async function handleToggle(item) {
@@ -139,6 +144,7 @@ export default function Tasks() {
     await deleteTaskItem(item.id)
     await loadItems(activeList.id)
     sync()
+    toast(tr('common.deleted'))
   }
 
   const pending = items.filter(i => i.done === 0)

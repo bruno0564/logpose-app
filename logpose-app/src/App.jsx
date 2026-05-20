@@ -12,6 +12,7 @@ import {
   IconHome, IconWeight, IconGym, IconCalendar,
   IconList, IconQuote, IconJournal, IconSettings,
 } from './Icons.jsx'
+import { ToastProvider } from './Toast.jsx'
 
 const API = 'http://localhost:8000'
 
@@ -118,7 +119,9 @@ function AppContent() {
 function App() {
   return (
     <LangProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </LangProvider>
   )
 }

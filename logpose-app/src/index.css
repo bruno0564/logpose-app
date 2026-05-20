@@ -293,6 +293,10 @@ body {
   box-shadow: 0 2px 12px var(--accent-glow);
 }
 
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
 .btn-primary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -338,6 +342,10 @@ body {
   border-color: var(--text-3);
 }
 
+.btn-cancel:active {
+  transform: scale(0.97);
+}
+
 .btn-danger {
   height: 34px;
   padding: 0 1rem;
@@ -353,6 +361,10 @@ body {
 
 .btn-danger:hover {
   background: var(--danger-bg-h);
+}
+
+.btn-danger:active {
+  transform: scale(0.97);
 }
 
 .modal-close {
@@ -453,17 +465,31 @@ body {
   color: var(--text-4);
 }
 
-/* ── Page animation ──────────────────────────────── */
+/* ── Animations ──────────────────────────────────── */
 
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+@keyframes checkBounce {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .page,
@@ -481,6 +507,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: overlayIn 0.15s ease-out both;
 }
 
 .modal {
@@ -493,6 +520,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  animation: modalIn 0.15s ease-out both;
 }
 
 .modal-header {
@@ -645,6 +673,10 @@ body {
 .todo-check--done {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.todo-check--done svg {
+  animation: checkBounce 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .todo-item-title {
@@ -1153,3 +1185,33 @@ body {
 .theme-toggle--on .theme-toggle-thumb {
   transform: translateX(18px);
 }
+
+/* ── Toasts ──────────────────────────────────────── */
+
+.toast-stack {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  animation: toastIn 0.2s ease-out both;
+  max-width: 260px;
+  border-left-width: 3px;
+}
+
+.toast--success { border-left-color: var(--success); }
+.toast--error   { border-left-color: var(--danger); color: var(--danger-text); }

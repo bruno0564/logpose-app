@@ -8,6 +8,7 @@ export default {
     save: 'Save',
     saving: 'Saving...',
     saved: 'Saved',
+    deleted: 'Deleted',
     delete: 'Delete',
     confirm: 'Confirm',
     back: '← Back',

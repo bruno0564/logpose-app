@@ -10,11 +10,13 @@ import {
 } from './api/client'
 import { useLang } from './LangContext.jsx'
 import { IconEdit, IconClose } from './Icons.jsx'
+import { useToast } from './Toast.jsx'
 
 let syncingQuotes = false
 
 function Quotes() {
   const { t: tr } = useLang()
+  const toast = useToast()
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState(null)
@@ -72,6 +74,7 @@ function Quotes() {
     setForm({ text: '', author: '' })
     await loadLocal()
     sync()
+    toast(tr('common.saved'))
   }
 
   async function handleDelete(quote) {
@@ -82,6 +85,7 @@ function Quotes() {
     }
     await loadLocal()
     sync()
+    toast(tr('common.deleted'))
   }
 
   async function handleEdit(e) {
@@ -90,6 +94,7 @@ function Quotes() {
     setEditQuote(null)
     await loadLocal()
     sync()
+    toast(tr('common.saved'))
   }
 
   return (
