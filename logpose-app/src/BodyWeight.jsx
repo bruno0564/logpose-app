@@ -21,9 +21,29 @@ function StatCard({ label, value }) {
   )
 }
 
+function useCssVar(name) {
+  const [value, setValue] = useState(() =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  )
+  useEffect(() => {
+    const observer = new MutationObserver(() =>
+      setValue(getComputedStyle(document.documentElement).getPropertyValue(name).trim())
+    )
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-style', 'data-theme'] })
+    return () => observer.disconnect()
+  }, [name])
+  return value
+}
+
 function BodyWeight() {
   const { t: tr, tp } = useLang()
   const toast = useToast()
+  const colorAccent  = useCssVar('--accent')
+  const colorText3   = useCssVar('--text-3')
+  const colorText4   = useCssVar('--text-4')
+  const colorText    = useCssVar('--text')
+  const colorSurface = useCssVar('--surface')
+  const colorBorder  = useCssVar('--border')
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState(null)
@@ -191,16 +211,16 @@ function BodyWeight() {
             <div className="bw-chart">
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid stroke="#181818" vertical={false} />
-                  <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: '#444', fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#444', fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <CartesianGrid stroke={colorBorder} vertical={false} />
+                  <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: colorText3, fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis domain={['auto', 'auto']} tick={{ fill: colorText3, fontSize: 11 }} tickLine={false} axisLine={false} />
                   <Tooltip
-                    contentStyle={{ background: '#111', border: '1px solid #222', borderRadius: 8, fontSize: 12 }}
-                    labelStyle={{ color: '#888' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ background: colorSurface, border: `1px solid ${colorBorder}`, borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: colorText4 }}
+                    itemStyle={{ color: colorText }}
                     formatter={v => [`${v} kg`]}
                   />
-                  <Line type="monotone" dataKey="weight" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3, fill: '#7c3aed' }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="weight" stroke={colorAccent} strokeWidth={2} dot={{ r: 3, fill: colorAccent }} activeDot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

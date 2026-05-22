@@ -1,6 +1,10 @@
-@import './theme.css';
-@import './HomeCuphead.css';
-@import './cartoon.css';
+@layer base, cartoon;
+
+@import './theme.css'        layer(base);
+@import './cartoon-base.css' layer(base);
+@import './cartoon.css'      layer(cartoon);
+
+@layer base {
 
 * {
   box-sizing: border-box;
@@ -1217,3 +1221,5 @@ body {
 
 .toast--success { border-left-color: var(--success); }
 .toast--error   { border-left-color: var(--danger); color: var(--danger-text); }
+
+} /* end @layer base */

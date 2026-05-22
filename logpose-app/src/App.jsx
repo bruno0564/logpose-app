@@ -89,8 +89,10 @@ function AppContent() {
   useEffect(() => {
     if (appStyle === 'normal') {
       delete document.documentElement.dataset.style
+      delete document.documentElement.dataset.cartoon
     } else {
       document.documentElement.dataset.style = appStyle
+      document.documentElement.dataset.cartoon = appStyle
     }
     localStorage.setItem('appStyle', appStyle)
   }, [appStyle])
