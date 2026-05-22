@@ -1,0 +1,78 @@
+/* Fuentes cartoon — el navegador sólo descarga la que está en uso */
+
+@font-face {
+  font-family: 'FredokaOne';
+  src: url('./fonts/FredokaOne.ttf') format('truetype');
+  font-weight: normal; font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PressStart2P';
+  src: url('./fonts/PressStart2P.ttf') format('truetype');
+  font-weight: normal; font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LuckiestGuy';
+  src: url('./fonts/LuckiestGuy.ttf') format('truetype');
+  font-weight: normal; font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lobster';
+  src: url('./fonts/Lobster.ttf') format('truetype');
+  font-weight: normal; font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  src: url('./fonts/Orbitron.ttf') format('truetype');
+  font-weight: normal; font-style: normal;
+  font-display: swap;
+}
+
+/* Keyframes compartidos por cartoon.css */
+
+@keyframes cup-crt-scan {
+  0%   { background-position: 0 -100%, 0 0; }
+  100% { background-position: 0  100%, 0 0; }
+}
+
+@keyframes cup-tv-flicker {
+  0%, 88%, 100% { opacity: 1; }
+  89%  { opacity: 0.88; }
+  90%  { opacity: 1; }
+  91%  { opacity: 0.93; }
+  92%  { opacity: 1; }
+}
+
+@keyframes cup-drop {
+  0%   { opacity: 0; transform: translateY(-80px) scaleY(0.7); }
+  55%  { opacity: 1; transform: translateY(12px) scaleY(1.06); }
+  75%  { transform: translateY(-6px) scaleY(0.97); }
+  90%  { transform: translateY(3px) scaleY(1.01); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+@keyframes cup-slide {
+  0%   { opacity: 0; transform: translateX(-100px) scaleX(1.12); }
+  55%  { opacity: 1; transform: translateX(10px) scaleX(0.96); }
+  75%  { transform: translateX(-5px) scaleX(1.01); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+@keyframes cup-pop {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-10deg); }
+  55%  { opacity: 1; transform: scale(1.12) rotate(3deg); }
+  75%  { transform: scale(0.96) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes cup-section-in {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
