@@ -1,4 +1,6 @@
 :root {
+  --app-font: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+
   /* Fondos */
   --bg:        #0a0a0a;
   --surface:   #111111;
@@ -76,4 +78,114 @@
   --success:       #22c55e;
   --overlay: rgba(0, 0, 0, 0.6);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Estilos cartoon (sobreescriben dark/light) ───── */
+
+[data-style="warm"] {
+  --app-font:      'FredokaOne', sans-serif;
+  --bg:            #f2dda4;
+  --surface:       #fdf5e0;
+  --surface-2:     #f5e9c8;
+  --border:        rgba(139, 69, 19, 0.2);
+  --border-2:      #c4a882;
+  --accent:              #c41e1e;
+  --accent-hover:        #a01818;
+  --accent-gradient:     linear-gradient(135deg, #c41e1e 0%, #8b4513 100%);
+  --accent-glow:         rgba(196, 30, 30, 0.2);
+  --accent-subtle:       rgba(196, 30, 30, 0.08);
+  --text:          #1a0a00;
+  --text-2:        #8b4513;
+  --text-3:        #b08050;
+  --text-4:        #c4a882;
+  --danger:        #c41e1e;
+  --danger-bg:     rgba(196, 30, 30, 0.1);
+  --danger-bg-h:   rgba(196, 30, 30, 0.2);
+  --danger-text:   #c41e1e;
+  --danger-border: rgba(196, 30, 30, 0.3);
+  --danger-subtle: rgba(196, 30, 30, 0.06);
+  --success:       #2a7c1e;
+  --overlay:       rgba(26, 10, 0, 0.65);
+  --shadow-card:   0 4px 24px rgba(26, 10, 0, 0.15);
+}
+
+[data-style="tv"] {
+  --app-font:      'FredokaOne', sans-serif;
+  --bg:            #2a2a2a;
+  --surface:       #333333;
+  --surface-2:     #3a3a3a;
+  --border:        #383838;
+  --border-2:      #484e48;
+  --accent:              #e0ece0;
+  --accent-hover:        #b0c8b0;
+  --accent-gradient:     linear-gradient(135deg, #e0ece0 0%, #909890 100%);
+  --accent-glow:         rgba(224, 236, 224, 0.1);
+  --accent-subtle:       rgba(224, 236, 224, 0.05);
+  --text:          #e0ece0;
+  --text-2:        #909890;
+  --text-3:        #6a726a;
+  --text-4:        #484e48;
+  --danger:        #c07860;
+  --danger-bg:     rgba(192, 120, 96, 0.15);
+  --danger-bg-h:   rgba(192, 120, 96, 0.25);
+  --danger-text:   #d09080;
+  --danger-border: rgba(192, 120, 96, 0.3);
+  --danger-subtle: rgba(192, 120, 96, 0.06);
+  --success:       #80b880;
+  --overlay:       rgba(0, 0, 0, 0.78);
+  --shadow-card:   0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+[data-style="tv-pixel"] {
+  --app-font:      'PressStart2P', sans-serif;
+  --bg:            #2a2a2a;
+  --surface:       #333333;
+  --surface-2:     #3a3a3a;
+  --border:        #383838;
+  --border-2:      #484e48;
+  --accent:              #e0ece0;
+  --accent-hover:        #b0c8b0;
+  --accent-gradient:     linear-gradient(135deg, #e0ece0 0%, #909890 100%);
+  --accent-glow:         rgba(224, 236, 224, 0.1);
+  --accent-subtle:       rgba(224, 236, 224, 0.05);
+  --text:          #e0ece0;
+  --text-2:        #909890;
+  --text-3:        #6a726a;
+  --text-4:        #484e48;
+  --danger:        #c07860;
+  --danger-bg:     rgba(192, 120, 96, 0.15);
+  --danger-bg-h:   rgba(192, 120, 96, 0.25);
+  --danger-text:   #d09080;
+  --danger-border: rgba(192, 120, 96, 0.3);
+  --danger-subtle: rgba(192, 120, 96, 0.06);
+  --success:       #80b880;
+  --overlay:       rgba(0, 0, 0, 0.78);
+  --shadow-card:   0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+[data-style="cuphead"] {
+  --app-font:      'LuckiestGuy', sans-serif;
+  --bg:            #f0d9a0;
+  --surface:       #faecc8;
+  --surface-2:     #f5e4b8;
+  --border:        rgba(24, 8, 0, 0.15);
+  --border-2:      rgba(24, 8, 0, 0.28);
+  --accent:              #c01818;
+  --accent-hover:        #a01010;
+  --accent-gradient:     linear-gradient(135deg, #c01818 0%, #8a3a0a 100%);
+  --accent-glow:         rgba(192, 24, 24, 0.2);
+  --accent-subtle:       rgba(192, 24, 24, 0.08);
+  --text:          #180800;
+  --text-2:        #8a3a0a;
+  --text-3:        #a87840;
+  --text-4:        #c09860;
+  --danger:        #c01818;
+  --danger-bg:     rgba(192, 24, 24, 0.1);
+  --danger-bg-h:   rgba(192, 24, 24, 0.2);
+  --danger-text:   #c01818;
+  --danger-border: rgba(192, 24, 24, 0.3);
+  --danger-subtle: rgba(192, 24, 24, 0.06);
+  --success:       #2a7c1e;
+  --overlay:       rgba(24, 8, 0, 0.65);
+  --shadow-card:   0 4px 24px rgba(24, 8, 0, 0.18);
 }

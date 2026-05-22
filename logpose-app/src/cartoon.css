@@ -1,0 +1,406 @@
+/*
+ * cartoon.css  — layer(cartoon)
+ * Se activa cuando App.jsx pone data-cartoon="" en <html>.
+ * Las diferencias de color y fuente vienen de theme.css (layer base).
+ * Por estar en layer(cartoon) gana a layer(base) sin necesitar !important.
+ */
+
+/* ── Body: textura de papel ──────────────────────────────────────────── */
+[data-cartoon] body {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.018) 3px,
+    rgba(0,0,0,0.018) 4px
+  );
+}
+
+/* ── TV: scanlines fijas ─────────────────────────────────────────────── */
+[data-cartoon~="tv"] body::before,
+[data-cartoon~="tv-pixel"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.07) 0px,
+    rgba(0,0,0,0.07) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* TV: línea de refresco CRT + viñeta */
+[data-cartoon~="tv"] body::after,
+[data-cartoon~="tv-pixel"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%),
+    radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+  background-size: 100% 200%, 100% 100%;
+  animation: cup-crt-scan 6s linear infinite;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* TV: parpadeo global */
+[data-cartoon~="tv"] .layout,
+[data-cartoon~="tv-pixel"] .layout {
+  animation: cup-tv-flicker 7s ease-in-out infinite;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+[data-cartoon] .sidebar {
+  border-right: 3px solid var(--text);
+}
+
+[data-cartoon] .sidebar-brand {
+  border-bottom: 3px solid var(--text);
+}
+
+[data-cartoon] .brand-name {
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: var(--accent);
+  color: var(--accent);
+  text-shadow: 2px 2px 0 var(--text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 1rem;
+}
+
+[data-cartoon] .sidebar-footer {
+  border-top: 3px solid var(--text);
+}
+
+/* Nav items */
+[data-cartoon] .nav-item {
+  border-radius: 8px 12px 10px 8px / 12px 8px 8px 10px;
+  border: 2px solid transparent;
+  transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-cartoon] .nav-item:hover {
+  border-color: var(--text);
+  box-shadow: 3px 3px 0 var(--text);
+  transform: translate(-1px, -1px);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+[data-cartoon] .nav-item--active {
+  border-color: var(--accent);
+  box-shadow: 3px 3px 0 var(--accent);
+  color: var(--text);
+}
+
+/* ── Page header ─────────────────────────────────────────────────────── */
+[data-cartoon~="warm"] .page-title,
+[data-cartoon~="cuphead"] .page-title {
+  color: var(--accent);
+  -webkit-text-stroke: 2px var(--text);
+  text-shadow: 5px 5px 0 var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 3rem;
+  line-height: 1;
+  animation: cup-slide 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+[data-cartoon~="tv"] .page-title,
+[data-cartoon~="tv-pixel"] .page-title {
+  color: var(--accent);
+  text-shadow: 5px 5px 0 rgba(0,0,0,0.6), 0 0 22px rgba(180,230,180,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 3rem;
+  line-height: 1;
+  animation: cup-slide 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+[data-cartoon] .page-subtitle {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
+  margin-top: 0.5rem;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────── */
+[data-cartoon] .card {
+  border: 3px solid var(--text);
+  border-radius: 12px 8px 14px 10px / 10px 14px 8px 12px;
+  box-shadow: 5px 5px 0 var(--text);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s;
+  animation: cup-drop 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+[data-cartoon] .card:hover {
+  transform: translate(-3px, -3px) rotate(-0.5deg);
+  box-shadow: 8px 8px 0 var(--text);
+}
+
+[data-cartoon] .card-title {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  border-bottom: 2px solid var(--border-2);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Stat cards ──────────────────────────────────────────────────────── */
+[data-cartoon] .stat-card {
+  border: 3px solid var(--text);
+  border-radius: 12px 8px 14px 10px / 8px 14px 10px 12px;
+  box-shadow: 5px 5px 0 var(--text);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+}
+
+[data-cartoon] .stat-card:hover {
+  transform: translate(-2px, -2px) rotate(-1deg);
+  box-shadow: 7px 7px 0 var(--text);
+}
+
+[data-cartoon~="warm"] .stat-value,
+[data-cartoon~="cuphead"] .stat-value {
+  color: var(--accent);
+  -webkit-text-stroke: 1px var(--text);
+  text-shadow: 3px 3px 0 var(--text);
+}
+
+[data-cartoon~="tv"] .stat-value,
+[data-cartoon~="tv-pixel"] .stat-value {
+  color: var(--accent);
+  text-shadow: 3px 3px 0 rgba(0,0,0,0.5), 0 0 16px rgba(180,230,180,0.3);
+}
+
+[data-cartoon] .stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────── */
+[data-cartoon] .btn-primary {
+  border: 3px solid var(--text);
+  border-radius: 10px 14px 10px 12px / 14px 10px 12px 10px;
+  box-shadow: 4px 4px 0 var(--text);
+  background: var(--accent);
+  color: var(--bg);
+  height: auto;
+  padding: 0.5rem 1.4rem;
+  font-weight: normal;
+  letter-spacing: 0.04em;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
+}
+
+[data-cartoon] .btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--text);
+  opacity: 1;
+}
+
+[data-cartoon] .btn-primary:active {
+  transform: scaleX(1.08) scaleY(0.88) translateY(3px);
+  box-shadow: 1px 1px 0 var(--text);
+}
+
+[data-cartoon] .btn-cancel {
+  border: 3px solid var(--text);
+  border-radius: 10px 14px 10px 12px / 14px 10px 12px 10px;
+  box-shadow: 4px 4px 0 var(--text);
+  background: var(--surface);
+  color: var(--text-2);
+  height: auto;
+  padding: 0.5rem 1.4rem;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
+}
+
+[data-cartoon] .btn-cancel:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--text);
+  color: var(--text);
+  border-color: var(--text);
+}
+
+[data-cartoon] .btn-cancel:active {
+  transform: scaleX(1.08) scaleY(0.88) translateY(3px);
+  box-shadow: 1px 1px 0 var(--text);
+}
+
+[data-cartoon] .btn-danger {
+  border: 3px solid var(--text);
+  border-radius: 10px 14px 10px 12px / 14px 10px 12px 10px;
+  box-shadow: 4px 4px 0 var(--text);
+  height: auto;
+  padding: 0.5rem 1.4rem;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
+}
+
+[data-cartoon] .btn-danger:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--text);
+}
+
+[data-cartoon] .btn-danger:active {
+  transform: scaleX(1.08) scaleY(0.88) translateY(3px);
+  box-shadow: 1px 1px 0 var(--text);
+}
+
+/* ── Formularios ─────────────────────────────────────────────────────── */
+[data-cartoon] .field input,
+[data-cartoon] .todo-add-item input,
+[data-cartoon] .todo-new-list input {
+  border: 3px solid var(--text);
+  border-radius: 10px 8px 12px 8px / 8px 12px 8px 10px;
+  box-shadow: 3px 3px 0 var(--text);
+  background: var(--surface);
+  color: var(--text);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+[data-cartoon] .field input:focus,
+[data-cartoon] .todo-add-item input:focus,
+[data-cartoon] .todo-new-list input:focus {
+  box-shadow: 5px 5px 0 var(--accent);
+  transform: translate(-1px, -1px);
+  border-color: var(--accent);
+}
+
+[data-cartoon] .field label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+
+/* ── Tablas ──────────────────────────────────────────────────────────── */
+[data-cartoon] .table th {
+  background: var(--text);
+  color: var(--bg);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 3px solid var(--text);
+}
+
+[data-cartoon] .table td {
+  border-bottom: 2px solid var(--border-2);
+}
+
+/* ── Todo items ──────────────────────────────────────────────────────── */
+[data-cartoon] .todo-item {
+  border: 2px solid var(--border-2);
+  border-radius: 10px 14px 10px 8px / 14px 8px 14px 10px;
+  box-shadow: 3px 3px 0 var(--border-2);
+  padding: 0.55rem 0.75rem;
+  background: var(--surface);
+  margin-bottom: 0.4rem;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
+}
+
+[data-cartoon] .todo-item:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--text);
+  border-color: var(--text);
+}
+
+[data-cartoon] .todo-item:last-child {
+  border-bottom: 2px solid var(--border-2);
+}
+
+[data-cartoon] .todo-check {
+  border: 2.5px solid var(--text);
+  transition: background 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-cartoon] .todo-check--done {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.2);
+}
+
+[data-cartoon] .todo-done-label {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+}
+
+/* ── Listas de todo ──────────────────────────────────────────────────── */
+[data-cartoon] .todo-list-row {
+  border-radius: 8px 12px 10px 8px / 12px 8px 8px 10px;
+}
+
+[data-cartoon] .todo-list-row--active {
+  border: 2px solid var(--accent);
+  box-shadow: 2px 2px 0 var(--accent);
+}
+
+/* ── Modal ───────────────────────────────────────────────────────────── */
+[data-cartoon] .modal {
+  border: 4px solid var(--text);
+  border-radius: 12px 8px 14px 10px / 10px 14px 8px 12px;
+  box-shadow: 8px 8px 0 var(--text);
+  animation: cup-drop 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+[data-cartoon] .modal-header h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+[data-cartoon] .modal-header {
+  border-bottom: 2px solid var(--text);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ── Settings ────────────────────────────────────────────────────────── */
+[data-cartoon] .settings-section {
+  border: 3px solid var(--text);
+  border-radius: 12px 8px 14px 10px / 10px 14px 8px 12px;
+  box-shadow: 5px 5px 0 var(--text);
+}
+
+[data-cartoon] .settings-title {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+[data-cartoon~="warm"] .settings-title,
+[data-cartoon~="cuphead"] .settings-title {
+  -webkit-text-stroke: 1.5px var(--text);
+  text-shadow: 3px 3px 0 var(--text);
+  color: var(--accent);
+}
+
+[data-cartoon~="tv"] .settings-title,
+[data-cartoon~="tv-pixel"] .settings-title {
+  text-shadow: 3px 3px 0 rgba(0,0,0,0.5), 0 0 18px rgba(180,230,180,0.3);
+  color: var(--accent);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────── */
+[data-cartoon] ::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 0;
+}
+
+/* ── PressStart2P: compensar tamaño visual mayor ─────────────────────── */
+[data-cartoon~="tv-pixel"] .page-title    { font-size: 1.6rem; letter-spacing: 0.02em; }
+[data-cartoon~="tv-pixel"] .stat-value    { font-size: 1.4rem; }
+[data-cartoon~="tv-pixel"] .brand-name    { font-size: 0.62rem; }
+[data-cartoon~="tv-pixel"] .nav-item      { font-size: 0.58rem; }
+[data-cartoon~="tv-pixel"] .card-title    { font-size: 0.55rem; }
+[data-cartoon~="tv-pixel"] .btn-primary,
+[data-cartoon~="tv-pixel"] .btn-cancel,
+[data-cartoon~="tv-pixel"] .btn-danger    { font-size: 0.6rem; padding: 0.55rem 1rem; }
+[data-cartoon~="tv-pixel"] .settings-title { font-size: 1rem; }
