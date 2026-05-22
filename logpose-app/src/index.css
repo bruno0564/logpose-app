@@ -1,4 +1,6 @@
 @import './theme.css';
+@import './HomeCuphead.css';
+@import './cartoon.css';
 
 * {
   box-sizing: border-box;
@@ -11,7 +13,7 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--app-font);
   background: var(--bg);
   color: var(--text-2);
   -webkit-font-smoothing: antialiased;

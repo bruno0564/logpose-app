@@ -79,11 +79,21 @@ function AppContent() {
   const [page, setPage] = useState('home')
   const [online, setOnline] = useState(false)
   const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
+  const [appStyle, setAppStyle] = useState(() => localStorage.getItem('appStyle') || 'normal')
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  useEffect(() => {
+    if (appStyle === 'normal') {
+      delete document.documentElement.dataset.style
+    } else {
+      document.documentElement.dataset.style = appStyle
+    }
+    localStorage.setItem('appStyle', appStyle)
+  }, [appStyle])
 
   useEffect(() => {
     async function check() {
@@ -110,7 +120,7 @@ function AppContent() {
         {page === 'todo'        && <Tasks />}
         {page === 'quotes'      && <Quotes />}
         {page === 'journal'     && <Journal />}
-        {page === 'settings'    && <Settings dark={dark} onToggle={() => setDark(d => !d)} />}
+        {page === 'settings'    && <Settings dark={dark} onToggle={() => setDark(d => !d)} appStyle={appStyle} onStyleChange={setAppStyle} />}
       </main>
     </div>
   )
