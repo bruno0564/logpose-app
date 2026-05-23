@@ -1,16 +1,19 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { darkTheme, lightTheme } from './theme'
+import { darkTheme, lightTheme, cupheadTheme } from './theme'
 
 const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(true)
-  const theme = dark ? darkTheme : lightTheme
+  const [appStyle, setAppStyleState] = useState('normal')
 
   useEffect(() => {
     AsyncStorage.getItem('theme').then(saved => {
       if (saved !== null) setDark(saved === 'dark')
+    })
+    AsyncStorage.getItem('appStyle').then(saved => {
+      if (saved !== null) setAppStyleState(saved)
     })
   }, [])
 
@@ -22,8 +25,20 @@ export function ThemeProvider({ children }) {
     })
   }
 
+  function setAppStyle(style) {
+    setAppStyleState(style)
+    AsyncStorage.setItem('appStyle', style)
+  }
+
+  const theme = appStyle === 'cuphead'
+    ? cupheadTheme
+    : (dark ? darkTheme : lightTheme)
+
+  // Cuphead es fondo claro → la barra de estado va en oscuro
+  const statusBarStyle = appStyle === 'cuphead' ? 'dark' : (dark ? 'light' : 'dark')
+
   return (
-    <ThemeContext.Provider value={{ theme, dark, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, dark, toggleTheme, appStyle, setAppStyle, statusBarStyle }}>
       {children}
     </ThemeContext.Provider>
   )

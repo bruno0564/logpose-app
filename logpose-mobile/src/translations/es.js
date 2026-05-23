@@ -31,6 +31,8 @@ export default {
   },
   settings: {
     title: 'Ajustes',
+    style: 'Estilo visual',
+    styleDesc: 'Cambia la apariencia de toda la app',
     darkMode: 'Modo oscuro',
     darkModeDesc: 'Cambia el aspecto de la app',
     language: 'Idioma',

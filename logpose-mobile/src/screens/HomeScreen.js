@@ -92,9 +92,9 @@ const makeStyles = (t) => StyleSheet.create({
   container:   { flex: 1, backgroundColor: t.bg },
   content:     { padding: 20, paddingTop: 60, paddingBottom: 40 },
   header:      { marginBottom: 28 },
-  greeting:    { color: t.text, fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
+  greeting:    { color: t.cartoon ? t.accent : t.text, fontSize: 28, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
   date:        { color: t.text3, fontSize: 13, marginTop: 4, textTransform: 'capitalize' },
-  quoteCard:   { backgroundColor: t.surface, borderRadius: 16, padding: 24, marginBottom: 12, borderWidth: 1, borderColor: t.border, ...t.shadow },
-  quoteText:   { color: t.text, fontSize: 17, fontStyle: 'italic', lineHeight: 28 },
+  quoteCard:   { backgroundColor: t.surface, borderRadius: t.cartoon ? 14 : 16, padding: 24, marginBottom: 12, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...t.shadow },
+  quoteText:   { color: t.text, fontSize: 17, fontStyle: t.cartoon ? 'normal' : 'italic', lineHeight: 28 },
   quoteAuthor: { color: t.text3, fontSize: 12, marginTop: 12, textAlign: 'right' },
 })
