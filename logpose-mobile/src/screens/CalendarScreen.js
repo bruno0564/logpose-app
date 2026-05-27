@@ -4,6 +4,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, Modal,
   TextInput, StyleSheet,
 } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
   markCalendarEventPendingDelete, purgeCalendarEvent,
@@ -343,11 +344,26 @@ export default function CalendarScreen() {
 
 // ── Event modal ───────────────────────────────────────────────────────────────
 
+function timeStrToDate(str) {
+  const [h, m] = (str || '00:00').split(':').map(Number)
+  const d = new Date()
+  d.setHours(h || 0, m || 0, 0, 0)
+  return d
+}
+
+function dateToTimeStr(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const daysShort = tr('common.daysShort')
+
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showStartPicker, setShowStartPicker] = useState(false)
+  const [showEndPicker, setShowEndPicker] = useState(false)
 
   const REC = ['none', 'daily', 'weekly']
   const REC_LABEL = [tr('calendar.recNone'), tr('calendar.recDaily'), tr('calendar.recWeekly')]
@@ -390,13 +406,28 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           </View>
 
           {form.recurrence === 'none' && (
-            <TextInput
-              style={s.input}
-              placeholder={tr('calendar.datePh')}
-              placeholderTextColor={t.text3}
-              value={form.date}
-              onChangeText={v => setForm(f => ({ ...f, date: v }))}
-            />
+            <>
+              <TouchableOpacity
+                style={[s.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: form.date ? t.text : t.text3, fontSize: 14 }}>
+                  {form.date || tr('calendar.datePh')}
+                </Text>
+                <Text>📅</Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.date ? new Date(form.date + 'T12:00:00') : new Date()}
+                  mode="date"
+                  display="calendar"
+                  onChange={(_, selected) => {
+                    setShowDatePicker(false)
+                    if (selected) setForm(f => ({ ...f, date: selected.toISOString().split('T')[0] }))
+                  }}
+                />
+              )}
+            </>
           )}
 
           {form.recurrence === 'weekly' && (
@@ -416,21 +447,49 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           )}
 
           <View style={s.timeRow}>
-            <TextInput
-              style={[s.input, { flex: 1 }]}
-              placeholder={tr('calendar.startTimePh')}
-              placeholderTextColor={t.text3}
-              value={form.start_time}
-              onChangeText={v => setForm(f => ({ ...f, start_time: v }))}
-            />
-            <TextInput
-              style={[s.input, { flex: 1 }]}
-              placeholder={tr('calendar.endTimePh')}
-              placeholderTextColor={t.text3}
-              value={form.end_time}
-              onChangeText={v => setForm(f => ({ ...f, end_time: v }))}
-            />
+            <TouchableOpacity
+              style={[s.input, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Text style={{ color: form.start_time ? t.text : t.text3, fontSize: 14 }}>
+                {form.start_time || tr('calendar.startTimePh')}
+              </Text>
+              <Text>🕐</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.input, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              onPress={() => setShowEndPicker(true)}
+            >
+              <Text style={{ color: form.end_time ? t.text : t.text3, fontSize: 14 }}>
+                {form.end_time || tr('calendar.endTimePh')}
+              </Text>
+              <Text>🕐</Text>
+            </TouchableOpacity>
           </View>
+          {showStartPicker && (
+            <DateTimePicker
+              value={timeStrToDate(form.start_time)}
+              mode="time"
+              is24Hour
+              display="spinner"
+              onChange={(_, selected) => {
+                setShowStartPicker(false)
+                if (selected) setForm(f => ({ ...f, start_time: dateToTimeStr(selected) }))
+              }}
+            />
+          )}
+          {showEndPicker && (
+            <DateTimePicker
+              value={timeStrToDate(form.end_time)}
+              mode="time"
+              is24Hour
+              display="spinner"
+              onChange={(_, selected) => {
+                setShowEndPicker(false)
+                if (selected) setForm(f => ({ ...f, end_time: dateToTimeStr(selected) }))
+              }}
+            />
+          )}
 
           <View style={s.colorRow}>
             {COLORS.map(c => (

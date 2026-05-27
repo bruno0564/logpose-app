@@ -4,6 +4,8 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LineChart } from 'react-native-chart-kit'
 import {
   getRoutines, insertLocalRoutine, updateLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
@@ -15,7 +17,7 @@ import {
   insertRoutineExercise, deleteRoutineExercise,
   getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
-  getActiveRoutine, setActiveRoutine,
+  getActiveRoutine, setActiveRoutine, restoreActiveRoutineByServerId,
   getAllSessions, getSetsForSession, getExerciseProgression,
   getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer,
   getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer,
@@ -92,6 +94,9 @@ export default function GymScreen() {
       const serverRoutines = await fetchAllRoutinesFromServer()
       for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
+
+      const savedServerId = await AsyncStorage.getItem('activeRoutineServerId')
+      if (savedServerId) await restoreActiveRoutineByServerId(parseInt(savedServerId))
 
       for (const ex of await getPendingDeleteExercises()) {
         try { await deleteExerciseFromServer(ex.server_id) } catch {}
@@ -171,6 +176,7 @@ export default function GymScreen() {
   async function handleActivate(r) {
     await setActiveRoutine(r.id)
     setActiveRoutineId(r.id)
+    if (r.server_id) await AsyncStorage.setItem('activeRoutineServerId', String(r.server_id))
   }
 
   function handleDelete(r) {
@@ -738,6 +744,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [sets, setSets] = useState(() => {
     const init = {}
     dayExercises.forEach(ex => {
@@ -791,13 +798,24 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 
         <View style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }]}>
           <Text style={s.hint}>{tr('common.date')}</Text>
-          <TextInput
-            style={[s.input, { flex: 1 }]}
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={t.text3}
-          />
+          <TouchableOpacity
+            style={[s.input, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={{ color: t.text, fontSize: 14 }}>{date}</Text>
+            <Text>📅</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={new Date(date + 'T12:00:00')}
+              mode="date"
+              display="calendar"
+              onChange={(_, selected) => {
+                setShowDatePicker(false)
+                if (selected) setDate(selected.toISOString().split('T')[0])
+              }}
+            />
+          )}
         </View>
 
         {dayExercises.map(ex => (

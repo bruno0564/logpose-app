@@ -772,6 +772,18 @@ export async function setActiveRoutine(localId) {
   await db.runAsync('UPDATE routines SET is_active = 1 WHERE id = ?', [localId])
 }
 
+export async function restoreActiveRoutineByServerId(serverId) {
+  const db = await openDB()
+  const row = await db.getFirstAsync(
+    'SELECT id FROM routines WHERE server_id = ? AND pending_delete = 0',
+    [serverId]
+  )
+  if (row) {
+    await db.runAsync('UPDATE routines SET is_active = 0')
+    await db.runAsync('UPDATE routines SET is_active = 1 WHERE id = ?', [row.id])
+  }
+}
+
 export async function getActiveTrainingDays() {
   const db = await openDB()
   return db.getAllAsync(`
