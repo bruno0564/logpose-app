@@ -4,6 +4,8 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LineChart } from 'react-native-chart-kit'
 import {
   getRoutines, insertLocalRoutine, updateLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
@@ -15,7 +17,7 @@ import {
   insertRoutineExercise, deleteRoutineExercise,
   getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
-  getActiveRoutine, setActiveRoutine,
+  getActiveRoutine, setActiveRoutine, restoreActiveRoutineByServerId,
   getAllSessions, getSetsForSession, getExerciseProgression,
   getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer,
   getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer,
@@ -92,6 +94,9 @@ export default function GymScreen() {
       const serverRoutines = await fetchAllRoutinesFromServer()
       for (const r of serverRoutines) await upsertRoutineFromServer(r)
       await pruneStaleRoutines(new Set(serverRoutines.map(r => r.id)))
+
+      const savedServerId = await AsyncStorage.getItem('activeRoutineServerId')
+      if (savedServerId) await restoreActiveRoutineByServerId(parseInt(savedServerId))
 
       for (const ex of await getPendingDeleteExercises()) {
         try { await deleteExerciseFromServer(ex.server_id) } catch {}
@@ -171,6 +176,7 @@ export default function GymScreen() {
   async function handleActivate(r) {
     await setActiveRoutine(r.id)
     setActiveRoutineId(r.id)
+    if (r.server_id) await AsyncStorage.setItem('activeRoutineServerId', String(r.server_id))
   }
 
   function handleDelete(r) {
@@ -738,6 +744,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [sets, setSets] = useState(() => {
     const init = {}
     dayExercises.forEach(ex => {
@@ -791,13 +798,24 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 
         <View style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }]}>
           <Text style={s.hint}>{tr('common.date')}</Text>
-          <TextInput
-            style={[s.input, { flex: 1 }]}
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={t.text3}
-          />
+          <TouchableOpacity
+            style={[s.input, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={{ color: t.text, fontSize: 14 }}>{date}</Text>
+            <Text>📅</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={new Date(date + 'T12:00:00')}
+              mode="date"
+              display="calendar"
+              onChange={(_, selected) => {
+                setShowDatePicker(false)
+                if (selected) setDate(selected.toISOString().split('T')[0])
+              }}
+            />
+          )}
         </View>
 
         {dayExercises.map(ex => (
@@ -890,17 +908,17 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
 const makeStyles = (t) => StyleSheet.create({
   screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  tabBar:          { flexDirection: 'row', backgroundColor: t.surface, borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: 1, borderColor: t.border },
+  tabBar:          { flexDirection: 'row', backgroundColor: t.surface, borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor },
   tabBtn:          { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },
   tabBtnActive:    { backgroundColor: t.accent },
   tabBtnText:      { color: t.text3, fontSize: 13, fontWeight: '500' },
   tabBtnTextActive:{ color: t.text, fontWeight: '600' },
-  title:           { color: t.text, fontSize: 22, fontWeight: '700' },
+  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
   subtitle:        { color: t.text2, fontSize: 13, marginBottom: 20 },
   hint:            { color: t.text3, fontSize: 13 },
   backBtn:         { color: t.accent, fontSize: 14, marginBottom: 2 },
-  card:            { backgroundColor: t.surface, borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: t.border },
-  rowCard:         { backgroundColor: t.surface, borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: t.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  card:            { backgroundColor: t.surface, borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
+  rowCard:         { backgroundColor: t.surface, borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', ...(t.cartoon ? t.shadow : {}) },
   rowText:         { color: t.text, fontSize: 14, fontWeight: '500' },
   deleteBtn:       { color: t.text3, fontSize: 20, lineHeight: 22 },
   deleteSmall:     { color: t.text3, fontSize: 18, lineHeight: 20, paddingHorizontal: 4 },
@@ -910,18 +928,18 @@ const makeStyles = (t) => StyleSheet.create({
   groupLabel:      { color: t.text3, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
   addedMark:       { color: t.text3, fontSize: 13 },
   colHeader:       { color: t.text3, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
-  input:           { backgroundColor: t.inputBg, borderWidth: 1, borderColor: t.border2, borderRadius: 6, color: t.text, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 },
-  btnPrimary:      { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
-  btnPrimarySmall: { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  btnPrimaryText:  { color: t.text, fontSize: 13, fontWeight: '600' },
+  input:           { backgroundColor: t.inputBg, borderWidth: t.cartoon ? 2 : 1, borderColor: t.cartoon ? t.text : t.border2, borderRadius: 6, color: t.text, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 },
+  btnPrimary:      { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
+  btnPrimarySmall: { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, borderWidth: t.cartoon ? 2 : 0, borderColor: t.text },
+  btnPrimaryText:  { color: t.cartoon ? t.bg : t.text, fontSize: 13, fontWeight: '600', fontFamily: t.fontTitle },
   btnCancel:       { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
   btnCancelText:   { color: t.text2, fontSize: 13 },
   btnOutline:      { borderWidth: 1, borderColor: t.border2, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
   btnOutlineText:  { color: t.text2, fontSize: 16, lineHeight: 18 },
   overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modal:           { backgroundColor: t.surface, borderRadius: 12, padding: 16, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: t.border },
+  modal:           { backgroundColor: t.surface, borderRadius: 12, padding: 16, width: '100%', maxWidth: 380, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
   modalHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  modalTitle:      { color: t.text, fontSize: 15, fontWeight: '600' },
+  modalTitle:      { color: t.text, fontSize: 15, fontWeight: '600', fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
   closeBtn:        { color: t.text2, fontSize: 22, lineHeight: 24 },
   divider:         { height: 1, backgroundColor: t.border, marginVertical: 12 },
 })

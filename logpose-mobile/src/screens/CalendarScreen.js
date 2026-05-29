@@ -4,6 +4,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, Modal,
   TextInput, StyleSheet,
 } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
   markCalendarEventPendingDelete, purgeCalendarEvent,
@@ -343,11 +344,26 @@ export default function CalendarScreen() {
 
 // ── Event modal ───────────────────────────────────────────────────────────────
 
+function timeStrToDate(str) {
+  const [h, m] = (str || '00:00').split(':').map(Number)
+  const d = new Date()
+  d.setHours(h || 0, m || 0, 0, 0)
+  return d
+}
+
+function dateToTimeStr(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const daysShort = tr('common.daysShort')
+
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showStartPicker, setShowStartPicker] = useState(false)
+  const [showEndPicker, setShowEndPicker] = useState(false)
 
   const REC = ['none', 'daily', 'weekly']
   const REC_LABEL = [tr('calendar.recNone'), tr('calendar.recDaily'), tr('calendar.recWeekly')]
@@ -390,13 +406,28 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           </View>
 
           {form.recurrence === 'none' && (
-            <TextInput
-              style={s.input}
-              placeholder={tr('calendar.datePh')}
-              placeholderTextColor={t.text3}
-              value={form.date}
-              onChangeText={v => setForm(f => ({ ...f, date: v }))}
-            />
+            <>
+              <TouchableOpacity
+                style={[s.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: form.date ? t.text : t.text3, fontSize: 14 }}>
+                  {form.date || tr('calendar.datePh')}
+                </Text>
+                <Text>📅</Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.date ? new Date(form.date + 'T12:00:00') : new Date()}
+                  mode="date"
+                  display="calendar"
+                  onChange={(_, selected) => {
+                    setShowDatePicker(false)
+                    if (selected) setForm(f => ({ ...f, date: selected.toISOString().split('T')[0] }))
+                  }}
+                />
+              )}
+            </>
           )}
 
           {form.recurrence === 'weekly' && (
@@ -416,21 +447,49 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
           )}
 
           <View style={s.timeRow}>
-            <TextInput
-              style={[s.input, { flex: 1 }]}
-              placeholder={tr('calendar.startTimePh')}
-              placeholderTextColor={t.text3}
-              value={form.start_time}
-              onChangeText={v => setForm(f => ({ ...f, start_time: v }))}
-            />
-            <TextInput
-              style={[s.input, { flex: 1 }]}
-              placeholder={tr('calendar.endTimePh')}
-              placeholderTextColor={t.text3}
-              value={form.end_time}
-              onChangeText={v => setForm(f => ({ ...f, end_time: v }))}
-            />
+            <TouchableOpacity
+              style={[s.input, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Text style={{ color: form.start_time ? t.text : t.text3, fontSize: 14 }}>
+                {form.start_time || tr('calendar.startTimePh')}
+              </Text>
+              <Text>🕐</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.input, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              onPress={() => setShowEndPicker(true)}
+            >
+              <Text style={{ color: form.end_time ? t.text : t.text3, fontSize: 14 }}>
+                {form.end_time || tr('calendar.endTimePh')}
+              </Text>
+              <Text>🕐</Text>
+            </TouchableOpacity>
           </View>
+          {showStartPicker && (
+            <DateTimePicker
+              value={timeStrToDate(form.start_time)}
+              mode="time"
+              is24Hour
+              display="spinner"
+              onChange={(_, selected) => {
+                setShowStartPicker(false)
+                if (selected) setForm(f => ({ ...f, start_time: dateToTimeStr(selected) }))
+              }}
+            />
+          )}
+          {showEndPicker && (
+            <DateTimePicker
+              value={timeStrToDate(form.end_time)}
+              mode="time"
+              is24Hour
+              display="spinner"
+              onChange={(_, selected) => {
+                setShowEndPicker(false)
+                if (selected) setForm(f => ({ ...f, end_time: dateToTimeStr(selected) }))
+              }}
+            />
+          )}
 
           <View style={s.colorRow}>
             {COLORS.map(c => (
@@ -468,16 +527,16 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
 const makeStyles = (t) => StyleSheet.create({
   container:        { flex: 1, backgroundColor: t.bg },
   header:           { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 60, gap: 12 },
-  title:            { color: t.text, fontSize: 22, fontWeight: '700', flex: 1 },
-  addBtn:           { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  addBtnText:       { color: t.text, fontSize: 24, lineHeight: 28, fontWeight: '300' },
+  title:            { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', flex: 1, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
+  addBtn:           { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
+  addBtnText:       { color: t.cartoon ? t.bg : t.text, fontSize: 24, lineHeight: 28, fontWeight: '300' },
   backBtn:          { padding: 4 },
   backArrow:        { color: t.accent, fontSize: 32, lineHeight: 36 },
   dayTitle:         { color: t.text, fontSize: 18, fontWeight: '700' },
   daySubtitle:      { color: t.text3, fontSize: 13 },
   gymBanner:        { backgroundColor: t.surface2, marginHorizontal: 16, borderRadius: 8, padding: 10, marginBottom: 4 },
   gymBannerText:    { color: t.text2, fontSize: 13 },
-  card:             { backgroundColor: t.surface2, borderRadius: 16, marginHorizontal: 16, padding: 20 },
+  card:             { backgroundColor: t.surface2, borderRadius: 16, marginHorizontal: 16, padding: 20, borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
   monthRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   arrowBtn:         { padding: 8 },
   arrow:            { color: t.accent, fontSize: 28, lineHeight: 30 },
@@ -495,15 +554,15 @@ const makeStyles = (t) => StyleSheet.create({
   dotRow:           { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
   dot:              { width: 5, height: 5, borderRadius: 3 },
   emptyText:        { color: t.text4, fontSize: 14, textAlign: 'center', marginTop: 60 },
-  eventCard:        { backgroundColor: t.surface2, borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderLeftWidth: 3, gap: 10 },
+  eventCard:        { backgroundColor: t.surface2, borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderLeftWidth: 3, gap: 10, borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
   eventTitle:       { color: t.text, fontSize: 14, fontWeight: '600' },
   eventTime:        { color: t.text2, fontSize: 12, marginTop: 3 },
   eventNotes:       { color: t.text3, fontSize: 12, marginTop: 4, fontStyle: 'italic' },
   deleteIcon:       { color: t.danger, fontSize: 20, lineHeight: 22 },
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal:            { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  modalTitle:       { color: t.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
-  input:            { backgroundColor: t.border2, color: t.text, borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 10 },
+  modal:            { backgroundColor: t.surface2, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.cardBorderColor },
+  modalTitle:       { color: t.text, fontSize: 16, fontWeight: '700', marginBottom: 16, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
+  input:            { backgroundColor: t.border2, color: t.text, borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 10, borderWidth: t.cartoon ? 2 : 0, borderColor: t.text },
   recRow:           { flexDirection: 'row', gap: 8, marginBottom: 10 },
   recBtn:           { flex: 1, borderRadius: 8, padding: 9, alignItems: 'center', backgroundColor: t.border2 },
   recBtnActive:     { backgroundColor: t.accent },
@@ -519,9 +578,9 @@ const makeStyles = (t) => StyleSheet.create({
   colorDot:         { width: 28, height: 28, borderRadius: 14 },
   colorDotActive:   { borderWidth: 3, borderColor: t.text },
   modalBtns:        { flexDirection: 'row', gap: 10, marginTop: 8 },
-  btn:              { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
+  btn:              { flex: 1, borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   btnCancel:        { backgroundColor: t.border2 },
-  btnCancelText:    { color: t.text2, fontWeight: '600' },
+  btnCancelText:    { color: t.text2, fontWeight: '600', fontFamily: t.fontTitle },
   btnSave:          { backgroundColor: t.accent },
-  btnSaveText:      { color: t.text, fontWeight: '700' },
+  btnSaveText:      { color: t.cartoon ? t.bg : t.text, fontWeight: '700', fontFamily: t.fontTitle },
 })

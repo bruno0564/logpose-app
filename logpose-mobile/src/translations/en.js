@@ -33,6 +33,8 @@ export default {
   },
   settings: {
     title: 'Settings',
+    style: 'Visual style',
+    styleDesc: 'Change the whole app appearance',
     darkMode: 'Dark mode',
     darkModeDesc: 'Change the app appearance',
     language: 'Language',

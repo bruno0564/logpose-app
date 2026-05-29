@@ -17,6 +17,11 @@ export const darkTheme = {
   dangerBg:       '#7f1d1d',
   dangerText:     '#fca5a5',
   success:        '#22c55e',
+  // Cartoon-aware (estilo normal: sin tratamiento cartoon)
+  cartoon:        false,
+  fontTitle:      undefined,
+  cardBorderWidth: 1,
+  cardBorderColor: '#1e1e1e',
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -45,11 +50,50 @@ export const lightTheme = {
   dangerBg:       '#fee2e2',
   dangerText:     '#991b1b',
   success:        '#22c55e',
+  cartoon:        false,
+  fontTitle:      undefined,
+  cardBorderWidth: 1,
+  cardBorderColor: '#e0e0e0',
   shadow: {
     shadowColor: '#818cf8',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
+  },
+}
+
+// Mismo palette que el desktop [data-style="cuphead"] (theme.css).
+// Es un tema único (no tiene variante oscura): papel crema + rojo + marrón.
+export const cupheadTheme = {
+  bg:             '#f0d9a0',
+  surface:        '#faecc8',
+  surface2:       '#f5e4b8',
+  inputBg:        '#faecc8',
+  border:         'rgba(24,8,0,0.15)',
+  border2:        'rgba(24,8,0,0.28)',
+  accent:         '#c01818',
+  accentSecond:   '#8a3a0a',
+  accentGradient: ['#c01818', '#8a3a0a'],
+  accentLight:    'rgba(192,24,24,0.12)',
+  text:           '#180800',
+  text2:          '#8a3a0a',
+  text3:          '#a87840',
+  text4:          '#c09860',
+  danger:         '#c01818',
+  dangerBg:       'rgba(192,24,24,0.12)',
+  dangerText:     '#c01818',
+  success:        '#2a7c1e',
+  // Cartoon-aware: bordes gruesos, fuente chunky y sombra dura desplazada
+  cartoon:        true,
+  fontTitle:      'LuckiestGuy',
+  cardBorderWidth: 3,
+  cardBorderColor: '#180800',
+  shadow: {
+    shadowColor: '#180800',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
   },
 }

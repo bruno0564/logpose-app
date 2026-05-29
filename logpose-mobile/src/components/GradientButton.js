@@ -10,11 +10,11 @@ export default function GradientButton({ onPress, label, disabled, loading, styl
         colors={disabled || loading ? ['#555', '#555'] : t.accentGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+        style={[styles.gradient, t.cartoon && { borderWidth: 3, borderColor: t.text }]}
       >
         {loading
           ? <ActivityIndicator size="small" color="#fff" />
-          : <Text style={styles.label}>{label}</Text>
+          : <Text style={[styles.label, { fontFamily: t.fontTitle }]}>{label}</Text>
         }
       </LinearGradient>
     </TouchableOpacity>

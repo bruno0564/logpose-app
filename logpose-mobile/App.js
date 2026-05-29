@@ -35,9 +35,12 @@ function ServerStatus({ online }) {
 
 function AppContent() {
   const [online, setOnline] = useState(false)
-  const { theme: t, dark } = useTheme()
+  const { theme: t, statusBarStyle } = useTheme()
   const s = makeStyles(t)
-  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_600SemiBold, Inter_700Bold })
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
+    LuckiestGuy: require('./assets/fonts/LuckiestGuy.ttf'),
+  })
 
   useEffect(() => {
     async function check() {
@@ -48,9 +51,11 @@ function AppContent() {
     return () => clearInterval(interval)
   }, [])
 
+  if (!fontsLoaded) return <View style={s.container} />
+
   return (
     <View style={s.container}>
-      <StatusBar style={dark ? 'light' : 'dark'} />
+      <StatusBar style={statusBarStyle} />
       <ServerStatus online={online} />
       <NavigationContainer>
         <Tab.Navigator
@@ -60,8 +65,8 @@ function AppContent() {
             tabBarShowLabel: false,
             tabBarStyle: {
               backgroundColor: t.surface,
-              borderTopColor: t.border,
-              borderTopWidth: 1,
+              borderTopColor: t.cartoon ? t.text : t.border,
+              borderTopWidth: t.cartoon ? 3 : 1,
               height: 62,
               paddingBottom: 10,
               paddingTop: 6,
