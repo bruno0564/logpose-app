@@ -1,0 +1,405 @@
+@font-face {
+  font-family: 'FredokaOne';
+  src: url('./fonts/FredokaOne.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* ── Keyframes ───────────────────────────────────────── */
+
+@keyframes neo-pop {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-6deg); }
+  55%  { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  75%  { transform: scale(0.97) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes neo-slam {
+  0%   { opacity: 0; transform: translateY(-120px) scaleY(0.6); }
+  50%  { opacity: 1; transform: translateY(14px) scaleY(1.08); }
+  70%  { transform: translateY(-7px) scaleY(0.96); }
+  85%  { transform: translateY(3px) scaleY(1.02); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+@keyframes neo-slide {
+  0%   { opacity: 0; transform: translateX(-120px); }
+  55%  { opacity: 1; transform: translateX(12px); }
+  75%  { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes neo-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  20%  { transform: rotate(-4deg) scale(1.04); }
+  40%  { transform: rotate(4deg) scale(1.04); }
+  60%  { transform: rotate(-2deg); }
+  80%  { transform: rotate(2deg); }
+}
+
+@keyframes neo-section-in {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Layout ──────────────────────────────────────────── */
+
+.neo-page {
+  margin: -2.5rem -3rem;
+  padding: 3rem;
+  min-height: 100%;
+  background: #fff9f0;
+}
+
+.neo-badge {
+  display: inline-block;
+  background: #ffd60a;
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  padding: 0.3rem 1rem;
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  color: #000;
+  margin-bottom: 2.5rem;
+  border-radius: 6px 10px 8px 12px / 10px 6px 12px 8px;
+  animation: neo-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+  cursor: default;
+  filter: url(#neo-hand-drawn);
+}
+
+.neo-badge:hover {
+  animation: neo-wobble 0.5s ease both;
+  box-shadow: 6px 6px 0 #000;
+}
+
+.neo-header { margin-bottom: 3rem; }
+
+.neo-greeting {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 5.5rem;
+  color: #000;
+  line-height: 0.95;
+  margin-bottom: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  animation: neo-slam 0.6s 0.05s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.neo-date {
+  display: inline-block;
+  background: #ff6b6b;
+  border: 3px solid #000;
+  box-shadow: 3px 3px 0 #000;
+  padding: 0.35rem 0.85rem;
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.95rem;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: 8px 6px 10px 6px / 6px 10px 6px 8px;
+  animation: neo-slide 0.5s 0.15s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  filter: url(#neo-hand-drawn);
+}
+
+/* ── Quote card ──────────────────────────────────────── */
+
+.neo-quote-card {
+  background: #ffd60a;
+  border: 3px solid #000;
+  box-shadow: 6px 6px 0 #000;
+  padding: 2rem 2.25rem;
+  max-width: 540px;
+  border-radius: 10px 14px 8px 12px / 12px 8px 14px 10px;
+  animation: neo-pop 0.55s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s;
+  filter: url(#neo-hand-drawn);
+}
+
+.neo-quote-card:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 10px 10px 0 #000;
+}
+
+.neo-quote-label {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  color: #000;
+  border-bottom: 3px solid #000;
+  padding-bottom: 0.6rem;
+  margin-bottom: 1rem;
+  animation: neo-slide 0.45s 0.4s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.neo-quote-text {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 1.35rem;
+  color: #000;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+  animation: neo-slide 0.45s 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.neo-quote-author {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.9rem;
+  color: #000;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-top: 3px solid #000;
+  padding-top: 0.6rem;
+  animation: neo-pop 0.4s 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── Sections ────────────────────────────────────────── */
+
+.neo-section {
+  margin-top: 3rem;
+  max-width: 560px;
+  animation: neo-section-in 0.4s ease both;
+}
+
+.neo-section-title {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.88rem;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border-bottom: 3px solid #000;
+  padding-bottom: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+
+.neo-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.neo-btn {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  padding: 0.55rem 1.5rem;
+  border: 3px solid #000;
+  border-radius: 8px 12px 10px 8px / 12px 8px 8px 12px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #000;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
+  filter: url(#neo-hand-drawn);
+}
+
+.neo-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #000;
+}
+
+.neo-btn:active {
+  transform: scaleX(1.1) scaleY(0.85) translateY(4px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.neo-btn--primary { background: #ffd60a; color: #000; }
+.neo-btn--cancel  { background: #fff9f0; color: #000; }
+.neo-btn--danger  { background: #ff6b6b; color: #000; }
+
+/* ── Form ────────────────────────────────────────────── */
+
+.neo-form {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.neo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.neo-field--action { justify-content: flex-end; }
+
+.neo-label {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.85rem;
+  color: #000;
+  letter-spacing: 0.05em;
+}
+
+.neo-input {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 8px 10px 8px 12px / 10px 8px 12px 8px;
+  color: #000;
+  outline: none;
+  box-shadow: 3px 3px 0 #000;
+  min-width: 110px;
+  transition: box-shadow 0.15s, transform 0.15s;
+  filter: url(#neo-hand-drawn);
+}
+
+.neo-input:focus {
+  box-shadow: 5px 5px 0 #ffd60a;
+  transform: translate(-1px, -1px);
+}
+
+.neo-input::placeholder { color: #aaa; }
+
+/* ── Stats ───────────────────────────────────────────── */
+
+.neo-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.neo-stat-card {
+  border: 3px solid #000;
+  border-radius: 10px 8px 12px 10px / 8px 12px 10px 8px;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  box-shadow: 5px 5px 0 #000;
+  filter: url(#neo-hand-drawn);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+}
+
+.neo-stat-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 8px 8px 0 #000;
+}
+
+.neo-stat-card--yellow { background: #ffd60a; }
+.neo-stat-card--pink   { background: #ff6b6b; }
+.neo-stat-card--blue   { background: #74b9ff; }
+
+.neo-stat-value {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 2.4rem;
+  color: #000;
+  line-height: 1;
+}
+
+.neo-stat-label {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.75rem;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Todo ────────────────────────────────────────────── */
+
+.neo-todo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.neo-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 8px 12px 10px 8px / 12px 8px 8px 10px;
+  box-shadow: 4px 4px 0 #000;
+  cursor: pointer;
+  filter: url(#neo-hand-drawn);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
+}
+
+.neo-todo-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #000;
+}
+
+.neo-todo-item:active {
+  transform: scaleY(0.92);
+  box-shadow: 2px 2px 0 #000;
+}
+
+.neo-todo-item--done { background: #e8f8e8; }
+
+.neo-check {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-family: 'FredokaOne', sans-serif;
+  color: #000;
+  flex-shrink: 0;
+  transition: background 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.neo-check--done {
+  background: #ffd60a;
+  transform: scale(1.15);
+}
+
+.neo-todo-text {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 1rem;
+  color: #000;
+}
+
+.neo-todo-item--done .neo-todo-text {
+  text-decoration: line-through;
+  color: #888;
+}
+
+/* ── Table ───────────────────────────────────────────── */
+
+.neo-table-wrap {
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 10px 12px 10px 10px / 12px 10px 10px 10px;
+  box-shadow: 6px 6px 0 #000;
+  overflow: hidden;
+  filter: url(#neo-hand-drawn);
+}
+
+.neo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.neo-table th {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.85rem;
+  color: #000;
+  background: #ffd60a;
+  padding: 0.65rem 1rem;
+  text-align: left;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 3px solid #000;
+}
+
+.neo-table td {
+  font-family: 'FredokaOne', sans-serif;
+  font-size: 0.95rem;
+  color: #000;
+  padding: 0.65rem 1rem;
+  border-bottom: 2px solid #000;
+}
+
+.neo-table tbody tr:last-child td { border-bottom: none; }
+
+.neo-table tbody tr:hover td { background: #fffbe6; }
