@@ -26,8 +26,16 @@ export default {
     quotes: 'Frases',
     journal: 'Diario',
     settings: 'Ajustes',
+    more: 'Más',
     serverOnline: 'Servidor conectado',
     serverOffline: 'Sin servidor',
+  },
+  more: {
+    title: 'Más',
+    calendarDesc: 'Eventos y agenda',
+    tasksDesc: 'Listas y tareas',
+    quotesDesc: 'Frases motivadoras',
+    settingsDesc: 'Tema, idioma y servidor',
   },
   settings: {
     title: 'Ajustes',

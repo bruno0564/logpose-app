@@ -28,8 +28,16 @@ export default {
     quotes: 'Quotes',
     journal: 'Journal',
     settings: 'Settings',
+    more: 'More',
     serverOnline: 'Server connected',
     serverOffline: 'No server',
+  },
+  more: {
+    title: 'More',
+    calendarDesc: 'Events and schedule',
+    tasksDesc: 'Lists and tasks',
+    quotesDesc: 'Motivational quotes',
+    settingsDesc: 'Theme, language & server',
   },
   settings: {
     title: 'Settings',

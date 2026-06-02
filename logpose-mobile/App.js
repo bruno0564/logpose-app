@@ -8,16 +8,38 @@ import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@e
 import { ThemeProvider, useTheme } from './src/ThemeContext'
 import { LangProvider, useLang } from './src/LangContext'
 import BodyWeightScreen from './src/screens/BodyWeightScreen'
-import HomeScreen from './src/screens/HomeScreen'
-import GymScreen from './src/screens/GymScreen'
-import CalendarScreen from './src/screens/CalendarScreen'
-import TasksScreen from './src/screens/TasksScreen'
-import QuotesScreen from './src/screens/QuotesScreen'
-import JournalScreen from './src/screens/JournalScreen'
-import SettingsScreen from './src/screens/SettingsScreen'
+import HomeScreen      from './src/screens/HomeScreen'
+import GymScreen       from './src/screens/GymScreen'
+import CalendarScreen  from './src/screens/CalendarScreen'
+import TasksScreen     from './src/screens/TasksScreen'
+import QuotesScreen    from './src/screens/QuotesScreen'
+import JournalScreen   from './src/screens/JournalScreen'
+import SettingsScreen  from './src/screens/SettingsScreen'
+import MoreScreen      from './src/screens/MoreScreen'
 import { isServerReachable, initServerUrl } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
+
+// Icono de tab con píldora activa (patrón moderno, e.g. Instagram 2024)
+function TabIcon({ name, focused, color, t }) {
+  return (
+    <View style={{
+      backgroundColor: focused ? color + '22' : 'transparent',
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 4,
+      alignItems: 'center',
+      borderWidth: focused && t.cartoon ? 2 : 0,
+      borderColor: focused && t.cartoon ? color : 'transparent',
+    }}>
+      <Ionicons
+        name={focused ? name : `${name}-outline`}
+        size={22}
+        color={color}
+      />
+    </View>
+  )
+}
 
 function ServerStatus({ online }) {
   const { theme: t } = useTheme()
@@ -36,6 +58,7 @@ function ServerStatus({ online }) {
 function AppContent() {
   const [online, setOnline] = useState(false)
   const { theme: t, statusBarStyle } = useTheme()
+  const { t: tr } = useLang()
   const s = makeStyles(t)
   const [fontsLoaded] = useFonts({
     Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
@@ -44,9 +67,7 @@ function AppContent() {
 
   useEffect(() => {
     let interval
-    async function check() {
-      setOnline(await isServerReachable())
-    }
+    async function check() { setOnline(await isServerReachable()) }
     initServerUrl().then(() => {
       check()
       interval = setInterval(check, 30000)
@@ -55,6 +76,26 @@ function AppContent() {
   }, [])
 
   if (!fontsLoaded) return <View style={s.container} />
+
+  const tabBarStyle = {
+    backgroundColor: t.surface,
+    borderTopColor: t.cartoon ? t.text : t.border,
+    borderTopWidth: t.cartoon ? 3 : 1,
+    height: 72,
+    paddingBottom: 14,
+    paddingTop: 8,
+    ...(t.cartoon ? t.shadow : {}),
+  }
+
+  const tabLabelStyle = {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    marginTop: 2,
+  }
+
+  const icon = (name) => ({ color, focused }) => (
+    <TabIcon name={name} focused={focused} color={color} t={t} />
+  )
 
   return (
     <View style={s.container}>
@@ -68,103 +109,61 @@ function AppContent() {
           initialRouteName="Home"
           screenOptions={{
             headerShown: false,
-            tabBarShowLabel: false,
             sceneContainerStyle: { backgroundColor: t.bg },
-            tabBarStyle: {
-              backgroundColor: t.surface,
-              borderTopColor: t.cartoon ? t.text : t.border,
-              borderTopWidth: t.cartoon ? 3 : 1,
-              height: 62,
-              paddingBottom: 10,
-              paddingTop: 6,
-            },
+            tabBarShowLabel: true,
+            tabBarStyle,
             tabBarActiveTintColor: t.accent,
             tabBarInactiveTintColor: t.text3,
-            tabBarLabelStyle: {
-              fontFamily: fontsLoaded ? 'Inter_600SemiBold' : undefined,
-              fontSize: 10,
-            },
+            tabBarLabelStyle: tabLabelStyle,
           }}
         >
+          {/* ── 5 tabs visibles ── */}
           <Tab.Screen
-            name="BodyWeight"
-            component={BodyWeightScreen}
-            options={{
-              title: 'Peso',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="person-outline" color={color} size={size} />
-              ),
-            }}
+            name="Home"
+            component={HomeScreen}
+            options={{ title: tr('nav.home'), tabBarIcon: icon('home') }}
           />
           <Tab.Screen
             name="Gym"
             component={GymScreen}
-            options={{
-              title: 'Gym',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="barbell-outline" color={color} size={size} />
-              ),
-            }}
+            options={{ title: tr('nav.gym'), tabBarIcon: icon('barbell') }}
           />
           <Tab.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{
-              title: 'Inicio',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="home-outline" color={color} size={size} />
-              ),
-            }}
-          />
-          <Tab.Screen
-            name="Calendar"
-            component={CalendarScreen}
-            options={{
-              title: 'Calendario',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="calendar-outline" color={color} size={size} />
-              ),
-            }}
-          />
-          <Tab.Screen
-            name="Tasks"
-            component={TasksScreen}
-            options={{
-              title: 'To-Do',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="checkmark-done-outline" color={color} size={size} />
-              ),
-            }}
-          />
-          <Tab.Screen
-            name="Quotes"
-            component={QuotesScreen}
-            options={{
-              title: 'Frases',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
-              ),
-            }}
+            name="BodyWeight"
+            component={BodyWeightScreen}
+            options={{ title: tr('nav.weight'), tabBarIcon: icon('person') }}
           />
           <Tab.Screen
             name="Journal"
             component={JournalScreen}
-            options={{
-              title: 'Diario',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="book-outline" color={color} size={size} />
-              ),
-            }}
+            options={{ title: tr('nav.journal'), tabBarIcon: icon('book') }}
+          />
+          <Tab.Screen
+            name="More"
+            component={MoreScreen}
+            options={{ title: tr('nav.more'), tabBarIcon: icon('grid') }}
+          />
+
+          {/* ── 4 tabs ocultos — navegables desde MoreScreen ── */}
+          <Tab.Screen
+            name="Calendar"
+            component={CalendarScreen}
+            options={{ tabBarButton: () => null }}
+          />
+          <Tab.Screen
+            name="Tasks"
+            component={TasksScreen}
+            options={{ tabBarButton: () => null }}
+          />
+          <Tab.Screen
+            name="Quotes"
+            component={QuotesScreen}
+            options={{ tabBarButton: () => null }}
           />
           <Tab.Screen
             name="Settings"
             component={SettingsScreen}
-            options={{
-              title: 'Ajustes',
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="settings-outline" color={color} size={size} />
-              ),
-            }}
+            options={{ tabBarButton: () => null }}
           />
         </Tab.Navigator>
       </NavigationContainer>
