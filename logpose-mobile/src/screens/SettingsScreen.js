@@ -1,6 +1,8 @@
-import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native'
+import { useState, useEffect } from 'react'
+import { View, Text, Switch, TouchableOpacity, TextInput, StyleSheet } from 'react-native'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
+import { getServerUrl, updateServerUrl } from '../api/client'
 import FadeInView from '../components/FadeInView'
 
 const STYLES = [
@@ -12,6 +14,29 @@ export default function SettingsScreen() {
   const { theme: t, dark, toggleTheme, appStyle, setAppStyle } = useTheme()
   const { lang, setLang, t: tr } = useLang()
   const s = makeStyles(t)
+
+  const [urlDisplay, setUrlDisplay] = useState(getServerUrl())
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    setUrlDisplay(getServerUrl())
+  }, [])
+
+  function openEdit() {
+    setDraft(urlDisplay)
+    setEditing(true)
+  }
+
+  async function saveUrl() {
+    await updateServerUrl(draft)
+    setUrlDisplay(getServerUrl())
+    setEditing(false)
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+  }
 
   return (
     <FadeInView style={s.screen}>
@@ -88,6 +113,42 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <View style={s.divider} />
+
+        <View style={[s.row, s.rowColumn]}>
+          <View>
+            <Text style={s.rowLabel}>{tr('settings.serverUrl')}</Text>
+            <Text style={s.rowSub}>{tr('settings.serverUrlDesc')}</Text>
+          </View>
+          {editing ? (
+            <View style={s.urlEditRow}>
+              <TextInput
+                style={s.urlInput}
+                value={draft}
+                onChangeText={setDraft}
+                placeholder={tr('settings.serverUrlPlaceholder')}
+                placeholderTextColor={t.text4}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+              <View style={s.urlBtns}>
+                <TouchableOpacity style={s.urlBtnSave} onPress={saveUrl}>
+                  <Text style={s.urlBtnSaveText}>{tr('common.save')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.urlBtnCancel} onPress={cancelEdit}>
+                  <Text style={s.urlBtnCancelText}>{tr('common.cancel')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.urlDisplayRow} onPress={openEdit} activeOpacity={0.7}>
+              <Text style={s.urlText} numberOfLines={1}>{urlDisplay}</Text>
+              <Text style={s.urlEditHint}>✎</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </FadeInView>
   )
@@ -114,4 +175,14 @@ const makeStyles = (t) => StyleSheet.create({
   styleLabel:      { fontSize: 12, fontWeight: '700', fontFamily: t.fontTitle },
   styleCheck:      { position: 'absolute', top: 5, right: 6, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   styleCheckMark:  { fontSize: 10, fontWeight: '700' },
+  urlDisplayRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, width: '100%', borderWidth: t.cartoon ? 2 : 1, borderColor: t.border2 },
+  urlText:         { flex: 1, color: t.text2, fontSize: 13, fontFamily: 'Inter_400Regular' },
+  urlEditHint:     { color: t.text3, fontSize: 16 },
+  urlEditRow:      { width: '100%', gap: 8 },
+  urlInput:        { backgroundColor: t.surface2, color: t.text, borderRadius: 8, padding: 12, fontSize: 14, borderWidth: t.cartoon ? 2 : 1, borderColor: t.accent, fontFamily: 'Inter_400Regular' },
+  urlBtns:         { flexDirection: 'row', gap: 8 },
+  urlBtnSave:      { flex: 1, backgroundColor: t.accent, borderRadius: 8, padding: 11, alignItems: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
+  urlBtnSaveText:  { color: t.cartoon ? t.bg : t.text, fontWeight: '700', fontSize: 14, fontFamily: t.fontTitle },
+  urlBtnCancel:    { flex: 1, backgroundColor: t.border2, borderRadius: 8, padding: 11, alignItems: 'center' },
+  urlBtnCancelText: { color: t.text2, fontWeight: '600', fontSize: 14 },
 })

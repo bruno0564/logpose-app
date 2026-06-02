@@ -15,7 +15,7 @@ import TasksScreen from './src/screens/TasksScreen'
 import QuotesScreen from './src/screens/QuotesScreen'
 import JournalScreen from './src/screens/JournalScreen'
 import SettingsScreen from './src/screens/SettingsScreen'
-import { isServerReachable } from './src/api/client'
+import { isServerReachable, initServerUrl } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
 
@@ -43,11 +43,14 @@ function AppContent() {
   })
 
   useEffect(() => {
+    let interval
     async function check() {
       setOnline(await isServerReachable())
     }
-    check()
-    const interval = setInterval(check, 30000)
+    initServerUrl().then(() => {
+      check()
+      interval = setInterval(check, 30000)
+    })
     return () => clearInterval(interval)
   }, [])
 

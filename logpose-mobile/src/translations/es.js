@@ -37,6 +37,9 @@ export default {
     darkModeDesc: 'Cambia el aspecto de la app',
     language: 'Idioma',
     languageDesc: 'Selecciona el idioma de la app',
+    serverUrl: 'URL del servidor',
+    serverUrlDesc: 'IP local del PC donde corre la API',
+    serverUrlPlaceholder: 'http://192.168.1.X:8000',
   },
   home: {
     greetingMorning: 'Buenos días',
