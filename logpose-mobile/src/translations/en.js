@@ -42,6 +42,9 @@ export default {
     serverUrl: 'Server URL',
     serverUrlDesc: 'Local IP of the PC running the API',
     serverUrlPlaceholder: 'http://192.168.1.X:8000',
+    export: 'Export data',
+    exportDesc: 'Share all local data as JSON',
+    exportSharing: 'Sharing...',
   },
   home: {
     greetingMorning: 'Good morning',

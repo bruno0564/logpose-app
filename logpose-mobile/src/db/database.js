@@ -1161,3 +1161,19 @@ export async function pruneStaleJournalEntries(serverIds) {
   }
 }
 
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
+export async function exportAllData() {
+  const db = await openDB()
+  const tables = [
+    'body_weight', 'quotes', 'routines', 'exercises', 'routine_exercises',
+    'workout_sessions', 'workout_sets', 'task_lists', 'task_items',
+    'calendar_events', 'journal_entries',
+  ]
+  const out = { exportedAt: new Date().toISOString(), tables: {} }
+  for (const table of tables) {
+    out.tables[table] = await db.getAllAsync(`SELECT * FROM ${table}`)
+  }
+  return out
+}

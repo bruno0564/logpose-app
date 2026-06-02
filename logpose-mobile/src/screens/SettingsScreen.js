@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { View, Text, Switch, TouchableOpacity, TextInput, StyleSheet } from 'react-native'
+import { View, Text, Switch, TouchableOpacity, TextInput, StyleSheet, Share } from 'react-native'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import { getServerUrl, updateServerUrl } from '../api/client'
+import { exportAllData } from '../db/database'
 import FadeInView from '../components/FadeInView'
 
 const STYLES = [
@@ -18,6 +19,7 @@ export default function SettingsScreen() {
   const [urlDisplay, setUrlDisplay] = useState(getServerUrl())
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     setUrlDisplay(getServerUrl())
@@ -36,6 +38,17 @@ export default function SettingsScreen() {
 
   function cancelEdit() {
     setEditing(false)
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const data = await exportAllData()
+      const json = JSON.stringify(data, null, 2)
+      await Share.share({ message: json, title: 'logpose-export.json' })
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -148,6 +161,25 @@ export default function SettingsScreen() {
               <Text style={s.urlEditHint}>✎</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        <View style={s.divider} />
+
+        <View style={[s.row, s.rowColumn]}>
+          <View>
+            <Text style={s.rowLabel}>{tr('settings.export')}</Text>
+            <Text style={s.rowSub}>{tr('settings.exportDesc')}</Text>
+          </View>
+          <TouchableOpacity
+            style={[s.urlBtnSave, { width: '100%' }]}
+            onPress={handleExport}
+            disabled={exporting}
+            activeOpacity={0.8}
+          >
+            <Text style={s.urlBtnSaveText}>
+              {exporting ? tr('settings.exportSharing') : tr('settings.export')}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </FadeInView>
