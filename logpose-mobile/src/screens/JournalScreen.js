@@ -186,7 +186,7 @@ export default function JournalScreen() {
 }
 
 const makeStyles = (t) => StyleSheet.create({
-  screen:      { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
+  screen:      { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 16 },
   header:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
   title:       { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
   dateLabel:   { color: t.text3, fontSize: 12, marginTop: 2, textTransform: 'capitalize' },

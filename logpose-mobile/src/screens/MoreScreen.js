@@ -1,72 +1,65 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import FadeInView from '../components/FadeInView'
 
+const PADDING = 20
+const GAP = 12
+
+function cardWidth() {
+  const { width } = Dimensions.get('window')
+  return Math.floor((width - PADDING * 2 - GAP) / 2)
+}
+
 const ITEMS = [
-  {
-    screen:  'Calendar',
-    icon:    'calendar',
-    color:   '#3b82f6',
-    labelKey: 'nav.calendar',
-    descKey:  'more.calendarDesc',
-  },
-  {
-    screen:  'Tasks',
-    icon:    'checkmark-done',
-    color:   '#22c55e',
-    labelKey: 'nav.todo',
-    descKey:  'more.tasksDesc',
-  },
-  {
-    screen:  'Quotes',
-    icon:    'chatbubble-ellipses',
-    color:   '#f59e0b',
-    labelKey: 'nav.quotes',
-    descKey:  'more.quotesDesc',
-  },
-  {
-    screen:  'Settings',
-    icon:    'settings',
-    color:   '#8b5cf6',
-    labelKey: 'nav.settings',
-    descKey:  'more.settingsDesc',
-  },
+  { screen: 'Calendar', icon: 'calendar',            color: '#3b82f6', labelKey: 'nav.calendar', descKey: 'more.calendarDesc' },
+  { screen: 'Tasks',    icon: 'checkmark-done',      color: '#22c55e', labelKey: 'nav.todo',     descKey: 'more.tasksDesc'    },
+  { screen: 'Quotes',   icon: 'chatbubble-ellipses', color: '#f59e0b', labelKey: 'nav.quotes',   descKey: 'more.quotesDesc'   },
+  { screen: 'Settings', icon: 'settings',            color: '#8b5cf6', labelKey: 'nav.settings', descKey: 'more.settingsDesc' },
 ]
 
 function MoreCard({ item }) {
-  const nav = useNavigation()
+  const nav    = useNavigation()
   const { theme: t } = useTheme()
-  const { t: tr } = useLang()
-  const s = cardStyles(t, item.color)
+  const { t: tr }    = useLang()
+  const w = cardWidth()
 
   return (
     <TouchableOpacity
-      style={s.card}
-      onPress={() => nav.navigate(item.screen)}
       activeOpacity={0.75}
+      onPress={() => nav.navigate(item.screen)}
+      style={[styles.card(t, item.color), { width: w }]}
     >
-      <View style={s.iconWrap}>
-        <Ionicons name={item.icon} size={28} color={item.color} />
+      <View style={styles.iconWrap(t, item.color)}>
+        <Ionicons name={item.icon} size={26} color={item.color} />
       </View>
-      <Text style={s.label}>{tr(item.labelKey)}</Text>
-      <Text style={s.desc}>{tr(item.descKey)}</Text>
+      <Text style={styles.label(t)}>{tr(item.labelKey)}</Text>
+      <Text style={styles.desc(t)}>{tr(item.descKey)}</Text>
     </TouchableOpacity>
   )
 }
 
 export default function MoreScreen() {
   const { theme: t } = useTheme()
-  const { t: tr } = useLang()
-  const s = makeStyles(t)
+  const { t: tr }    = useLang()
+  const insets       = useSafeAreaInsets()
 
   return (
-    <FadeInView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.title}>{tr('more.title')}</Text>
-        <View style={s.grid}>
+    <FadeInView style={{ flex: 1, backgroundColor: t.bg }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: PADDING,
+          paddingTop: insets.top + 16,
+          paddingBottom: 32,
+          gap: GAP,
+        }}
+      >
+        <Text style={styles.title(t)}>{tr('more.title')}</Text>
+
+        <View style={styles.grid}>
           {ITEMS.map(item => (
             <MoreCard key={item.screen} item={item} />
           ))}
@@ -76,63 +69,55 @@ export default function MoreScreen() {
   )
 }
 
-const cardStyles = (t, accentColor) => StyleSheet.create({
-  card: {
-    flex: 1,
+const styles = {
+  title: (t) => ({
+    color: t.cartoon ? t.accent : t.text,
+    fontSize: 26,
+    fontWeight: '700',
+    fontFamily: t.fontTitle,
+    textTransform: t.cartoon ? 'uppercase' : 'none',
+    letterSpacing: t.cartoon ? 1 : -0.5,
+    marginBottom: 8,
+  }),
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: GAP,
+  },
+  card: (t, accentColor) => ({
     backgroundColor: t.surface,
     borderRadius: t.cartoon ? 14 : 16,
-    padding: 20,
+    padding: 18,
     gap: 10,
     borderWidth: t.cartoon ? t.cardBorderWidth : 1,
     borderColor: t.cartoon ? t.cardBorderColor : t.border,
     ...(t.cartoon ? t.shadow : {
       shadowColor: accentColor,
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.12,
+      shadowOpacity: 0.1,
       shadowRadius: 8,
       elevation: 3,
     }),
-  },
-  iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: t.cartoon ? 10 : 14,
+  }),
+  iconWrap: (t, accentColor) => ({
+    width: 48,
+    height: 48,
+    borderRadius: t.cartoon ? 10 : 12,
     backgroundColor: accentColor + '18',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: t.cartoon ? 2 : 0,
-    borderColor: t.cartoon ? t.cardBorderColor : 'transparent',
-  },
-  label: {
+  }),
+  label: (t) => ({
     color: t.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: t.fontTitle,
     textTransform: t.cartoon ? 'uppercase' : 'none',
     letterSpacing: t.cartoon ? 0.5 : 0,
-  },
-  desc: {
+  }),
+  desc: (t) => ({
     color: t.text3,
     fontSize: 12,
     lineHeight: 17,
-  },
-})
-
-const makeStyles = (t) => StyleSheet.create({
-  screen:  { flex: 1, backgroundColor: t.bg },
-  content: { padding: 20, paddingTop: 54, paddingBottom: 40 },
-  title:   {
-    color: t.cartoon ? t.accent : t.text,
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 24,
-    fontFamily: t.fontTitle,
-    textTransform: t.cartoon ? 'uppercase' : 'none',
-    letterSpacing: t.cartoon ? 1 : -0.5,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-  },
-})
+  }),
+}

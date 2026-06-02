@@ -187,7 +187,7 @@ export default function SettingsScreen() {
 }
 
 const makeStyles = (t) => StyleSheet.create({
-  screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
+  screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 16 },
   title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', marginBottom: 28, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', letterSpacing: t.cartoon ? 1 : 0 },
   section:         { backgroundColor: t.surface, borderRadius: t.cartoon ? 14 : 10, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
   row:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },

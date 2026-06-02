@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
 import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter'
@@ -20,21 +21,18 @@ import { isServerReachable, initServerUrl } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
 
-// Icono de tab con píldora activa (patrón moderno, e.g. Instagram 2024)
-function TabIcon({ name, focused, color, t }) {
+function TabIcon({ name, focused, color, cartoon }) {
   return (
     <View style={{
-      backgroundColor: focused ? color + '22' : 'transparent',
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 4,
+      backgroundColor: focused ? color + '20' : 'transparent',
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 3,
       alignItems: 'center',
-      borderWidth: focused && t.cartoon ? 2 : 0,
-      borderColor: focused && t.cartoon ? color : 'transparent',
     }}>
       <Ionicons
         name={focused ? name : `${name}-outline`}
-        size={22}
+        size={21}
         color={color}
       />
     </View>
@@ -44,11 +42,21 @@ function TabIcon({ name, focused, color, t }) {
 function ServerStatus({ online }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
-  const s = makeStyles(t)
+  const insets = useSafeAreaInsets()
   return (
-    <View style={s.statusBar}>
-      <View style={[s.dot, online ? s.online : s.offline]} />
-      <Text style={s.statusText}>
+    <View style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: insets.top + 6,
+      paddingBottom: 8,
+      backgroundColor: t.bg,
+    }}>
+      <View style={{
+        width: 6, height: 6, borderRadius: 3, marginRight: 6,
+        backgroundColor: online ? t.success : t.text4,
+      }} />
+      <Text style={{ color: t.text3, fontSize: 11 }}>
         {online ? tr('server.online') : tr('server.offline')}
       </Text>
     </View>
@@ -59,7 +67,6 @@ function AppContent() {
   const [online, setOnline] = useState(false)
   const { theme: t, statusBarStyle } = useTheme()
   const { t: tr } = useLang()
-  const s = makeStyles(t)
   const [fontsLoaded] = useFonts({
     Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
     LuckiestGuy: require('./assets/fonts/LuckiestGuy.ttf'),
@@ -75,30 +82,14 @@ function AppContent() {
     return () => clearInterval(interval)
   }, [])
 
-  if (!fontsLoaded) return <View style={s.container} />
-
-  const tabBarStyle = {
-    backgroundColor: t.surface,
-    borderTopColor: t.cartoon ? t.text : t.border,
-    borderTopWidth: t.cartoon ? 3 : 1,
-    height: 72,
-    paddingBottom: 14,
-    paddingTop: 8,
-    ...(t.cartoon ? t.shadow : {}),
-  }
-
-  const tabLabelStyle = {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
-    marginTop: 2,
-  }
+  if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: t.bg }} />
 
   const icon = (name) => ({ color, focused }) => (
-    <TabIcon name={name} focused={focused} color={color} t={t} />
+    <TabIcon name={name} focused={focused} color={color} cartoon={t.cartoon} />
   )
 
   return (
-    <View style={s.container}>
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={statusBarStyle} />
       <ServerStatus online={online} />
       <NavigationContainer theme={{
@@ -111,60 +102,34 @@ function AppContent() {
             headerShown: false,
             sceneContainerStyle: { backgroundColor: t.bg },
             tabBarShowLabel: true,
-            tabBarStyle,
+            tabBarStyle: {
+              backgroundColor: t.surface,
+              borderTopColor: t.cartoon ? t.text : t.border,
+              borderTopWidth: t.cartoon ? 3 : 1,
+            },
             tabBarActiveTintColor: t.accent,
             tabBarInactiveTintColor: t.text3,
-            tabBarLabelStyle: tabLabelStyle,
+            tabBarLabelStyle: {
+              fontFamily: 'Inter_600SemiBold',
+              fontSize: 10,
+              marginBottom: 2,
+            },
+            tabBarItemStyle: {
+              paddingTop: 6,
+            },
           }}
         >
-          {/* ── 5 tabs visibles ── */}
-          <Tab.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{ title: tr('nav.home'), tabBarIcon: icon('home') }}
-          />
-          <Tab.Screen
-            name="Gym"
-            component={GymScreen}
-            options={{ title: tr('nav.gym'), tabBarIcon: icon('barbell') }}
-          />
-          <Tab.Screen
-            name="BodyWeight"
-            component={BodyWeightScreen}
-            options={{ title: tr('nav.weight'), tabBarIcon: icon('person') }}
-          />
-          <Tab.Screen
-            name="Journal"
-            component={JournalScreen}
-            options={{ title: tr('nav.journal'), tabBarIcon: icon('book') }}
-          />
-          <Tab.Screen
-            name="More"
-            component={MoreScreen}
-            options={{ title: tr('nav.more'), tabBarIcon: icon('grid') }}
-          />
+          <Tab.Screen name="Home"       component={HomeScreen}       options={{ title: tr('nav.home'),    tabBarIcon: icon('home')     }} />
+          <Tab.Screen name="Gym"        component={GymScreen}        options={{ title: tr('nav.gym'),     tabBarIcon: icon('barbell')  }} />
+          <Tab.Screen name="BodyWeight" component={BodyWeightScreen} options={{ title: tr('nav.weight'),  tabBarIcon: icon('person')   }} />
+          <Tab.Screen name="Journal"    component={JournalScreen}    options={{ title: tr('nav.journal'), tabBarIcon: icon('book')     }} />
+          <Tab.Screen name="More"       component={MoreScreen}       options={{ title: tr('nav.more'),    tabBarIcon: icon('grid')     }} />
 
-          {/* ── 4 tabs ocultos — navegables desde MoreScreen ── */}
-          <Tab.Screen
-            name="Calendar"
-            component={CalendarScreen}
-            options={{ tabBarButton: () => null }}
-          />
-          <Tab.Screen
-            name="Tasks"
-            component={TasksScreen}
-            options={{ tabBarButton: () => null }}
-          />
-          <Tab.Screen
-            name="Quotes"
-            component={QuotesScreen}
-            options={{ tabBarButton: () => null }}
-          />
-          <Tab.Screen
-            name="Settings"
-            component={SettingsScreen}
-            options={{ tabBarButton: () => null }}
-          />
+          {/* Ocultos — navegables desde MoreScreen */}
+          <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarButton: () => null }} />
+          <Tab.Screen name="Tasks"    component={TasksScreen}    options={{ tabBarButton: () => null }} />
+          <Tab.Screen name="Quotes"   component={QuotesScreen}   options={{ tabBarButton: () => null }} />
+          <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarButton: () => null }} />
         </Tab.Navigator>
       </NavigationContainer>
     </View>
@@ -173,19 +138,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <LangProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </LangProvider>
+    <SafeAreaProvider>
+      <LangProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </LangProvider>
+    </SafeAreaProvider>
   )
 }
-
-const makeStyles = (t) => StyleSheet.create({
-  container:  { flex: 1, backgroundColor: t.bg },
-  statusBar:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 52, paddingBottom: 8, backgroundColor: t.bg },
-  dot:        { width: 7, height: 7, borderRadius: 4, marginRight: 7 },
-  online:     { backgroundColor: t.success },
-  offline:    { backgroundColor: t.danger },
-  statusText: { color: t.text3, fontSize: 11 },
-})

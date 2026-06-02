@@ -909,7 +909,7 @@ function ConfirmModal({ visible, message, onConfirm, onCancel }) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const makeStyles = (t) => StyleSheet.create({
-  screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 54 },
+  screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 16 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   tabBar:          { flexDirection: 'row', backgroundColor: t.surface, borderRadius: 8, padding: 3, marginBottom: 16, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor },
   tabBtn:          { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },

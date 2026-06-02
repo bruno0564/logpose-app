@@ -527,7 +527,7 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
 
 const makeStyles = (t) => StyleSheet.create({
   container:        { flex: 1, backgroundColor: t.bg },
-  header:           { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 60, gap: 12 },
+  header:           { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 16, gap: 12 },
   title:            { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', flex: 1, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
   addBtn:           { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   addBtnText:       { color: t.cartoon ? t.bg : t.text, fontSize: 24, lineHeight: 28, fontWeight: '300' },

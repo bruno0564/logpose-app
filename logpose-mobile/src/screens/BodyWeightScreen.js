@@ -358,7 +358,7 @@ export default function BodyWeightScreen() {
 
 const makeStyles = (t) => StyleSheet.create({
   container:    { flex: 1, backgroundColor: t.bg },
-  content:      { padding: 16, paddingTop: 56, paddingBottom: 32 },
+  content:      { padding: 16, paddingTop: 20, paddingBottom: 32 },
   title:        { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', marginBottom: 8, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
   statsRow:     { flexDirection: 'row', gap: 12, marginBottom: 16 },
   stat:         { flex: 1, backgroundColor: t.surface2, borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
