@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
+import FadeInView from '../components/FadeInView'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LineChart } from 'react-native-chart-kit'
@@ -225,7 +226,8 @@ export default function GymScreen() {
   }
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
+    <FadeInView style={s.screen}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
       <ConfirmModal
         visible={confirmTarget !== null}
         message={confirmTarget ? tr('gym.confirmDeleteRoutine', { name: confirmTarget.name }) : ''}
@@ -339,6 +341,7 @@ export default function GymScreen() {
         </>
       )}
     </ScrollView>
+    </FadeInView>
   )
 }
 

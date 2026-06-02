@@ -5,6 +5,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import GradientButton from '../components/GradientButton'
+import FadeInView from '../components/FadeInView'
 import {
   getTodayJournalEntry, getAllJournalEntries, saveJournalEntry, getJournalStreak,
   getUnsyncedJournalEntries, getPendingDeleteJournalEntries,
@@ -136,6 +137,7 @@ export default function JournalScreen() {
   const words = wordCount(draft)
 
   return (
+    <FadeInView style={{ flex: 1 }}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <View style={s.header}>
@@ -179,6 +181,7 @@ export default function JournalScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </FadeInView>
   )
 }
 

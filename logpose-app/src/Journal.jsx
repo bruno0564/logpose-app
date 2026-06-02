@@ -161,17 +161,10 @@ export default function Journal() {
 
       <div style={{ maxWidth: 640 }}>
         <textarea
+          className="journal-textarea"
           value={draft}
           onChange={e => setDraft(e.target.value)}
           placeholder={tr('journal.placeholder')}
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            minHeight: 320, resize: 'vertical',
-            padding: '1rem', lineHeight: 1.75,
-            background: 'var(--surface-2)', border: '1px solid var(--border-2)',
-            borderRadius: 'var(--radius)', color: 'var(--text)',
-            fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit',
-          }}
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.6rem' }}>
           <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>

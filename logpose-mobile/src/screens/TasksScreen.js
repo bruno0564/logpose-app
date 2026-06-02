@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, Modal, Keyboard,
 } from 'react-native'
+import FadeInView from '../components/FadeInView'
 import { Ionicons } from '@expo/vector-icons'
 import {
   getTaskLists, insertTaskList, deleteTaskList,
@@ -263,7 +264,7 @@ export default function TasksScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <FadeInView style={s.container}>
       <View style={s.header}>
         {activeList ? (
           <TouchableOpacity onPress={() => setActiveList(null)}>
@@ -368,7 +369,7 @@ export default function TasksScreen() {
         onConfirm={confirmDeleteList}
         onCancel={() => setConfirmTarget(null)}
       />
-    </View>
+    </FadeInView>
   )
 }
 

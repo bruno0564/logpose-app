@@ -5,6 +5,7 @@ import {
   StyleSheet, ActivityIndicator, ScrollView, Dimensions, Modal,
 } from 'react-native'
 import GradientButton from '../components/GradientButton'
+import FadeInView from '../components/FadeInView'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { LineChart } from 'react-native-chart-kit'
 import {
@@ -154,7 +155,8 @@ export default function BodyWeightScreen() {
 
   return (
     <>
-    <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+    <FadeInView style={s.container}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <Text style={s.title}>{tr('bodyWeight.title')}</Text>
 
       <View style={s.statsRow}>
@@ -303,6 +305,7 @@ export default function BodyWeightScreen() {
         )}
       </View>
     </ScrollView>
+    </FadeInView>
 
       <Modal visible={!!editEntry} transparent animationType="slide">
         <View style={s.modalOverlay}>

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import FadeInView from '../components/FadeInView'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
   markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote, pruneStaleQuotes,
@@ -72,19 +73,21 @@ export default function HomeScreen() {
   )
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
-      <View style={s.header}>
-        <Text style={s.greeting}>{greeting()}</Text>
-        <Text style={s.date}>{formatDate()}</Text>
-      </View>
-
-      {current && (
-        <View style={s.quoteCard}>
-          <Text style={s.quoteText}>"{current.text}"</Text>
-          {current.author && <Text style={s.quoteAuthor}>— {current.author}</Text>}
+    <FadeInView style={s.container}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.content}>
+        <View style={s.header}>
+          <Text style={s.greeting}>{greeting()}</Text>
+          <Text style={s.date}>{formatDate()}</Text>
         </View>
-      )}
-    </ScrollView>
+
+        {current && (
+          <View style={s.quoteCard}>
+            <Text style={s.quoteText}>"{current.text}"</Text>
+            {current.author && <Text style={s.quoteAuthor}>— {current.author}</Text>}
+          </View>
+        )}
+      </ScrollView>
+    </FadeInView>
   )
 }
 

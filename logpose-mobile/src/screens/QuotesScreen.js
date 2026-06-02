@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Modal, StyleSheet,
 } from 'react-native'
+import FadeInView from '../components/FadeInView'
 import GradientButton from '../components/GradientButton'
 import {
   getQuotes, insertLocalQuote, updateLocalQuote, deleteLocalQuote,
@@ -100,7 +101,7 @@ export default function QuotesScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <FadeInView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{tr('quotes.title')}</Text>
         <TouchableOpacity style={s.addBtn} onPress={openAdd}>
@@ -178,7 +179,7 @@ export default function QuotesScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </FadeInView>
   )
 }
 

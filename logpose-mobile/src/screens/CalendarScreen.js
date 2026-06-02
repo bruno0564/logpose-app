@@ -4,6 +4,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, Modal,
   TextInput, StyleSheet,
 } from 'react-native'
+import FadeInView from '../components/FadeInView'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
@@ -271,7 +272,7 @@ export default function CalendarScreen() {
   const daysShort = tr('common.daysShort')
 
   return (
-    <View style={s.container}>
+    <FadeInView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{tr('calendar.title')}</Text>
         <TouchableOpacity style={s.addBtn} onPress={() => openCreate(toDateStr(today))}>
@@ -338,7 +339,7 @@ export default function CalendarScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setConfirmTarget(null)}
       />
-    </View>
+    </FadeInView>
   )
 }
 

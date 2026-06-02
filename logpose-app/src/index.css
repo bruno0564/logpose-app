@@ -471,6 +471,34 @@ body {
   color: var(--text-4);
 }
 
+/* ── Journal textarea ────────────────────────────── */
+
+.journal-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 320px;
+  resize: vertical;
+  padding: 1rem;
+  line-height: 1.75;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.journal-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.journal-textarea::placeholder {
+  color: var(--text-4);
+}
+
 /* ── Animations ──────────────────────────────────── */
 
 @keyframes fadeUp {

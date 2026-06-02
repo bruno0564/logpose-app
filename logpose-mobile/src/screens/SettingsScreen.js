@@ -1,6 +1,7 @@
 import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
+import FadeInView from '../components/FadeInView'
 
 const STYLES = [
   { id: 'normal',  label: 'Normal',  bg: '#111111', surface: '#1e1e1e', accent: '#818cf8', text: '#f0f0f0' },
@@ -13,7 +14,7 @@ export default function SettingsScreen() {
   const s = makeStyles(t)
 
   return (
-    <View style={s.screen}>
+    <FadeInView style={s.screen}>
       <Text style={s.title}>{tr('settings.title')}</Text>
 
       <View style={s.section}>
@@ -88,7 +89,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </FadeInView>
   )
 }
 
