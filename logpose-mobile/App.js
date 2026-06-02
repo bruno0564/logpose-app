@@ -122,10 +122,10 @@ function AppContent() {
           <Tab.Screen name="More"       component={MoreScreen}       options={{ title: tr('nav.more'),    tabBarIcon: makeIcon('grid')    }} />
 
           {/* ── Ocultos — navegables desde MoreScreen ── */}
-          <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarButton: () => null }} />
-          <Tab.Screen name="Tasks"    component={TasksScreen}    options={{ tabBarButton: () => null }} />
-          <Tab.Screen name="Quotes"   component={QuotesScreen}   options={{ tabBarButton: () => null }} />
-          <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarButton: () => null }} />
+          <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
+          <Tab.Screen name="Tasks"    component={TasksScreen}    options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
+          <Tab.Screen name="Quotes"   component={QuotesScreen}   options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
+          <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
         </Tab.Navigator>
       </NavigationContainer>
     </View>
