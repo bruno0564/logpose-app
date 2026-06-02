@@ -51,17 +51,17 @@
 }
 
 @keyframes cup-drop {
-  0%   { opacity: 0; transform: translateY(-80px) scaleY(0.7); }
-  55%  { opacity: 1; transform: translateY(12px) scaleY(1.06); }
-  75%  { transform: translateY(-6px) scaleY(0.97); }
+  0%   { opacity: 0; transform: translateY(-22px) scaleY(0.88); }
+  55%  { opacity: 1; transform: translateY(10px) scaleY(1.05); }
+  75%  { transform: translateY(-5px) scaleY(0.97); }
   90%  { transform: translateY(3px) scaleY(1.01); }
   100% { transform: translateY(0) scaleY(1); }
 }
 
 @keyframes cup-slide {
-  0%   { opacity: 0; transform: translateX(-100px) scaleX(1.12); }
-  55%  { opacity: 1; transform: translateX(10px) scaleX(0.96); }
-  75%  { transform: translateX(-5px) scaleX(1.01); }
+  0%   { opacity: 0; transform: translateX(-28px); }
+  55%  { opacity: 1; transform: translateX(8px) scaleX(0.97); }
+  75%  { transform: translateX(-4px) scaleX(1.01); }
   100% { transform: translateX(0) scaleX(1); }
 }
 

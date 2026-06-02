@@ -101,6 +101,10 @@
 }
 
 /* ── Page header ─────────────────────────────────────────────────────── */
+[data-cartoon] .page-title {
+  will-change: transform, opacity;
+}
+
 [data-cartoon~="warm"] .page-title,
 [data-cartoon~="cuphead"] .page-title {
   color: var(--accent);
@@ -133,6 +137,7 @@
 
 /* ── Cards ───────────────────────────────────────────────────────────── */
 [data-cartoon] .card {
+  will-change: transform, opacity;
   border: 3px solid var(--text);
   border-radius: 12px 8px 14px 10px / 10px 14px 8px 12px;
   box-shadow: 5px 5px 0 var(--text);
