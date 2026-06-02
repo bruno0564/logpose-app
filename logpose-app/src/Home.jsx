@@ -66,14 +66,14 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="home-page">
-      <div className="home-header">
-        <h1 className="home-greeting">{greeting()}</h1>
-        <p className="home-date">{formatDate()}</p>
+    <div className="page">
+      <div className="page-header">
+        <h1 className="page-title">{greeting()}</h1>
+        <p className="page-subtitle">{formatDate()}</p>
       </div>
 
       {current && (
-        <div className="home-quote-card">
+        <div className="card home-quote-card">
           <p className="home-quote-text">"{current.text}"</p>
           {current.author && <p className="home-quote-author">— {current.author}</p>}
         </div>
