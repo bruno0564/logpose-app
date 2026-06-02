@@ -21,32 +21,13 @@ import { isServerReachable, initServerUrl } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
 
-function TabIcon({ name, focused, color, cartoon }) {
-  return (
-    <View style={{
-      backgroundColor: focused ? color + '20' : 'transparent',
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 3,
-      alignItems: 'center',
-    }}>
-      <Ionicons
-        name={focused ? name : `${name}-outline`}
-        size={21}
-        color={color}
-      />
-    </View>
-  )
-}
-
 function ServerStatus({ online }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const insets = useSafeAreaInsets()
   return (
     <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: 'row', alignItems: 'center',
       paddingHorizontal: 16,
       paddingTop: insets.top + 6,
       paddingBottom: 8,
@@ -67,6 +48,7 @@ function AppContent() {
   const [online, setOnline] = useState(false)
   const { theme: t, statusBarStyle } = useTheme()
   const { t: tr } = useLang()
+  const insets = useSafeAreaInsets()
   const [fontsLoaded] = useFonts({
     Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
     LuckiestGuy: require('./assets/fonts/LuckiestGuy.ttf'),
@@ -84,8 +66,16 @@ function AppContent() {
 
   if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: t.bg }} />
 
-  const icon = (name) => ({ color, focused }) => (
-    <TabIcon name={name} focused={focused} color={color} cartoon={t.cartoon} />
+  // Altura = área de contenido fija + margen de gestos del sistema
+  const TAB_CONTENT_H = 58
+  const tabBarHeight = TAB_CONTENT_H + insets.bottom
+
+  const makeIcon = (name) => ({ color, focused }) => (
+    <Ionicons
+      name={focused ? name : `${name}-outline`}
+      size={focused ? 25 : 22}
+      color={color}
+    />
   )
 
   return (
@@ -102,30 +92,36 @@ function AppContent() {
             headerShown: false,
             sceneContainerStyle: { backgroundColor: t.bg },
             tabBarShowLabel: true,
+            tabBarHideOnKeyboard: true,
             tabBarStyle: {
               backgroundColor: t.surface,
-              borderTopColor: t.cartoon ? t.text : t.border,
-              borderTopWidth: t.cartoon ? 3 : 1,
+              borderTopWidth: t.cartoon ? 3 : StyleSheet.hairlineWidth,
+              borderTopColor: t.cartoon ? t.cardBorderColor : t.border,
+              height: tabBarHeight,
+              paddingBottom: insets.bottom,
+              paddingTop: 8,
+              // Sin overflow ni márgenes — full width garantizado
+              left: 0,
+              right: 0,
             },
             tabBarActiveTintColor: t.accent,
             tabBarInactiveTintColor: t.text3,
             tabBarLabelStyle: {
-              fontFamily: 'Inter_600SemiBold',
-              fontSize: 10,
-              marginBottom: 2,
-            },
-            tabBarItemStyle: {
-              paddingTop: 6,
+              fontFamily: t.cartoon ? 'LuckiestGuy' : 'Inter_600SemiBold',
+              fontSize: t.cartoon ? 8 : 10,
+              textTransform: t.cartoon ? 'uppercase' : 'none',
+              marginTop: 2,
             },
           }}
         >
-          <Tab.Screen name="Home"       component={HomeScreen}       options={{ title: tr('nav.home'),    tabBarIcon: icon('home')     }} />
-          <Tab.Screen name="Gym"        component={GymScreen}        options={{ title: tr('nav.gym'),     tabBarIcon: icon('barbell')  }} />
-          <Tab.Screen name="BodyWeight" component={BodyWeightScreen} options={{ title: tr('nav.weight'),  tabBarIcon: icon('person')   }} />
-          <Tab.Screen name="Journal"    component={JournalScreen}    options={{ title: tr('nav.journal'), tabBarIcon: icon('book')     }} />
-          <Tab.Screen name="More"       component={MoreScreen}       options={{ title: tr('nav.more'),    tabBarIcon: icon('grid')     }} />
+          {/* ── 5 tabs visibles ── */}
+          <Tab.Screen name="Home"       component={HomeScreen}       options={{ title: tr('nav.home'),    tabBarIcon: makeIcon('home')    }} />
+          <Tab.Screen name="Gym"        component={GymScreen}        options={{ title: tr('nav.gym'),     tabBarIcon: makeIcon('barbell') }} />
+          <Tab.Screen name="BodyWeight" component={BodyWeightScreen} options={{ title: tr('nav.weight'),  tabBarIcon: makeIcon('person')  }} />
+          <Tab.Screen name="Journal"    component={JournalScreen}    options={{ title: tr('nav.journal'), tabBarIcon: makeIcon('book')    }} />
+          <Tab.Screen name="More"       component={MoreScreen}       options={{ title: tr('nav.more'),    tabBarIcon: makeIcon('grid')    }} />
 
-          {/* Ocultos — navegables desde MoreScreen */}
+          {/* ── Ocultos — navegables desde MoreScreen ── */}
           <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarButton: () => null }} />
           <Tab.Screen name="Tasks"    component={TasksScreen}    options={{ tabBarButton: () => null }} />
           <Tab.Screen name="Quotes"   component={QuotesScreen}   options={{ tabBarButton: () => null }} />
