@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
@@ -60,12 +60,16 @@ function AppContent() {
     <View style={s.container}>
       <StatusBar style={statusBarStyle} />
       <ServerStatus online={online} />
-      <NavigationContainer>
+      <NavigationContainer theme={{
+        ...DefaultTheme,
+        colors: { ...DefaultTheme.colors, background: t.bg, card: t.surface, border: t.border },
+      }}>
         <Tab.Navigator
           initialRouteName="Home"
           screenOptions={{
             headerShown: false,
             tabBarShowLabel: false,
+            sceneContainerStyle: { backgroundColor: t.bg },
             tabBarStyle: {
               backgroundColor: t.surface,
               borderTopColor: t.cartoon ? t.text : t.border,
