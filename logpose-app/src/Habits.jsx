@@ -17,7 +17,7 @@ import { IconClose } from './Icons.jsx'
 
 let syncingHabits = false
 
-const CATEGORY_COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#d97706']
+const CATEGORY_COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#ea580c', '#dc2626', '#0891b2', '#d97706', '#ec4899']
 
 function toMonthStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -367,8 +367,15 @@ export default function Habits() {
               </div>
               <div className="field">
                 <label>Goal (days this month)</label>
-                <input type="number" min="1" max="31" required value={form.goal}
-                  onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} style={{ maxWidth: 80 }} />
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input type="number" min="1" max="31" required value={form.goal}
+                    onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} style={{ maxWidth: 70 }} />
+                  <button type="button" className="btn-cancel"
+                    style={{ height: 34, fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                    onClick={() => setForm(f => ({ ...f, goal: days }))}>
+                    Cada día ({days})
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {modal.mode === 'edit'

@@ -1210,14 +1210,15 @@ body {
 .habits-rate--bad  { background: var(--danger-subtle); color: var(--danger-text); }
 
 .habits-grid-wrap {
-  overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .habits-grid {
   border-collapse: collapse;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   font-size: 0.78rem;
 }
 
@@ -1227,7 +1228,7 @@ body {
 }
 
 .habits-grid-label-col {
-  min-width: 160px;
+  width: 150px;
   text-align: left !important;
   padding: 0.4rem 0.75rem;
   color: var(--text-3);
@@ -1236,26 +1237,22 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   background: var(--surface);
-  position: sticky;
-  left: 0;
-  z-index: 1;
 }
 
 .habits-grid-day-th {
-  width: 30px;
-  min-width: 30px;
-  padding: 0.3rem 0;
+  padding: 0.25rem 0;
   color: var(--text-4);
   font-weight: 500;
   background: var(--surface);
+  overflow: hidden;
 }
 .habits-grid-day-th--today { color: var(--accent); font-weight: 700; }
 
 .habits-grid-dow { font-size: 0.6rem; color: var(--text-4); margin-top: 1px; }
 
 .habits-grid-pct-col {
-  min-width: 44px;
-  padding: 0.3rem 0.5rem;
+  width: 38px;
+  padding: 0.3rem 0.25rem;
   color: var(--text-3);
   font-size: var(--font-xs);
   font-weight: 600;
@@ -1269,10 +1266,10 @@ body {
   padding: 0.4rem 0.75rem;
   color: var(--text-2);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   background: var(--surface);
-  position: sticky;
-  left: 0;
   cursor: pointer;
 }
 .habits-grid-habit-name:hover { color: var(--text); }
@@ -1280,8 +1277,7 @@ body {
 .habits-grid-goal { color: var(--text-4); font-size: 0.7rem; font-weight: 400; }
 
 .habits-grid-cell {
-  width: 30px;
-  height: 30px;
+  height: 28px;
   cursor: pointer;
   transition: background 0.1s;
   vertical-align: middle;
