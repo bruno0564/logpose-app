@@ -483,9 +483,12 @@
   font-weight: 700;
 }
 
-/* Separadores cartoon: misma clase en th y td → siempre alineados */
-[data-cartoon] .habits-grid-day--first { border-left:  1px solid var(--border-2); }
-[data-cartoon] .habits-grid-day--last  { border-right: 1px solid var(--border-2); }
+/* Separadores cartoon: columnas sin borde lateral propio (los maneja label-col y pct--sep) */
+[data-cartoon] .habits-grid-day--first { border-left:  none; }
+[data-cartoon] .habits-grid-day--last  { border-right: none; }
+
+[data-cartoon] .habits-grid-pct-col--sep { border-left: 3px solid var(--text) !important; }
+[data-cartoon] .habits-grid-pct--sep      { border-left: 3px solid var(--text) !important; }
 
 /* Hoy */
 [data-cartoon] .habits-grid-day-th--today .habits-grid-daynum {
@@ -527,10 +530,16 @@
   background: var(--accent-subtle);
 }
 
-/* Filas: border inferior más grueso */
+/* Filas: border inferior más grueso + separadores verticales entre días */
 [data-cartoon] .habits-grid th,
 [data-cartoon] .habits-grid td {
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--text-4);
+  border-right: 1px solid var(--border-2);
+}
+
+[data-cartoon] .habits-grid-label-col,
+[data-cartoon] .habits-grid-habit-name {
+  border-right: 3px solid var(--text) !important;
 }
 
 /* Stats: text-shadow en modo cuphead */

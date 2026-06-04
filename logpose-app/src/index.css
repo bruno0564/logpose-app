@@ -1222,16 +1222,20 @@ body {
   font-size: 0.78rem;
 }
 
-/* Solo líneas horizontales — sin cuadrícula vertical entre días */
+/* Cuadrícula: líneas horizontales visibles + líneas verticales sutiles entre días */
 .habits-grid th, .habits-grid td {
   border: none;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--text-4);
+  border-right: 1px solid var(--border-2);
   text-align: center;
 }
 
-/* Separadores: siempre en columnas de días (misma clase en th y td → alineación perfecta) */
-.habits-grid-day--first { border-left:  1px solid var(--border); }
-.habits-grid-day--last  { border-right: 1px solid var(--border); }
+/* Separadores estructurales: nombre | días | % (más gruesos que la cuadrícula interna) */
+.habits-grid-day--first { border-left: none; }
+.habits-grid-day--last  { border-right: none; }
+
+.habits-grid-pct-col--sep { border-left: 2px solid var(--text-3) !important; }
+.habits-grid-pct--sep      { border-left: 2px solid var(--text-3) !important; }
 
 /* Cabecera */
 .habits-grid-label-col {
@@ -1244,6 +1248,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   background: var(--surface);
+  border-right: 2px solid var(--text-3) !important;
 }
 
 .habits-grid-day-th {
@@ -1296,6 +1301,7 @@ body {
   font-weight: 500;
   background: var(--surface);
   white-space: nowrap;
+  border-right: 2px solid var(--text-3) !important;
 }
 
 /* Contenido flex dentro de la celda de nombre */
