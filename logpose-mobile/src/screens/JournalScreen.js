@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import GradientButton from '../components/GradientButton'
 import FadeInView from '../components/FadeInView'
+import { titleShadow } from '../cartoonStyles'
 import {
   getTodayJournalEntry, getAllJournalEntries, saveJournalEntry, getJournalStreak,
   getUnsyncedJournalEntries, getPendingDeleteJournalEntries,
@@ -188,7 +189,7 @@ export default function JournalScreen() {
 const makeStyles = (t) => StyleSheet.create({
   screen:      { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 16 },
   header:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
-  title:       { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
+  title:       { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   dateLabel:   { color: t.text3, fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
   backBtn:     { color: t.accent, fontSize: 14, marginBottom: 12 },
   hint:        { color: t.text3, fontSize: 13 },

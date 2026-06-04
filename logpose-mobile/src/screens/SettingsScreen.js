@@ -5,6 +5,7 @@ import { useLang } from '../LangContext'
 import { getServerUrl, updateServerUrl } from '../api/client'
 import { exportAllData } from '../db/database'
 import FadeInView from '../components/FadeInView'
+import { titleShadow } from '../cartoonStyles'
 
 const STYLES = [
   { id: 'normal',  label: 'Normal',  bg: '#111111', surface: '#1e1e1e', accent: '#818cf8', text: '#f0f0f0' },
@@ -188,7 +189,7 @@ export default function SettingsScreen() {
 
 const makeStyles = (t) => StyleSheet.create({
   screen:          { flex: 1, backgroundColor: t.bg, padding: 16, paddingTop: 16 },
-  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', marginBottom: 28, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', letterSpacing: t.cartoon ? 1 : 0 },
+  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', marginBottom: 28, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', letterSpacing: t.cartoon ? 1 : 0, ...titleShadow(t) },
   section:         { backgroundColor: t.surface, borderRadius: t.cartoon ? 14 : 10, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
   row:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   rowColumn:       { flexDirection: 'column', alignItems: 'flex-start', gap: 12 },

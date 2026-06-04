@@ -5,6 +5,7 @@ import {
   StyleSheet, Modal, Keyboard,
 } from 'react-native'
 import FadeInView from '../components/FadeInView'
+import { titleShadow } from '../cartoonStyles'
 import { Ionicons } from '@expo/vector-icons'
 import {
   getTaskLists, insertTaskList, deleteTaskList,
@@ -394,7 +395,7 @@ function ItemRow({ item, onToggle, onDelete }) {
 const makeStyles = (t) => StyleSheet.create({
   container:       { flex: 1, backgroundColor: t.bg },
   header:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 16 },
-  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', flex: 1, marginHorizontal: 8, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
+  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', flex: 1, marginHorizontal: 8, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   addBtn:          { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   empty:           { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText:       { color: t.text4, fontSize: 16, fontWeight: '600' },

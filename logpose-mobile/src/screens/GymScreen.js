@@ -5,6 +5,7 @@ import {
   Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
 import FadeInView from '../components/FadeInView'
+import { titleShadow } from '../cartoonStyles'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LineChart } from 'react-native-chart-kit'
@@ -916,7 +917,7 @@ const makeStyles = (t) => StyleSheet.create({
   tabBtnActive:    { backgroundColor: t.accent },
   tabBtnText:      { color: t.text3, fontSize: 13, fontWeight: '500' },
   tabBtnTextActive:{ color: t.text, fontWeight: '600' },
-  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
+  title:           { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   subtitle:        { color: t.text2, fontSize: 13, marginBottom: 20 },
   hint:            { color: t.text3, fontSize: 13 },
   backBtn:         { color: t.accent, fontSize: 14, marginBottom: 2 },

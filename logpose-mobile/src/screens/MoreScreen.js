@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import FadeInView from '../components/FadeInView'
+import { titleShadow } from '../cartoonStyles'
 
 const PADDING = 20
 const GAP = 12
@@ -79,6 +80,7 @@ const styles = {
     textTransform: t.cartoon ? 'uppercase' : 'none',
     letterSpacing: t.cartoon ? 1 : -0.5,
     marginBottom: 8,
+    ...titleShadow(t),
   }),
   grid: {
     flexDirection: 'row',
