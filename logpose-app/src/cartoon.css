@@ -475,19 +475,23 @@
 
 /* Cabecera de la tabla */
 [data-cartoon] .habits-grid-label-col {
-  border-right: 3px solid var(--text);
   text-shadow: 1px 1px 0 var(--text);
   letter-spacing: 0.1em;
 }
 
 [data-cartoon] .habits-grid-habit-name {
-  border-right: 3px solid var(--text);
   font-weight: 700;
+}
+
+/* Separadores: misma clase en header y body → perfectamente alineados,
+   misma grosor que el resto de la tabla cartoon */
+[data-cartoon] .habits-grid-day--first {
+  border-left: 2px solid var(--border-2);
 }
 
 [data-cartoon] .habits-grid-pct-col--sep,
 [data-cartoon] .habits-grid-pct--sep {
-  border-left: 3px solid var(--text);
+  border-left: 2px solid var(--border-2);
 }
 
 /* Hoy */

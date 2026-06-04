@@ -1229,10 +1229,11 @@ body {
   text-align: center;
 }
 
-/* Separador vertical entre nombre y días / entre días y stats */
-.habits-grid-label-col,
-.habits-grid-habit-name { border-right: 1px solid var(--border-2); }
+/* Separador entre nombre y días: borde en la primera columna de días
+   (misma clase en th y td → siempre alineada) */
+.habits-grid-day--first { border-left: 1px solid var(--border-2); }
 
+/* Separador entre días y stats */
 .habits-grid-pct-col--sep,
 .habits-grid-pct--sep   { border-left: 1px solid var(--border-2); }
 
