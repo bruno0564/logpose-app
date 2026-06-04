@@ -316,7 +316,8 @@ export default function Habits() {
                     return (
                       <th key={i} className={[
                         'habits-grid-day-th',
-                        i === 0  ? 'habits-grid-day--first'    : '',
+                        i === 0        ? 'habits-grid-day--first' : '',
+                        i === days - 1 ? 'habits-grid-day--last'  : '',
                         ds === todayStr ? 'habits-grid-day-th--today'   : '',
                         isWkd   ? 'habits-grid-day-th--weekend' : '',
                         isFuture ? 'habits-grid-day-th--future'  : '',
@@ -351,7 +352,8 @@ export default function Habits() {
                         <td key={i}
                           className={[
                             'habits-grid-cell',
-                            i === 0   ? 'habits-grid-day--first'     : '',
+                            i === 0        ? 'habits-grid-day--first' : '',
+                            i === days - 1 ? 'habits-grid-day--last'  : '',
                             done      ? 'habits-grid-cell--done'     : '',
                             !expected ? 'habits-grid-cell--skip'     : '',
                             ds === todayStr ? 'habits-grid-cell--today'  : '',
