@@ -136,6 +136,17 @@ export function IconJournal({ size = 15, strokeWidth = 1.75 }) {
   )
 }
 
+export function IconHabit({ size = 15, strokeWidth = 1.75 }) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={strokeWidth}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  )
+}
+
 export function IconSettings({ size = 15, strokeWidth = 1.75 }) {
   return (
     <svg {...base} width={size} height={size} strokeWidth={strokeWidth}>

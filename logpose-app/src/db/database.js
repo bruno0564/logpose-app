@@ -128,6 +128,35 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
+  await instance.execute(`CREATE TABLE IF NOT EXISTS habit_categories (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id      INTEGER,
+    name           TEXT    NOT NULL,
+    color          TEXT    NOT NULL DEFAULT '#7c3aed',
+    synced         INTEGER NOT NULL DEFAULT 0,
+    pending_delete INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  await instance.execute(`CREATE TABLE IF NOT EXISTS habits (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id            INTEGER,
+    local_category_id    INTEGER NOT NULL REFERENCES habit_categories(id),
+    name                 TEXT    NOT NULL,
+    goal                 INTEGER NOT NULL DEFAULT 30,
+    position             INTEGER NOT NULL DEFAULT 0,
+    synced               INTEGER NOT NULL DEFAULT 0,
+    pending_delete       INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  await instance.execute(`CREATE TABLE IF NOT EXISTS habit_logs (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id        INTEGER,
+    local_habit_id   INTEGER NOT NULL REFERENCES habits(id),
+    date             TEXT    NOT NULL,
+    synced           INTEGER NOT NULL DEFAULT 0,
+    pending_delete   INTEGER NOT NULL DEFAULT 0
+  )`)
+
   db = instance
   return db
 }
@@ -1144,5 +1173,228 @@ export async function pruneStaleJournalEntries(serverIds) {
   const rows = await db.select('SELECT id, server_id FROM journal_entries WHERE server_id IS NOT NULL AND pending_delete = 0')
   for (const row of rows) {
     if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM journal_entries WHERE id = ?', [row.id])
+  }
+}
+
+// ── Habits ────────────────────────────────────────────────────────────────────
+
+export async function getHabitCategories() {
+  const db = await openDB()
+  return db.select('SELECT * FROM habit_categories WHERE pending_delete = 0 ORDER BY id ASC')
+}
+
+export async function insertHabitCategory(data) {
+  const db = await openDB()
+  await db.execute(
+    'INSERT INTO habit_categories (name, color, synced) VALUES (?, ?, 0)',
+    [data.name, data.color]
+  )
+}
+
+export async function updateHabitCategory(id, data) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE habit_categories SET name = ?, color = ?, synced = 0 WHERE id = ?',
+    [data.name, data.color, id]
+  )
+}
+
+export async function deleteLocalHabitCategory(id) {
+  const db = await openDB()
+  const [cat] = await db.select('SELECT server_id FROM habit_categories WHERE id = ?', [id])
+  const habits = await db.select('SELECT id, server_id FROM habits WHERE local_category_id = ?', [id])
+  for (const h of habits) {
+    if (h.server_id) {
+      await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [h.id])
+      await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [h.id])
+      await db.execute('UPDATE habits SET pending_delete = 1 WHERE id = ?', [h.id])
+    } else {
+      await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ?', [h.id])
+      await db.execute('DELETE FROM habits WHERE id = ?', [h.id])
+    }
+  }
+  if (cat?.server_id) {
+    await db.execute('UPDATE habit_categories SET pending_delete = 1 WHERE id = ?', [id])
+  } else {
+    await db.execute('DELETE FROM habit_categories WHERE id = ?', [id])
+  }
+}
+
+export async function getHabits() {
+  const db = await openDB()
+  return db.select('SELECT * FROM habits WHERE pending_delete = 0 ORDER BY local_category_id, position ASC')
+}
+
+export async function insertHabit(data) {
+  const db = await openDB()
+  await db.execute(
+    'INSERT INTO habits (local_category_id, name, goal, position, synced) VALUES (?, ?, ?, ?, 0)',
+    [data.local_category_id, data.name, data.goal, data.position ?? 0]
+  )
+}
+
+export async function updateHabit(id, data) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE habits SET name = ?, goal = ?, position = ?, synced = 0 WHERE id = ?',
+    [data.name, data.goal, data.position ?? 0, id]
+  )
+}
+
+export async function deleteLocalHabit(id) {
+  const db = await openDB()
+  const [h] = await db.select('SELECT server_id FROM habits WHERE id = ?', [id])
+  if (h?.server_id) {
+    await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [id])
+    await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [id])
+    await db.execute('UPDATE habits SET pending_delete = 1 WHERE id = ?', [id])
+  } else {
+    await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ?', [id])
+    await db.execute('DELETE FROM habits WHERE id = ?', [id])
+  }
+}
+
+export async function getHabitLogs(month) {
+  const db = await openDB()
+  return db.select(
+    'SELECT * FROM habit_logs WHERE pending_delete = 0 AND date LIKE ?',
+    [`${month}%`]
+  )
+}
+
+export async function toggleHabitLog(localHabitId, date) {
+  const db = await openDB()
+  const existing = await db.select(
+    'SELECT * FROM habit_logs WHERE local_habit_id = ? AND date = ? AND pending_delete = 0',
+    [localHabitId, date]
+  )
+  if (existing.length > 0) {
+    const log = existing[0]
+    if (log.server_id) {
+      await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE id = ?', [log.id])
+    } else {
+      await db.execute('DELETE FROM habit_logs WHERE id = ?', [log.id])
+    }
+  } else {
+    await db.execute(
+      'INSERT INTO habit_logs (local_habit_id, date, synced) VALUES (?, ?, 0)',
+      [localHabitId, date]
+    )
+  }
+}
+
+// ── Habits sync helpers ───────────────────────────────────────────────────────
+
+export async function getUnsyncedHabitCategories() {
+  const db = await openDB()
+  return db.select('SELECT * FROM habit_categories WHERE synced = 0 AND pending_delete = 0')
+}
+export async function getPendingDeleteHabitCategories() {
+  const db = await openDB()
+  return db.select('SELECT * FROM habit_categories WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+export async function markHabitCategorySynced(id, serverId) {
+  const db = await openDB()
+  await db.execute('UPDATE habit_categories SET synced = 1, server_id = ? WHERE id = ?', [serverId, id])
+}
+export async function purgeLocalHabitCategory(id) {
+  const db = await openDB()
+  await db.execute('DELETE FROM habit_categories WHERE id = ?', [id])
+}
+export async function upsertHabitCategoryFromServer(cat) {
+  const db = await openDB()
+  const rows = await db.select('SELECT * FROM habit_categories WHERE server_id = ?', [cat.id])
+  if (rows.length > 0) {
+    await db.execute(
+      'UPDATE habit_categories SET name = ?, color = ?, synced = 1 WHERE server_id = ?',
+      [cat.name, cat.color, cat.id]
+    )
+  } else {
+    await db.execute(
+      'INSERT INTO habit_categories (server_id, name, color, synced) VALUES (?, ?, ?, 1)',
+      [cat.id, cat.name, cat.color]
+    )
+  }
+}
+export async function pruneStaleHabitCategories(serverIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM habit_categories WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM habit_categories WHERE id = ?', [row.id])
+  }
+}
+
+export async function getUnsyncedHabits() {
+  const db = await openDB()
+  return db.select('SELECT h.*, c.server_id AS cat_server_id FROM habits h JOIN habit_categories c ON h.local_category_id = c.id WHERE h.synced = 0 AND h.pending_delete = 0 AND c.server_id IS NOT NULL')
+}
+export async function getPendingDeleteHabits() {
+  const db = await openDB()
+  return db.select('SELECT * FROM habits WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+export async function markHabitSynced(id, serverId) {
+  const db = await openDB()
+  await db.execute('UPDATE habits SET synced = 1, server_id = ? WHERE id = ?', [serverId, id])
+}
+export async function purgeLocalHabit(id) {
+  const db = await openDB()
+  await db.execute('DELETE FROM habits WHERE id = ?', [id])
+}
+export async function upsertHabitFromServer(habit, localCategoryId) {
+  const db = await openDB()
+  const rows = await db.select('SELECT * FROM habits WHERE server_id = ?', [habit.id])
+  if (rows.length > 0) {
+    await db.execute(
+      'UPDATE habits SET name = ?, goal = ?, position = ?, synced = 1 WHERE server_id = ?',
+      [habit.name, habit.goal, habit.position, habit.id]
+    )
+  } else {
+    await db.execute(
+      'INSERT INTO habits (server_id, local_category_id, name, goal, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
+      [habit.id, localCategoryId, habit.name, habit.goal, habit.position]
+    )
+  }
+}
+export async function pruneStaleHabits(serverIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM habits WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM habits WHERE id = ?', [row.id])
+  }
+}
+
+export async function getUnsyncedHabitLogs() {
+  const db = await openDB()
+  return db.select('SELECT l.*, h.server_id AS habit_server_id FROM habit_logs l JOIN habits h ON l.local_habit_id = h.id WHERE l.synced = 0 AND l.pending_delete = 0 AND h.server_id IS NOT NULL')
+}
+export async function getPendingDeleteHabitLogs() {
+  const db = await openDB()
+  return db.select('SELECT * FROM habit_logs WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+export async function markHabitLogSynced(id, serverId) {
+  const db = await openDB()
+  await db.execute('UPDATE habit_logs SET synced = 1, server_id = ? WHERE id = ?', [serverId, id])
+}
+export async function purgeLocalHabitLog(id) {
+  const db = await openDB()
+  await db.execute('DELETE FROM habit_logs WHERE id = ?', [id])
+}
+export async function upsertHabitLogFromServer(log, localHabitId) {
+  const db = await openDB()
+  const rows = await db.select('SELECT * FROM habit_logs WHERE server_id = ?', [log.id])
+  if (rows.length > 0) {
+    await db.execute('UPDATE habit_logs SET date = ?, synced = 1 WHERE server_id = ?', [log.date, log.id])
+  } else {
+    await db.execute(
+      'INSERT INTO habit_logs (server_id, local_habit_id, date, synced) VALUES (?, ?, ?, 1)',
+      [log.id, localHabitId, log.date]
+    )
+  }
+}
+export async function pruneStaleHabitLogs(serverIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM habit_logs WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM habit_logs WHERE id = ?', [row.id])
   }
 }
