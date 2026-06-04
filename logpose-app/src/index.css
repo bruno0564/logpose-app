@@ -1222,78 +1222,155 @@ body {
   font-size: 0.78rem;
 }
 
+/* Solo líneas horizontales — sin cuadrícula vertical entre días */
 .habits-grid th, .habits-grid td {
-  border: 1px solid var(--border);
+  border: none;
+  border-bottom: 1px solid var(--border);
   text-align: center;
 }
 
+/* Separador vertical entre nombre y días / entre días y stats */
+.habits-grid-label-col,
+.habits-grid-habit-name { border-right: 1px solid var(--border-2); }
+
+.habits-grid-pct-col--sep,
+.habits-grid-pct--sep   { border-left: 1px solid var(--border-2); }
+
+/* Cabecera */
 .habits-grid-label-col {
   width: 150px;
   text-align: left !important;
-  padding: 0.4rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   color: var(--text-3);
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   background: var(--surface);
 }
 
 .habits-grid-day-th {
-  padding: 0.25rem 0;
-  color: var(--text-4);
-  font-weight: 500;
+  padding: 0.3rem 0;
   background: var(--surface);
   overflow: hidden;
 }
-.habits-grid-day-th--today { color: var(--accent); font-weight: 700; }
 
-.habits-grid-dow { font-size: 0.6rem; color: var(--text-4); margin-top: 1px; }
+.habits-grid-daynum {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-3);
+  line-height: 1.2;
+}
+
+.habits-grid-dow {
+  font-size: 0.58rem;
+  color: var(--text-4);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.habits-grid-day-th--today .habits-grid-daynum { color: var(--accent); }
+.habits-grid-day-th--today .habits-grid-dow    { color: var(--accent); opacity: 0.7; }
+.habits-grid-day-th--weekend { background: rgba(255,255,255,0.025); }
 
 .habits-grid-pct-col {
   width: 38px;
-  padding: 0.3rem 0.25rem;
+  padding: 0.3rem 0.2rem;
   color: var(--text-3);
-  font-size: var(--font-xs);
-  font-weight: 600;
+  font-size: 0.65rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   background: var(--surface);
 }
 
+/* Filas */
+.habits-grid-row:nth-child(even) td { background-color: rgba(255,255,255,0.018); }
+
+.habits-grid-row:hover .habits-grid-habit-name { color: var(--text); }
+.habits-grid-row:hover .habits-grid-cell:not(.habits-grid-cell--done) { background: rgba(255,255,255,0.04); }
+
 .habits-grid-habit-name {
+  position: relative;
   text-align: left !important;
-  padding: 0.4rem 0.75rem;
+  padding: 0 0.5rem 0 0.75rem;
+  height: 32px;
   color: var(--text-2);
   font-weight: 500;
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+/* Contenido flex dentro de la celda de nombre */
+.habits-grid-habit-name { display: flex; align-items: center; gap: 0.3rem; }
+
+.habits-name-text {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: var(--surface);
-  cursor: pointer;
 }
-.habits-grid-habit-name:hover { color: var(--text); }
 
-.habits-grid-goal { color: var(--text-4); font-size: 0.7rem; font-weight: 400; }
+.habits-grid-goal {
+  color: var(--text-4);
+  font-size: 0.68rem;
+  font-weight: 400;
+  flex-shrink: 0;
+}
 
+.habits-edit-btn {
+  opacity: 0;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: opacity 0.12s;
+}
+.habits-grid-row:hover .habits-edit-btn { opacity: 1; }
+
+/* Celdas de días */
 .habits-grid-cell {
-  height: 28px;
+  height: 32px;
   cursor: pointer;
   transition: background 0.1s;
   vertical-align: middle;
 }
-.habits-grid-cell:hover { background: var(--surface-2); }
-.habits-grid-cell--done { background: var(--accent-subtle); }
-.habits-grid-cell--today { outline: 1px solid var(--accent); outline-offset: -1px; }
 
-.habits-check { color: var(--accent); font-size: 0.75rem; font-weight: 700; user-select: none; }
+.habits-grid-cell--weekend { background: rgba(255,255,255,0.025); }
+.habits-grid-cell--done    { background: var(--accent-subtle); }
+.habits-grid-cell--today   { box-shadow: inset 0 0 0 1px var(--accent); }
 
-.habits-grid-pct {
-  padding: 0.4rem 0.5rem;
-  color: var(--text-3);
-  font-weight: 600;
-  background: var(--surface);
+.habits-grid-cell--done.habits-grid-cell--today {
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
+
+/* Círculo de completado */
+.habits-check {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 0 auto;
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+/* Stats */
+.habits-grid-pct {
+  padding: 0 0.3rem;
+  height: 32px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--surface);
+  vertical-align: middle;
+}
+.habits-grid-pct--good { color: #4ade80; }
+.habits-grid-pct--mid  { color: #fbbf24; }
+.habits-grid-pct--low  { color: var(--text-4); }
 
 /* ── Settings ────────────────────────────────────── */
 

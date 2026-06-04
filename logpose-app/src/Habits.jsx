@@ -271,40 +271,60 @@ export default function Habits() {
                 <tr>
                   <th className="habits-grid-label-col">Habit</th>
                   {Array.from({ length: days }, (_, i) => {
-                    const ds  = toDateStr(year, month, i + 1)
-                    const dow = new Date(year, month, i + 1).toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 1).toUpperCase()
+                    const ds    = toDateStr(year, month, i + 1)
+                    const d     = new Date(year, month, i + 1)
+                    const dow   = (d.getDay() + 6) % 7
+                    const isWkd = dow === 5 || dow === 6
+                    const letter = d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 1).toUpperCase()
                     return (
-                      <th key={i} className={`habits-grid-day-th${ds === todayStr ? ' habits-grid-day-th--today' : ''}`}>
-                        <div>{i + 1}</div>
-                        <div className="habits-grid-dow">{dow}</div>
+                      <th key={i} className={[
+                        'habits-grid-day-th',
+                        ds === todayStr ? 'habits-grid-day-th--today' : '',
+                        isWkd ? 'habits-grid-day-th--weekend' : '',
+                      ].filter(Boolean).join(' ')}>
+                        <div className="habits-grid-daynum">{i + 1}</div>
+                        <div className="habits-grid-dow">{letter}</div>
                       </th>
                     )
                   })}
-                  <th className="habits-grid-pct-col">%</th>
+                  <th className="habits-grid-pct-col habits-grid-pct-col--sep">%</th>
                   <th className="habits-grid-pct-col">/{days}</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleHabits.map(habit => (
-                  <tr key={habit.id}>
-                    <td className="habits-grid-habit-name" onDoubleClick={() => openEditHabit(habit)} title="Double-click to edit">
-                      {habit.name}
-                      <span className="habits-grid-goal"> /{habit.goal}</span>
+                {visibleHabits.map(habit => {
+                  const p = pct(habit.id, habit.goal)
+                  const pctClass = p >= 80 ? 'habits-grid-pct--good' : p >= 50 ? 'habits-grid-pct--mid' : 'habits-grid-pct--low'
+                  return (
+                  <tr key={habit.id} className="habits-grid-row">
+                    <td className="habits-grid-habit-name">
+                      <span className="habits-name-text">{habit.name}</span>
+                      <span className="habits-grid-goal">/{habit.goal}</span>
+                      <button className="habits-edit-btn" onClick={e => { e.stopPropagation(); openEditHabit(habit) }}>✎</button>
                     </td>
                     {Array.from({ length: days }, (_, i) => {
-                      const done = isDone(habit.id, i + 1)
-                      const ds   = toDateStr(year, month, i + 1)
+                      const done  = isDone(habit.id, i + 1)
+                      const ds    = toDateStr(year, month, i + 1)
+                      const dow   = (new Date(year, month, i + 1).getDay() + 6) % 7
+                      const isWkd = dow === 5 || dow === 6
                       return (
-                        <td key={i} className={`habits-grid-cell${done ? ' habits-grid-cell--done' : ''}${ds === todayStr ? ' habits-grid-cell--today' : ''}`}
+                        <td key={i}
+                          className={[
+                            'habits-grid-cell',
+                            done   ? 'habits-grid-cell--done'    : '',
+                            ds === todayStr ? 'habits-grid-cell--today' : '',
+                            isWkd  ? 'habits-grid-cell--weekend' : '',
+                          ].filter(Boolean).join(' ')}
                           onClick={() => handleToggle(habit.id, i + 1)}>
-                          {done && <span className="habits-check">✓</span>}
+                          {done && <div className="habits-check" />}
                         </td>
                       )
                     })}
-                    <td className="habits-grid-pct">{pct(habit.id, habit.goal)}%</td>
-                    <td className="habits-grid-pct">{completedDays(habit.id)}</td>
+                    <td className={`habits-grid-pct habits-grid-pct--sep ${pctClass}`}>{p}%</td>
+                    <td className={`habits-grid-pct ${pctClass}`}>{completedDays(habit.id)}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
