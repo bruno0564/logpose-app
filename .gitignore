@@ -25,3 +25,6 @@ build/
 # IDEs
 .idea/
 .vscode/
+
+# gstack QA artifacts
+.gstack/
