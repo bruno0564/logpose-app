@@ -4,12 +4,13 @@
 
 // Contorno duro de los títulos (el text-shadow del desktop cuphead).
 // Devuelve {} en modo normal para no tocar el render no-cartoon.
+// OJO: en Android textShadowRadius:0 NO se pinta — necesita un radio mínimo.
 export function titleShadow(t) {
   if (!t.cartoon) return {}
   return {
     textShadowColor:  t.cardBorderColor,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
+    textShadowOffset: { width: 2.5, height: 2.5 },
+    textShadowRadius: 1,
   }
 }
 
