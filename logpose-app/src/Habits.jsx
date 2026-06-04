@@ -46,15 +46,19 @@ export default function Habits() {
   const todayStr = toDateStr(now.getFullYear(), now.getMonth(), now.getDate())
 
   const load = useCallback(async () => {
-    const [cats, habs, ls] = await Promise.all([
-      getHabitCategories(),
-      getHabits(),
-      getHabitLogs(monthStr),
-    ])
-    setCategories(cats)
-    setHabits(habs)
-    setLogs(ls)
-    if (cats.length > 0) setActiveCatId(id => id ?? cats[0].id)
+    try {
+      const [cats, habs, ls] = await Promise.all([
+        getHabitCategories(),
+        getHabits(),
+        getHabitLogs(monthStr),
+      ])
+      setCategories(cats)
+      setHabits(habs)
+      setLogs(ls)
+      if (cats.length > 0) setActiveCatId(id => id ?? cats[0].id)
+    } catch (err) {
+      console.error('Habits load error:', err)
+    }
   }, [monthStr])
 
   const sync = useCallback(async () => {
@@ -226,7 +230,7 @@ export default function Habits() {
     return logs.filter(l => {
       if (l.local_habit_id !== habitId || l.pending_delete) return false
       const [, , dd] = l.date.split('-').map(Number)
-      return dow.includes((new Date(year, month - 1, dd).getDay() + 6) % 7)
+      return dow.includes((new Date(year, month, dd).getDay() + 6) % 7)
     }).length
   }
   function pct(habitId, habit) {
@@ -327,7 +331,7 @@ export default function Habits() {
               </thead>
               <tbody>
                 {visibleHabits.map(habit => {
-                  const p = pct(habit.id, habit.goal)
+                  const p = pct(habit.id, habit)
                   const pctClass = p >= 80 ? 'habits-grid-pct--good' : p >= 50 ? 'habits-grid-pct--mid' : 'habits-grid-pct--low'
                   return (
                   <tr key={habit.id} className="habits-grid-row">
