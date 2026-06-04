@@ -335,3 +335,69 @@ export async function putJournalEntryToServer(serverId, entry) {
 export async function deleteJournalEntryFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/journal/${serverId}`, { method: 'DELETE' })
 }
+
+// ── Habits ────────────────────────────────────────────────────────────────────
+
+export async function fetchAllHabitCategoriesFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/habits/categories`)
+  return res.json()
+}
+export async function postHabitCategoryToServer(cat) {
+  const res = await fetchWithTimeout(`${SERVER}/habits/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: cat.name, color: cat.color }),
+  })
+  return res.json()
+}
+export async function putHabitCategoryToServer(serverId, cat) {
+  const res = await fetchWithTimeout(`${SERVER}/habits/categories/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: cat.name, color: cat.color }),
+  })
+  return res.json()
+}
+export async function deleteHabitCategoryFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/habits/categories/${serverId}`, { method: 'DELETE' })
+}
+
+export async function fetchAllHabitsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/habits/`)
+  return res.json()
+}
+export async function postHabitToServer(habit, categoryServerId) {
+  const res = await fetchWithTimeout(`${SERVER}/habits/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category_id: categoryServerId, name: habit.name, days_of_week: habit.days_of_week, position: habit.position }),
+  })
+  return res.json()
+}
+export async function putHabitToServer(serverId, habit) {
+  const res = await fetchWithTimeout(`${SERVER}/habits/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: habit.name, days_of_week: habit.days_of_week, position: habit.position }),
+  })
+  return res.json()
+}
+export async function deleteHabitFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/habits/${serverId}`, { method: 'DELETE' })
+}
+
+export async function fetchHabitLogsFromServer(month) {
+  const res = await fetchWithTimeout(`${SERVER}/habits/logs?month=${month}`)
+  return res.json()
+}
+export async function postHabitLogToServer(log, habitServerId) {
+  const res = await fetchWithTimeout(`${SERVER}/habits/logs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ habit_id: habitServerId, date: log.date }),
+  })
+  return res.json()
+}
+export async function deleteHabitLogFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/habits/logs/${serverId}`, { method: 'DELETE' })
+}

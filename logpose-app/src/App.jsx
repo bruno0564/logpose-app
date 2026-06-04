@@ -6,23 +6,25 @@ import Calendar from './Calendar.jsx'
 import Tasks from './Tasks.jsx'
 import Quotes from './Quotes.jsx'
 import Journal from './Journal.jsx'
+import Habits from './Habits.jsx'
 import Settings from './Settings.jsx'
 import { LangProvider, useLang } from './LangContext.jsx'
 import {
   IconHome, IconWeight, IconGym, IconCalendar,
-  IconList, IconQuote, IconJournal, IconSettings,
+  IconList, IconQuote, IconJournal, IconHabit, IconSettings,
 } from './Icons.jsx'
 import { ToastProvider } from './Toast.jsx'
 
 const API = 'http://localhost:8000'
 
-const NAV_IDS = ['home', 'body-weight', 'gym', 'calendar', 'todo', 'quotes', 'journal']
+const NAV_IDS = ['home', 'body-weight', 'gym', 'calendar', 'habits', 'todo', 'quotes', 'journal']
 
 const NAV_ICONS = {
   'home':        <IconHome />,
   'body-weight': <IconWeight />,
   'gym':         <IconGym />,
   'calendar':    <IconCalendar />,
+  'habits':      <IconHabit />,
   'todo':        <IconList />,
   'quotes':      <IconQuote />,
   'journal':     <IconJournal />,
@@ -36,6 +38,7 @@ function Sidebar({ active, onNav, online }) {
     'body-weight': tr('nav.weight'),
     'gym':         tr('nav.gym'),
     'calendar':    tr('nav.calendar'),
+    'habits':      'Habits',
     'todo':        tr('nav.todo'),
     'quotes':      tr('nav.quotes'),
     'journal':     tr('nav.journal'),
@@ -119,6 +122,7 @@ function AppContent() {
         {page === 'body-weight' && <BodyWeight />}
         {page === 'gym'         && <Gym />}
         {page === 'calendar'    && <Calendar />}
+        {page === 'habits'      && <Habits />}
         {page === 'todo'        && <Tasks />}
         {page === 'quotes'      && <Quotes />}
         {page === 'journal'     && <Journal />}

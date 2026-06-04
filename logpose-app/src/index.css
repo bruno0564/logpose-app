@@ -1149,6 +1149,230 @@ body {
   -webkit-box-orient: vertical;
 }
 
+/* ── Habits ──────────────────────────────────────── */
+
+.habits-page { max-width: 100%; }
+
+.habits-cat-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+
+.habits-cat-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 1.1rem;
+  color: var(--text-3);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.habits-cat-tab:hover { color: var(--text-2); }
+.habits-cat-tab--active { font-weight: 600; }
+
+.habits-cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.habits-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.habits-month-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 160px;
+  text-align: center;
+}
+
+.habits-rate {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+}
+.habits-rate--good { background: #14532d22; color: #4ade80; }
+.habits-rate--mid  { background: #78350f22; color: #fbbf24; }
+.habits-rate--bad  { background: var(--danger-subtle); color: var(--danger-text); }
+
+.habits-grid-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.habits-grid {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 0.78rem;
+}
+
+/* Solo líneas horizontales — sin cuadrícula vertical entre días */
+.habits-grid th, .habits-grid td {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+/* Separadores: siempre en columnas de días (misma clase en th y td → alineación perfecta) */
+.habits-grid-day--first { border-left:  1px solid var(--border); }
+.habits-grid-day--last  { border-right: 1px solid var(--border); }
+
+/* Cabecera */
+.habits-grid-label-col {
+  width: 150px;
+  text-align: left !important;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-3);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  background: var(--surface);
+}
+
+.habits-grid-day-th {
+  padding: 0.3rem 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.habits-grid-daynum {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-3);
+  line-height: 1.2;
+}
+
+.habits-grid-dow {
+  font-size: 0.58rem;
+  color: var(--text-4);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.habits-grid-day-th--today .habits-grid-daynum { color: var(--accent); }
+.habits-grid-day-th--today .habits-grid-dow    { color: var(--accent); opacity: 0.7; }
+.habits-grid-day-th--weekend { background: rgba(255,255,255,0.025); }
+
+.habits-grid-pct-col {
+  width: 38px;
+  padding: 0.3rem 0.2rem;
+  color: var(--text-3);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--surface);
+}
+
+/* Filas */
+.habits-grid-row:nth-child(even) td { background-color: rgba(255,255,255,0.018); }
+
+.habits-grid-row:hover .habits-grid-habit-name { color: var(--text); }
+.habits-grid-row:hover .habits-grid-cell:not(.habits-grid-cell--done) { background: rgba(255,255,255,0.04); }
+
+.habits-grid-habit-name {
+  position: relative;
+  text-align: left !important;
+  padding: 0 0.5rem 0 0.75rem;
+  height: 32px;
+  color: var(--text-2);
+  font-weight: 500;
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+/* Contenido flex dentro de la celda de nombre */
+.habits-grid-habit-name { display: flex; align-items: center; gap: 0.3rem; }
+
+.habits-name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.habits-grid-goal {
+  color: var(--text-4);
+  font-size: 0.68rem;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+.habits-edit-btn {
+  opacity: 0;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: opacity 0.12s;
+}
+.habits-grid-row:hover .habits-edit-btn { opacity: 1; }
+
+/* Celdas de días */
+.habits-grid-cell {
+  height: 32px;
+  cursor: pointer;
+  transition: background 0.1s;
+  vertical-align: middle;
+}
+
+.habits-grid-cell--weekend { background: rgba(255,255,255,0.025); }
+.habits-grid-cell--skip    { background: rgba(0,0,0,0.12); cursor: default; pointer-events: none; }
+.habits-grid-cell--done    { background: var(--accent-subtle); }
+.habits-grid-cell--today   { box-shadow: inset 0 0 0 1px var(--accent); }
+.habits-grid-cell--future  { cursor: default; opacity: 0.35; pointer-events: none; }
+.habits-grid-day-th--future .habits-grid-daynum,
+.habits-grid-day-th--future .habits-grid-dow { opacity: 0.35; }
+
+.habits-grid-cell--done.habits-grid-cell--today {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Círculo de completado */
+.habits-check {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 0 auto;
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+/* Stats */
+.habits-grid-pct {
+  padding: 0 0.3rem;
+  height: 32px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--surface);
+  vertical-align: middle;
+}
+.habits-grid-pct--good { color: #4ade80; }
+.habits-grid-pct--mid  { color: #fbbf24; }
+.habits-grid-pct--low  { color: var(--text-4); }
+
 /* ── Settings ────────────────────────────────────── */
 
 .settings-page {
