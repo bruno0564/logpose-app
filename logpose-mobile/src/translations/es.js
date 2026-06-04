@@ -220,8 +220,5 @@ export default {
     addHabit: '+ Hábito',
     addCategory: '+ Categoría',
     atLeastOneDay: 'Selecciona al menos un día',
-    onFire: 'EN RACHA 🔥',
-    keepGoing: 'SIGUE ASÍ',
-    needsWork: 'MEJORABLE',
   },
 }

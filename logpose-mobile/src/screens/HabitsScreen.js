@@ -142,7 +142,9 @@ export default function HabitsScreen() {
         if (localHabitId) await upsertHabitLogFromServer(l, localHabitId)
       }
       await pruneStaleHabitLogs(new Set(serverLogs.map(l => l.id)))
-    } catch {}
+    } catch (e) {
+      console.warn('habits sync failed:', e)
+    }
     finally { syncingHabits = false; await load() }
   }, [load, monthStr])
 
@@ -309,9 +311,12 @@ export default function HabitsScreen() {
           const pctColor = p >= 80 ? '#4ade80' : p >= 50 ? '#fbbf24' : t.text4
           return (
             <View key={habit.id} style={[s.gridRow, idx % 2 === 1 && s.rowAlt]}>
-              <TouchableOpacity style={s.nameCol} onLongPress={() => openEditHabit(habit)} activeOpacity={0.7}>
+              <View style={s.nameCol}>
                 <Text style={s.habitName} numberOfLines={1}>{habit.name}</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={s.editBtn} onPress={() => openEditHabit(habit)} hitSlop={8}>
+                  <Text style={s.editBtnText}>✎</Text>
+                </TouchableOpacity>
+              </View>
               {dayList.map(d => renderDayCell(habit, d, cellW))}
               <View style={[s.pctCol, s.pctSep]}>
                 <Text style={[s.pctText, { color: pctColor }]}>{p}%</Text>
@@ -557,11 +562,14 @@ function makeStyles(t) {
     gridRow:    { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.border },
     rowAlt:     { backgroundColor: 'rgba(255,255,255,0.02)' },
     nameCol: {
-      width: NAME_W, height: CELL_H, paddingHorizontal: 10, justifyContent: 'center',
+      width: NAME_W, height: CELL_H, paddingLeft: 10, paddingRight: 4,
+      flexDirection: 'row', alignItems: 'center', gap: 2,
       borderRightWidth: 2, borderRightColor: t.text3, backgroundColor: t.surface,
     },
     headerText: { fontSize: 9, fontWeight: '700', color: t.text3, textTransform: 'uppercase', letterSpacing: 0.5 },
-    habitName:  { fontSize: 12, fontWeight: '500', color: t.text2 },
+    habitName:  { flex: 1, fontSize: 12, fontWeight: '500', color: t.text2 },
+    editBtn:    { paddingHorizontal: 3, paddingVertical: 2 },
+    editBtnText:{ fontSize: 12, color: t.accent },
     dayCol: {
       height: CELL_H, alignItems: 'center', justifyContent: 'center',
       borderRightWidth: 1, borderRightColor: t.border2, backgroundColor: t.surface,

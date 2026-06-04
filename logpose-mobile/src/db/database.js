@@ -168,6 +168,12 @@ export async function openDB() {
     );
   `)
 
+  // Red de seguridad: como mucho un log ACTIVO por (hábito, día).
+  // Índice parcial → permite filas en cola de borrado (pending_delete=1).
+  try {
+    await db.runAsync('CREATE UNIQUE INDEX IF NOT EXISTS uq_habit_log_active ON habit_logs(local_habit_id, date) WHERE pending_delete = 0')
+  } catch {}
+
   return db
 }
 

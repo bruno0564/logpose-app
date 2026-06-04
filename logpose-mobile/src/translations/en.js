@@ -223,8 +223,5 @@ export default {
     addHabit: '+ Habit',
     addCategory: '+ Category',
     atLeastOneDay: 'Select at least one day',
-    onFire: 'ON FIRE 🔥',
-    keepGoing: 'KEEP GOING',
-    needsWork: 'NEEDS WORK',
   },
 }

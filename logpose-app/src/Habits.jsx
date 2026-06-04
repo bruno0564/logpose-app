@@ -117,7 +117,9 @@ export default function Habits() {
         if (localHabitId) await upsertHabitLogFromServer(l, localHabitId)
       }
       await pruneStaleHabitLogs(new Set(serverLogs.map(l => l.id)))
-    } catch {}
+    } catch (e) {
+      console.warn('habits sync failed:', e)
+    }
     finally {
       syncingHabits = false
       await load()
