@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
-import FadeInView from '../components/FadeInView'
+import CartoonCard from '../components/CartoonCard'
+import CartoonEntrance from '../components/CartoonEntrance'
+import { titleShadow } from '../cartoonStyles'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
   markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote, pruneStaleQuotes,
@@ -73,21 +75,25 @@ export default function HomeScreen() {
   )
 
   return (
-    <FadeInView style={s.container}>
+    <View style={s.container}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={s.content}>
-        <View style={s.header}>
-          <Text style={s.greeting}>{greeting()}</Text>
-          <Text style={s.date}>{formatDate()}</Text>
-        </View>
+        <CartoonEntrance index={0} type="drop">
+          <View style={s.header}>
+            <Text style={s.greeting}>{greeting()}</Text>
+            <Text style={s.date}>{formatDate()}</Text>
+          </View>
+        </CartoonEntrance>
 
         {current && (
-          <View style={s.quoteCard}>
-            <Text style={s.quoteText}>"{current.text}"</Text>
-            {current.author && <Text style={s.quoteAuthor}>— {current.author}</Text>}
-          </View>
+          <CartoonEntrance index={1} type="pop">
+            <CartoonCard style={s.quoteCard} radius={t.cartoon ? 14 : 16}>
+              <Text style={s.quoteText}>"{current.text}"</Text>
+              {current.author && <Text style={s.quoteAuthor}>— {current.author}</Text>}
+            </CartoonCard>
+          </CartoonEntrance>
         )}
       </ScrollView>
-    </FadeInView>
+    </View>
   )
 }
 
@@ -95,9 +101,9 @@ const makeStyles = (t) => StyleSheet.create({
   container:   { flex: 1, backgroundColor: t.bg },
   content:     { padding: 20, paddingTop: 20, paddingBottom: 40 },
   header:      { marginBottom: 28 },
-  greeting:    { color: t.cartoon ? t.accent : t.text, fontSize: 28, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none' },
+  greeting:    { color: t.cartoon ? t.accent : t.text, fontSize: 28, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   date:        { color: t.text3, fontSize: 13, marginTop: 4, textTransform: 'capitalize' },
-  quoteCard:   { backgroundColor: t.surface, borderRadius: t.cartoon ? 14 : 16, padding: 24, marginBottom: 12, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...t.shadow },
+  quoteCard:   { backgroundColor: t.surface, padding: 24 },
   quoteText:   { color: t.text, fontSize: 17, fontStyle: t.cartoon ? 'normal' : 'italic', lineHeight: 28 },
   quoteAuthor: { color: t.text3, fontSize: 12, marginTop: 12, textAlign: 'right' },
 })

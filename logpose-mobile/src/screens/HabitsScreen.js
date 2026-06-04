@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import FadeInView from '../components/FadeInView'
+import CartoonEntrance from '../components/CartoonEntrance'
+import { titleShadow } from '../cartoonStyles'
 import {
   getHabitCategories, insertHabitCategory, updateHabitCategory, deleteLocalHabitCategory,
   getHabits, insertHabit, updateHabit, deleteLocalHabit,
@@ -427,9 +429,9 @@ export default function HabitsScreen() {
         {activeCat && visibleHabits.length > 0 && (
           viewMode === 'week'
             ? /* Vista 7 días — sin scroll horizontal, cabe en pantalla */
-              <View style={{ marginTop: 8 }}>
+              <CartoonEntrance type="drop" style={{ marginTop: 8 }}>
                 {renderGrid(weekDayNums, weekCellW)}
-              </View>
+              </CartoonEntrance>
             : /* Vista mes completo — scroll horizontal */
               <ScrollView horizontal showsHorizontalScrollIndicator style={{ marginTop: 8 }}>
                 {renderGrid(Array.from({ length: days }, (_, i) => i + 1), 32)}
@@ -525,7 +527,7 @@ function makeStyles(t) {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingHorizontal: 16, paddingBottom: 12,
     },
-    title:      { fontSize: 26, fontWeight: '700', color: t.text, fontFamily: t.fontTitle },
+    title:      { fontSize: 26, fontWeight: '700', color: t.cartoon ? t.accent : t.text, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
     tabsRow:    { marginBottom: 4 },
     catTab: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
