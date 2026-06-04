@@ -123,6 +123,7 @@ export default function Habits() {
   useEffect(() => { load().then(() => sync()) }, [monthStr])
 
   async function handleToggle(habitId, day) {
+    if (toDateStr(year, month, day) > todayStr) return
     await toggleHabitLog(habitId, toDateStr(year, month, day))
     await load()
     sync()
@@ -271,16 +272,18 @@ export default function Habits() {
                 <tr>
                   <th className="habits-grid-label-col">Habit</th>
                   {Array.from({ length: days }, (_, i) => {
-                    const ds    = toDateStr(year, month, i + 1)
-                    const d     = new Date(year, month, i + 1)
-                    const dow   = (d.getDay() + 6) % 7
-                    const isWkd = dow === 5 || dow === 6
-                    const letter = d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 1).toUpperCase()
+                    const ds      = toDateStr(year, month, i + 1)
+                    const d       = new Date(year, month, i + 1)
+                    const dow     = (d.getDay() + 6) % 7
+                    const isWkd   = dow === 5 || dow === 6
+                    const isFuture = ds > todayStr
+                    const letter  = d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 1).toUpperCase()
                     return (
                       <th key={i} className={[
                         'habits-grid-day-th',
-                        ds === todayStr ? 'habits-grid-day-th--today' : '',
-                        isWkd ? 'habits-grid-day-th--weekend' : '',
+                        ds === todayStr ? 'habits-grid-day-th--today'   : '',
+                        isWkd   ? 'habits-grid-day-th--weekend' : '',
+                        isFuture ? 'habits-grid-day-th--future'  : '',
                       ].filter(Boolean).join(' ')}>
                         <div className="habits-grid-daynum">{i + 1}</div>
                         <div className="habits-grid-dow">{letter}</div>
@@ -303,17 +306,19 @@ export default function Habits() {
                       <button className="habits-edit-btn" onClick={e => { e.stopPropagation(); openEditHabit(habit) }}>✎</button>
                     </td>
                     {Array.from({ length: days }, (_, i) => {
-                      const done  = isDone(habit.id, i + 1)
-                      const ds    = toDateStr(year, month, i + 1)
-                      const dow   = (new Date(year, month, i + 1).getDay() + 6) % 7
-                      const isWkd = dow === 5 || dow === 6
+                      const done    = isDone(habit.id, i + 1)
+                      const ds      = toDateStr(year, month, i + 1)
+                      const dow     = (new Date(year, month, i + 1).getDay() + 6) % 7
+                      const isWkd   = dow === 5 || dow === 6
+                      const isFuture = ds > todayStr
                       return (
                         <td key={i}
                           className={[
                             'habits-grid-cell',
-                            done   ? 'habits-grid-cell--done'    : '',
+                            done      ? 'habits-grid-cell--done'    : '',
                             ds === todayStr ? 'habits-grid-cell--today' : '',
-                            isWkd  ? 'habits-grid-cell--weekend' : '',
+                            isWkd     ? 'habits-grid-cell--weekend' : '',
+                            isFuture  ? 'habits-grid-cell--future'  : '',
                           ].filter(Boolean).join(' ')}
                           onClick={() => handleToggle(habit.id, i + 1)}>
                           {done && <div className="habits-check" />}

@@ -1344,6 +1344,9 @@ body {
 .habits-grid-cell--weekend { background: rgba(255,255,255,0.025); }
 .habits-grid-cell--done    { background: var(--accent-subtle); }
 .habits-grid-cell--today   { box-shadow: inset 0 0 0 1px var(--accent); }
+.habits-grid-cell--future  { cursor: default; opacity: 0.35; pointer-events: none; }
+.habits-grid-day-th--future .habits-grid-daynum,
+.habits-grid-day-th--future .habits-grid-dow { opacity: 0.35; }
 
 .habits-grid-cell--done.habits-grid-cell--today {
   box-shadow: inset 0 0 0 1px var(--accent);
