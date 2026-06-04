@@ -142,11 +142,13 @@ export async function openDB() {
     server_id            INTEGER,
     local_category_id    INTEGER NOT NULL REFERENCES habit_categories(id),
     name                 TEXT    NOT NULL,
-    goal                 INTEGER NOT NULL DEFAULT 30,
+    days_of_week         TEXT    NOT NULL DEFAULT '0,1,2,3,4,5,6',
     position             INTEGER NOT NULL DEFAULT 0,
     synced               INTEGER NOT NULL DEFAULT 0,
     pending_delete       INTEGER NOT NULL DEFAULT 0
   )`)
+  try { await instance.execute("ALTER TABLE habits ADD COLUMN days_of_week TEXT NOT NULL DEFAULT '0,1,2,3,4,5,6'") } catch {}
+  try { await instance.execute('ALTER TABLE habits DROP COLUMN goal') } catch {}
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS habit_logs (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1228,16 +1230,16 @@ export async function getHabits() {
 export async function insertHabit(data) {
   const db = await openDB()
   await db.execute(
-    'INSERT INTO habits (local_category_id, name, goal, position, synced) VALUES (?, ?, ?, ?, 0)',
-    [data.local_category_id, data.name, data.goal, data.position ?? 0]
+    'INSERT INTO habits (local_category_id, name, days_of_week, position, synced) VALUES (?, ?, ?, ?, 0)',
+    [data.local_category_id, data.name, data.days_of_week ?? '0,1,2,3,4,5,6', data.position ?? 0]
   )
 }
 
 export async function updateHabit(id, data) {
   const db = await openDB()
   await db.execute(
-    'UPDATE habits SET name = ?, goal = ?, position = ?, synced = 0 WHERE id = ?',
-    [data.name, data.goal, data.position ?? 0, id]
+    'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 0 WHERE id = ?',
+    [data.name, data.days_of_week ?? '0,1,2,3,4,5,6', data.position ?? 0, id]
   )
 }
 
@@ -1345,13 +1347,13 @@ export async function upsertHabitFromServer(habit, localCategoryId) {
   const rows = await db.select('SELECT * FROM habits WHERE server_id = ?', [habit.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE habits SET name = ?, goal = ?, position = ?, synced = 1 WHERE server_id = ?',
-      [habit.name, habit.goal, habit.position, habit.id]
+      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1 WHERE server_id = ?',
+      [habit.name, habit.days_of_week, habit.position, habit.id]
     )
   } else {
     await db.execute(
-      'INSERT INTO habits (server_id, local_category_id, name, goal, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
-      [habit.id, localCategoryId, habit.name, habit.goal, habit.position]
+      'INSERT INTO habits (server_id, local_category_id, name, days_of_week, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
+      [habit.id, localCategoryId, habit.name, habit.days_of_week, habit.position]
     )
   }
 }

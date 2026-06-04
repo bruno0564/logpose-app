@@ -370,7 +370,7 @@ export async function postHabitToServer(habit, categoryServerId) {
   const res = await fetchWithTimeout(`${SERVER}/habits/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ category_id: categoryServerId, name: habit.name, goal: habit.goal, position: habit.position }),
+    body: JSON.stringify({ category_id: categoryServerId, name: habit.name, days_of_week: habit.days_of_week, position: habit.position }),
   })
   return res.json()
 }
@@ -378,7 +378,7 @@ export async function putHabitToServer(serverId, habit) {
   const res = await fetchWithTimeout(`${SERVER}/habits/${serverId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: habit.name, goal: habit.goal, position: habit.position }),
+    body: JSON.stringify({ name: habit.name, days_of_week: habit.days_of_week, position: habit.position }),
   })
   return res.json()
 }
