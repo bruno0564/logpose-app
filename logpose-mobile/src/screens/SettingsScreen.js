@@ -5,7 +5,7 @@ import TextInput from '../components/TextInput'
 import PressableScale from '../components/PressableScale'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
-import { getServerUrl, updateServerUrl } from '../api/client'
+import { getServerUrl, updateServerUrl, pingServer } from '../api/client'
 import { exportAllData } from '../db/database'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
@@ -24,6 +24,7 @@ export default function SettingsScreen() {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [testState, setTestState] = useState('idle')   // idle | testing | ok | fail
 
   useEffect(() => {
     setUrlDisplay(getServerUrl())
@@ -31,7 +32,14 @@ export default function SettingsScreen() {
 
   function openEdit() {
     setDraft(urlDisplay)
+    setTestState('idle')
     setEditing(true)
+  }
+
+  async function handleTest() {
+    setTestState('testing')
+    const ok = await pingServer(editing ? draft : urlDisplay)
+    setTestState(ok ? 'ok' : 'fail')
   }
 
   async function saveUrl() {
@@ -165,6 +173,15 @@ export default function SettingsScreen() {
               <Text style={s.urlEditHint}>✎</Text>
             </PressableScale>
           )}
+          <View style={s.testRow}>
+            <PressableScale style={s.testBtn} onPress={handleTest} disabled={testState === 'testing'}>
+              <Text style={s.testBtnText}>
+                {testState === 'testing' ? tr('settings.testing') : tr('settings.testConnection')}
+              </Text>
+            </PressableScale>
+            {testState === 'ok'   && <Text style={[s.testResult, { color: t.success }]}>✓ {tr('settings.testOk')}</Text>}
+            {testState === 'fail' && <Text style={[s.testResult, { color: t.danger }]}>✕ {tr('settings.testFail')}</Text>}
+          </View>
         </View>
 
         <View style={s.divider} />
@@ -212,6 +229,10 @@ const makeStyles = (t) => StyleSheet.create({
   styleCheck:      { position: 'absolute', top: 5, right: 6, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   styleCheckMark:  { fontSize: 10, fontWeight: '700' },
   urlDisplayRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, width: '100%', borderWidth: t.cartoon ? 2 : 1, borderColor: t.border2 },
+  testRow:         { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  testBtn:         { backgroundColor: t.surface2, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, borderWidth: t.cartoon ? 2 : 1, borderColor: t.accent },
+  testBtnText:     { color: t.accent, fontWeight: '700', fontSize: 13 },
+  testResult:      { fontSize: 13, fontWeight: '700' },
   urlText:         { flex: 1, color: t.text2, fontSize: 13, fontFamily: 'DMSans_400Regular' },
   urlEditHint:     { color: t.text3, fontSize: 16 },
   urlEditRow:      { width: '100%', gap: 8 },
