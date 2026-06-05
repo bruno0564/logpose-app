@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList,
+  View, TouchableOpacity, FlatList,
   StyleSheet, Modal, Keyboard,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import { Ionicons } from '@expo/vector-icons'

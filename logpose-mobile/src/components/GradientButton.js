@@ -1,4 +1,5 @@
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native'
+import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import Text from './Text'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../ThemeContext'
 

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, StyleSheet, ScrollView } from 'react-native'
+import Text from '../components/Text'
 import CartoonCard from '../components/CartoonCard'
 import CartoonEntrance from '../components/CartoonEntrance'
 import { titleShadow } from '../cartoonStyles'

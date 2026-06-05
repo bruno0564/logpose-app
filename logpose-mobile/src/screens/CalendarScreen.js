@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, TouchableOpacity, ScrollView, Modal,
-  TextInput, StyleSheet,
+  View, TouchableOpacity, ScrollView, Modal,
+  StyleSheet,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import DateTimePicker from '@react-native-community/datetimepicker'

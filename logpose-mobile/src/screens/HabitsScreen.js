@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput,
+  View, ScrollView, TouchableOpacity,
   Modal, StyleSheet, Alert, useWindowDimensions,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
 import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../ThemeContext'

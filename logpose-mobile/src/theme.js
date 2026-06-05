@@ -1,27 +1,30 @@
+// Tema "Bitácora / Instrumento": neutros tinta azul-verde, acento latón (la aguja
+// de la brújula), teal náutico como secundario. Identidad propia, no plantilla.
 export const darkTheme = {
-  bg:             '#0a0a0a',
-  surface:        '#111111',
-  surface2:       '#1a1a1a',
-  inputBg:        '#181818',
-  border:         '#1e1e1e',
-  border2:        '#2a2a2a',
-  accent:         '#818cf8',
-  accentSecond:   '#c084fc',
-  accentGradient: ['#818cf8', '#c084fc'],
-  accentLight:    'rgba(129,140,248,0.12)',
-  text:           '#f0f0f0',
-  text2:          '#888888',
-  text3:          '#444444',
-  text4:          '#2e2e2e',
-  danger:         '#ef4444',
-  dangerBg:       '#7f1d1d',
-  dangerText:     '#fca5a5',
-  success:        '#22c55e',
+  bg:             '#0b1519',
+  surface:        '#10212a',
+  surface2:       '#162c36',
+  inputBg:        '#13262f',
+  border:         '#1d3540',
+  border2:        '#244350',
+  accent:         '#d9a441',   // latón / dorado apagado
+  accentSecond:   '#3a9d92',   // teal náutico
+  accentGradient: ['#d9a441', '#3a9d92'],
+  accentLight:    'rgba(217,164,65,0.14)',
+  text:           '#eaf0ec',
+  text2:          '#9fb0ab',
+  text3:          '#5e726f',
+  text4:          '#2b3d43',
+  danger:         '#e5544b',
+  dangerBg:       '#5e1f1b',
+  dangerText:     '#f3a39c',
+  success:        '#46b08a',
   // Cartoon-aware (estilo normal: sin tratamiento cartoon)
   cartoon:        false,
-  fontTitle:      undefined,
+  fontTitle:      'Fraunces_600SemiBold',   // serif con carácter (titulares / números hero)
+  fontBody:       { regular: 'DMSans_400Regular', medium: 'DMSans_500Medium', bold: 'DMSans_700Bold' },
   cardBorderWidth: 1,
-  cardBorderColor: '#1e1e1e',
+  cardBorderColor: '#1d3540',
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -31,31 +34,34 @@ export const darkTheme = {
   },
 }
 
+// Variante clara de "Bitácora": fondo carta náutica (cálido suave, no blanco
+// clínico), tinta navy para el texto, latón más hondo para contraste.
 export const lightTheme = {
-  bg:             '#f8f8f8',
-  surface:        '#ffffff',
-  surface2:       '#f0f0f0',
-  inputBg:        '#f5f5f5',
-  border:         '#e0e0e0',
-  border2:        '#d0d0d0',
-  accent:         '#818cf8',
-  accentSecond:   '#c084fc',
-  accentGradient: ['#818cf8', '#c084fc'],
-  accentLight:    'rgba(129,140,248,0.10)',
-  text:           '#111111',
-  text2:          '#555555',
-  text3:          '#999999',
-  text4:          '#cccccc',
-  danger:         '#ef4444',
-  dangerBg:       '#fee2e2',
-  dangerText:     '#991b1b',
-  success:        '#22c55e',
+  bg:             '#f4efe4',
+  surface:        '#fbf8f1',
+  surface2:       '#f1ece0',
+  inputBg:        '#f7f2e8',
+  border:         '#e3dccb',
+  border2:        '#d8cfb8',
+  accent:         '#b07a1c',   // latón más hondo (contraste sobre claro)
+  accentSecond:   '#2f7d74',   // teal náutico
+  accentGradient: ['#b07a1c', '#2f7d74'],
+  accentLight:    'rgba(176,122,28,0.12)',
+  text:           '#13242c',   // tinta navy
+  text2:          '#4a5a5c',
+  text3:          '#8a8270',
+  text4:          '#d8cfb8',
+  danger:         '#c0392b',
+  dangerBg:       '#f6e0dc',
+  dangerText:     '#9a2a1e',
+  success:        '#2f7d5e',
   cartoon:        false,
-  fontTitle:      undefined,
+  fontTitle:      'Fraunces_600SemiBold',   // serif con carácter (titulares / números hero)
+  fontBody:       { regular: 'DMSans_400Regular', medium: 'DMSans_500Medium', bold: 'DMSans_700Bold' },
   cardBorderWidth: 1,
-  cardBorderColor: '#e0e0e0',
+  cardBorderColor: '#e3dccb',
   shadow: {
-    shadowColor: '#818cf8',
+    shadowColor: '#3a2f14',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -87,6 +93,7 @@ export const cupheadTheme = {
   // Cartoon-aware: bordes gruesos, fuente chunky y sombra dura desplazada
   cartoon:        true,
   fontTitle:      'LuckiestGuy',
+  fontBody:       { regular: 'LuckiestGuy', medium: 'LuckiestGuy', bold: 'LuckiestGuy' },
   cardBorderWidth: 3,
   cardBorderColor: '#180800',
   shadow: {

@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList,
+  View, TouchableOpacity, FlatList,
   StyleSheet, ActivityIndicator, ScrollView, Dimensions, Modal,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
 import GradientButton from '../components/GradientButton'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
