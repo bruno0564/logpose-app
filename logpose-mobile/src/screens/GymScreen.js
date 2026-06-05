@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import DateTimePicker from '@react-native-community/datetimepicker'
@@ -240,9 +241,9 @@ export default function GymScreen() {
       <View style={s.header}>
         <Text style={s.title}>{tr('gym.title')}</Text>
         {tab === 'routines' && (
-          <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
+          <PressableScale style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
             <Text style={s.btnPrimaryText}>{tr('gym.addRoutine')}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       </View>
 
@@ -523,13 +524,13 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
               <Text style={s.dayName}>{dayName}</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {dayExs.length > 0 && (
-                  <TouchableOpacity style={s.btnPrimary} onPress={() => onTrain(idx)}>
+                  <PressableScale style={s.btnPrimary} onPress={() => onTrain(idx)}>
                     <Text style={s.btnPrimaryText}>{tr('gym.trainBtn')}</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
-                <TouchableOpacity style={s.btnOutline} onPress={() => setPickerDay(idx)}>
+                <PressableScale style={s.btnOutline} onPress={() => setPickerDay(idx)}>
                   <Text style={s.btnOutlineText}>+</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </View>
 
@@ -733,9 +734,9 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                 ))}
               </View>
             )}
-            <TouchableOpacity style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
+            <PressableScale style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
               <Text style={s.btnPrimaryText}>{tr('gym.createAndAdd')}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>

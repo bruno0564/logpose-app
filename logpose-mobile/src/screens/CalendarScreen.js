@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import DateTimePicker from '@react-native-community/datetimepicker'
@@ -207,9 +208,9 @@ export default function CalendarScreen() {
             <Text style={s.dayTitle}>{dayName}</Text>
             <Text style={s.daySubtitle}>{daySubtitle}</Text>
           </View>
-          <TouchableOpacity style={s.addBtn} onPress={() => openCreate(dateStr)}>
+          <PressableScale style={s.addBtn} onPress={() => openCreate(dateStr)}>
             <Text style={s.addBtnText}>+</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {isGym && (
@@ -223,7 +224,7 @@ export default function CalendarScreen() {
             <Text style={s.emptyText}>{tr('calendar.noEvents')}</Text>
           ) : (
             dayEvents.map(ev => (
-              <TouchableOpacity key={ev.id} style={[s.eventCard, { borderLeftColor: ev.color || '#7c3aed' }]} onPress={() => openEdit(ev)}>
+              <PressableScale key={ev.id} style={[s.eventCard, { borderLeftColor: ev.color || '#7c3aed' }]} onPress={() => openEdit(ev)}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.eventTitle}>{ev.title}</Text>
                   {ev.start_time ? (
@@ -234,7 +235,7 @@ export default function CalendarScreen() {
                 <TouchableOpacity onPress={() => handleDelete(ev)} hitSlop={10}>
                   <Text style={s.deleteIcon}>×</Text>
                 </TouchableOpacity>
-              </TouchableOpacity>
+              </PressableScale>
             ))
           )}
         </ScrollView>
@@ -278,9 +279,9 @@ export default function CalendarScreen() {
     <FadeInView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{tr('calendar.title')}</Text>
-        <TouchableOpacity style={s.addBtn} onPress={() => openCreate(toDateStr(today))}>
+        <PressableScale style={s.addBtn} onPress={() => openCreate(toDateStr(today))}>
           <Text style={s.addBtnText}>+</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       <View style={s.card}>

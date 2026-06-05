@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { View, Switch, TouchableOpacity, StyleSheet, Share } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import { getServerUrl, updateServerUrl } from '../api/client'
@@ -159,10 +160,10 @@ export default function SettingsScreen() {
               </View>
             </View>
           ) : (
-            <TouchableOpacity style={s.urlDisplayRow} onPress={openEdit} activeOpacity={0.7}>
+            <PressableScale style={s.urlDisplayRow} onPress={openEdit}>
               <Text style={s.urlText} numberOfLines={1}>{urlDisplay}</Text>
               <Text style={s.urlEditHint}>✎</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
 
