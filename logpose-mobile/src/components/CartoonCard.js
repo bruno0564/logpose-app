@@ -11,16 +11,19 @@ import { useTheme } from '../ThemeContext'
  *
  * En modo normal (no cartoon) cae a la sombra nativa del tema (`t.shadow`).
  */
-export default function CartoonCard({ children, style, radius = 14, offset = 5 }) {
+export default function CartoonCard({ children, style, radius = 14, offset = 5, flat = false }) {
   const { theme: t } = useTheme()
 
   if (!t.cartoon) {
+    // `flat`: sin sombra de elevación. Útil cuando la card va dentro de un
+    // contenedor animado ajustado (la sombra de elevation se sale de los
+    // límites y la textura HW la recorta → parpadeo de esquinas al entrar).
     return (
       <View style={[style, {
         borderRadius: radius,
         borderWidth: t.cardBorderWidth,
         borderColor: t.cardBorderColor,
-      }, t.shadow]}>
+      }, !flat && t.shadow]}>
         {children}
       </View>
     )
