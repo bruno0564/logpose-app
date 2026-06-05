@@ -9,6 +9,7 @@ import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import FadeInView from '../components/FadeInView'
 import CartoonEntrance from '../components/CartoonEntrance'
+import HabitCheck from '../components/HabitCheck'
 import { titleShadow } from '../cartoonStyles'
 import {
   getHabitCategories, insertHabitCategory, updateHabitCategory, deleteLocalHabitCategory,
@@ -43,9 +44,10 @@ function parseDow(str) {
   return str ? str.split(',').map(Number).filter(n => !isNaN(n)) : [0, 1, 2, 3, 4, 5, 6]
 }
 
-const CELL_H  = 36
-const NAME_W  = 100
-const PCT_W   = 38
+const CELL_H      = 36
+const NAME_W      = 100
+const PCT_W       = 38
+const GRID_MARGIN = 14   // separación lateral de la tabla respecto a los bordes de pantalla
 
 export default function HabitsScreen() {
   const { theme: t } = useTheme()
@@ -53,8 +55,8 @@ export default function HabitsScreen() {
   const insets       = useSafeAreaInsets()
   const { width: screenW } = useWindowDimensions()
 
-  // 7 celdas de día encajan en el ancho disponible
-  const weekCellW = Math.floor((screenW - NAME_W - PCT_W * 2) / 7)
+  // 7 celdas de día encajan en el ancho disponible (descontando margen lateral + borde del contenedor)
+  const weekCellW = Math.floor((screenW - GRID_MARGIN * 2 - 2 - NAME_W - PCT_W * 2) / 7)
 
   const now = new Date()
   const [cursor, setCursor]       = useState(new Date(now.getFullYear(), now.getMonth(), 1))
@@ -258,20 +260,20 @@ export default function HabitsScreen() {
   const weekEnd   = weekDayNums[6]
   const weekLabel = `${weekStart}–${weekEnd} ${cursor.toLocaleDateString('es-ES', { month: 'short' })}`
 
-  function renderDayHeader(dayNum, cellW) {
+  function renderDayHeader(dayNum, cellW, isLast) {
     const ds     = toDateStr(year, month, dayNum)
     const dow    = (new Date(year, month, dayNum).getDay() + 6) % 7
     const isWkd  = dow === 5 || dow === 6
     const isTod  = ds === todayStr
     return (
-      <View key={dayNum} style={[s.dayCol, { width: cellW }, isWkd && s.weekend, isTod && s.todayCol]}>
+      <View key={dayNum} style={[s.dayCol, { width: cellW }, isWkd && s.weekend, isTod && s.todayCol, isLast && s.noRightBorder]}>
         <Text style={[s.dayNum, isTod && { color: t.accent, fontWeight: '800' }]}>{dayNum}</Text>
         <Text style={[s.dayDow, isTod && { color: t.accent }]}>{DAY_LABELS[dow]}</Text>
       </View>
     )
   }
 
-  function renderDayCell(habit, dayNum, cellW) {
+  function renderDayCell(habit, dayNum, cellW, isLast) {
     const ds     = toDateStr(year, month, dayNum)
     const done   = isDone(habit.id, dayNum)
     const skip   = !isExpected(habit, dayNum)
@@ -287,23 +289,25 @@ export default function HabitsScreen() {
           isWkd  && s.weekend,
           skip   && s.skipCell,
           done   && { backgroundColor: t.accentLight },
-          isTod  && s.todayCell,
+          isLast && s.noRightBorder,
         ]}
         onPress={() => !skip && !future && handleToggle(habit.id, dayNum)}
         activeOpacity={skip || future ? 1 : 0.65}
       >
-        {done && <View style={[s.check, { backgroundColor: t.accent }]} />}
+        {isTod && <View style={s.todayWash} pointerEvents="none" />}
+        <HabitCheck done={done} t={t} />
       </TouchableOpacity>
     )
   }
 
   function renderGrid(dayList, cellW) {
+    const lastDay = dayList.length - 1
     return (
-      <View>
+      <View style={s.gridWrap}>
         {/* Header */}
         <View style={s.gridRow}>
           <View style={s.nameCol}><Text style={s.headerText}>Habit</Text></View>
-          {dayList.map(d => renderDayHeader(d, cellW))}
+          {dayList.map((d, i) => renderDayHeader(d, cellW, i === lastDay))}
           <View style={[s.pctCol, s.pctSep]}><Text style={s.headerText}>%</Text></View>
           <View style={s.pctCol}><Text style={s.headerText}>/{days}</Text></View>
         </View>
@@ -311,15 +315,16 @@ export default function HabitsScreen() {
         {visibleHabits.map((habit, idx) => {
           const p        = pct(habit.id, habit)
           const pctColor = p >= 80 ? '#4ade80' : p >= 50 ? '#fbbf24' : t.text4
+          const isLastRow = idx === visibleHabits.length - 1
           return (
-            <View key={habit.id} style={[s.gridRow, idx % 2 === 1 && s.rowAlt]}>
+            <View key={habit.id} style={[s.gridRow, idx % 2 === 1 && s.rowAlt, isLastRow && s.rowLast]}>
               <View style={s.nameCol}>
                 <Text style={s.habitName} numberOfLines={1}>{habit.name}</Text>
                 <TouchableOpacity style={s.editBtn} onPress={() => openEditHabit(habit)} hitSlop={8}>
                   <Text style={s.editBtnText}>✎</Text>
                 </TouchableOpacity>
               </View>
-              {dayList.map(d => renderDayCell(habit, d, cellW))}
+              {dayList.map((d, i) => renderDayCell(habit, d, cellW, i === lastDay))}
               <View style={[s.pctCol, s.pctSep]}>
                 <Text style={[s.pctText, { color: pctColor }]}>{p}%</Text>
               </View>
@@ -561,8 +566,18 @@ function makeStyles(t) {
     hint: { color: t.text3, textAlign: 'center', marginTop: 32, paddingHorizontal: 16 },
 
     // Grid
-    gridRow:    { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.border },
-    rowAlt:     { backgroundColor: 'rgba(255,255,255,0.02)' },
+    gridWrap: {
+      marginHorizontal: GRID_MARGIN,
+      borderWidth: 1,
+      borderColor: t.border,
+      borderRadius: 12,
+      overflow: 'hidden',
+      backgroundColor: t.surface,
+    },
+    gridRow:       { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.text4 },
+    rowAlt:        { backgroundColor: 'rgba(255,255,255,0.02)' },
+    rowLast:       { borderBottomWidth: 0 },
+    noRightBorder: { borderRightWidth: 0 },
     nameCol: {
       width: NAME_W, height: CELL_H, paddingLeft: 10, paddingRight: 4,
       flexDirection: 'row', alignItems: 'center', gap: 2,
@@ -585,8 +600,7 @@ function makeStyles(t) {
       borderRightWidth: 1, borderRightColor: t.border2,
     },
     skipCell:   { backgroundColor: 'rgba(0,0,0,0.12)' },
-    todayCell:  { borderWidth: 2, borderColor: t.accent },
-    check:      { width: 16, height: 16, borderRadius: 8 },
+    todayWash:  { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.accent, opacity: 0.16 },
     pctCol: {
       width: PCT_W, height: CELL_H, alignItems: 'center', justifyContent: 'center',
       backgroundColor: t.surface,

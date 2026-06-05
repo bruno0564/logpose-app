@@ -29,6 +29,31 @@ function toDateStr(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+// Punto de "hábito hecho". Anima la entrada (pop, vía CSS) y la SALIDA: al
+// desmarcar, en vez de desaparecer de golpe, se mantiene montado con la clase
+// --leaving mientras corre la animación de salida, y se desmonta al terminar.
+function HabitCheck({ done }) {
+  const [visible, setVisible] = useState(done)
+  const [leaving, setLeaving] = useState(false)
+
+  useEffect(() => {
+    if (done) {
+      setLeaving(false)
+      setVisible(true)
+    } else if (visible) {
+      setLeaving(true)   // arranca la animación de salida; el unmount es en onAnimationEnd
+    }
+  }, [done])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!visible) return null
+  return (
+    <div
+      className={`habits-check${leaving ? ' habits-check--leaving' : ''}`}
+      onAnimationEnd={() => { if (leaving) { setVisible(false); setLeaving(false) } }}
+    />
+  )
+}
+
 export default function Habits() {
   const now        = new Date()
   const [cursor, setCursor]         = useState(new Date(now.getFullYear(), now.getMonth(), 1))
@@ -363,7 +388,7 @@ export default function Habits() {
                             isFuture  ? 'habits-grid-cell--future'   : '',
                           ].filter(Boolean).join(' ')}
                           onClick={() => handleToggle(habit.id, i + 1)}>
-                          {done && <div className="habits-check" />}
+                          <HabitCheck done={done} />
                         </td>
                       )
                     })}

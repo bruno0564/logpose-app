@@ -516,6 +516,16 @@
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
+/* Salida cartoon: pequeño rebote y encoge girando (espejo de la entrada) */
+[data-cartoon] .habits-check--leaving {
+  animation: habits-check-out-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes habits-check-out-pop {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  30%  { transform: scale(1.25) rotate(6deg); opacity: 1; }
+  100% { transform: scale(0) rotate(-15deg); opacity: 0; }
+}
+
 /* Celda marcada: ligero bounce al hacer click — se aplica con la clase via JS */
 [data-cartoon] .habits-grid-cell {
   transition: background 0.1s, transform 0.1s;
