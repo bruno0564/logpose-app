@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList,
+  View, TouchableOpacity, FlatList,
   StyleSheet, Modal, Keyboard,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import { Ionicons } from '@expo/vector-icons'
@@ -284,7 +287,7 @@ export default function TasksScreen() {
           keyExtractor={l => String(l.id)}
           contentContainerStyle={s.listContainer}
           renderItem={({ item: list }) => (
-            <TouchableOpacity style={s.listCard} onPress={() => setActiveList(list)}>
+            <PressableScale style={s.listCard} onPress={() => setActiveList(list)}>
               <View style={s.listCardLeft}>
                 <Ionicons name="list-outline" color={t.accent} size={18} />
                 <Text style={s.listCardName}>{list.name}</Text>
@@ -292,7 +295,7 @@ export default function TasksScreen() {
               <TouchableOpacity onPress={() => handleDeleteList(list)}>
                 <Ionicons name="trash-outline" color={t.danger} size={16} />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         />
       ) : (

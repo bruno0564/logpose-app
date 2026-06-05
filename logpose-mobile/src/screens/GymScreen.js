@@ -1,12 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
+  View, TouchableOpacity, ScrollView,
   Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import DatePicker from '../components/DatePicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LineChart } from 'react-native-chart-kit'
 import {
@@ -238,9 +241,9 @@ export default function GymScreen() {
       <View style={s.header}>
         <Text style={s.title}>{tr('gym.title')}</Text>
         {tab === 'routines' && (
-          <TouchableOpacity style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
+          <PressableScale style={s.btnPrimary} onPress={() => setAdding(a => !a)}>
             <Text style={s.btnPrimaryText}>{tr('gym.addRoutine')}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       </View>
 
@@ -521,13 +524,13 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
               <Text style={s.dayName}>{dayName}</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {dayExs.length > 0 && (
-                  <TouchableOpacity style={s.btnPrimary} onPress={() => onTrain(idx)}>
+                  <PressableScale style={s.btnPrimary} onPress={() => onTrain(idx)}>
                     <Text style={s.btnPrimaryText}>{tr('gym.trainBtn')}</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
-                <TouchableOpacity style={s.btnOutline} onPress={() => setPickerDay(idx)}>
+                <PressableScale style={s.btnOutline} onPress={() => setPickerDay(idx)}>
                   <Text style={s.btnOutlineText}>+</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </View>
 
@@ -731,9 +734,9 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                 ))}
               </View>
             )}
-            <TouchableOpacity style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
+            <PressableScale style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
               <Text style={s.btnPrimaryText}>{tr('gym.createAndAdd')}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -809,17 +812,12 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
             <Text style={{ color: t.text, fontSize: 14 }}>{date}</Text>
             <Text>📅</Text>
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date(date + 'T12:00:00')}
-              mode="date"
-              display="calendar"
-              onChange={(_, selected) => {
-                setShowDatePicker(false)
-                if (selected) setDate(selected.toISOString().split('T')[0])
-              }}
-            />
-          )}
+          <DatePicker
+            visible={showDatePicker}
+            value={date}
+            onClose={() => setShowDatePicker(false)}
+            onSelect={setDate}
+          />
         </View>
 
         {dayExercises.map(ex => (

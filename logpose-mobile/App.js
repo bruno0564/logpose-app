@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, StyleSheet } from 'react-native'
+import Text from './src/components/Text'
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
-import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter'
+import { useFonts } from 'expo-font'
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces'
+import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans'
 import { ThemeProvider, useTheme } from './src/ThemeContext'
 import { LangProvider, useLang } from './src/LangContext'
 import BodyWeightScreen from './src/screens/BodyWeightScreen'
@@ -51,7 +54,8 @@ function AppContent() {
   const { t: tr } = useLang()
   const insets = useSafeAreaInsets()
   const [fontsLoaded] = useFonts({
-    Inter_400Regular, Inter_600SemiBold, Inter_700Bold,
+    Fraunces_600SemiBold,
+    DMSans_400Regular, DMSans_500Medium, DMSans_700Bold,
     LuckiestGuy: require('./assets/fonts/LuckiestGuy.ttf'),
   })
 
@@ -108,7 +112,7 @@ function AppContent() {
             tabBarActiveTintColor: t.accent,
             tabBarInactiveTintColor: t.text3,
             tabBarLabelStyle: {
-              fontFamily: t.cartoon ? 'LuckiestGuy' : 'Inter_600SemiBold',
+              fontFamily: t.cartoon ? 'LuckiestGuy' : 'DMSans_500Medium',
               fontSize: t.cartoon ? 8 : 10,
               textTransform: t.cartoon ? 'uppercase' : 'none',
               marginTop: 2,

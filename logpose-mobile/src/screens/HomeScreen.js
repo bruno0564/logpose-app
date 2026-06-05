@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, StyleSheet, ScrollView } from 'react-native'
+import Text from '../components/Text'
 import CartoonCard from '../components/CartoonCard'
-import CartoonEntrance from '../components/CartoonEntrance'
+import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
@@ -75,25 +76,21 @@ export default function HomeScreen() {
   )
 
   return (
-    <View style={s.container}>
+    <FadeInView style={s.container}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={s.content}>
-        <CartoonEntrance index={0} type="drop">
-          <View style={s.header}>
-            <Text style={s.greeting}>{greeting()}</Text>
-            <Text style={s.date}>{formatDate()}</Text>
-          </View>
-        </CartoonEntrance>
+        <View style={s.header}>
+          <Text style={s.greeting}>{greeting()}</Text>
+          <Text style={s.date}>{formatDate()}</Text>
+        </View>
 
         {current && (
-          <CartoonEntrance index={1} type="pop">
-            <CartoonCard style={s.quoteCard} radius={t.cartoon ? 14 : 16}>
-              <Text style={s.quoteText}>"{current.text}"</Text>
-              {current.author && <Text style={s.quoteAuthor}>— {current.author}</Text>}
-            </CartoonCard>
-          </CartoonEntrance>
+          <CartoonCard style={s.quoteCard} radius={t.cartoon ? 14 : 16}>
+            <Text style={s.quoteText}>"{current.text}"</Text>
+            {current.author && <Text style={s.quoteAuthor}>— {current.author}</Text>}
+          </CartoonCard>
         )}
       </ScrollView>
-    </View>
+    </FadeInView>
   )
 }
 

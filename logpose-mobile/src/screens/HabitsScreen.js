@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput,
+  View, ScrollView, TouchableOpacity,
   Modal, StyleSheet, Alert, useWindowDimensions,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../ThemeContext'
@@ -349,9 +352,9 @@ export default function HabitsScreen() {
         {/* Header */}
         <View style={[s.header, { paddingTop: insets.top + 12 }]}>
           <Text style={s.title}>{tr('habits.title')}</Text>
-          <TouchableOpacity style={s.btnPrimary} onPress={openCreateCat}>
+          <PressableScale style={s.btnPrimary} onPress={openCreateCat}>
             <Text style={s.btnPrimaryText}>{tr('habits.addCategory')}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* Category tabs */}
@@ -419,9 +422,9 @@ export default function HabitsScreen() {
                 <Text style={{ color: t.accent, fontSize: 16 }}>✎</Text>
               </TouchableOpacity>
               {/* Añadir hábito */}
-              <TouchableOpacity style={s.btnPrimary} onPress={openCreateHabit}>
+              <PressableScale style={s.btnPrimary} onPress={openCreateHabit}>
                 <Text style={s.btnPrimaryText}>{tr('habits.addHabit')}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </View>
         )}

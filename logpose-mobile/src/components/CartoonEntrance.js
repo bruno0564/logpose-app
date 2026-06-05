@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { Animated } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { useTheme } from '../ThemeContext'
@@ -18,10 +18,13 @@ import { useTheme } from '../ThemeContext'
 export default function CartoonEntrance({ children, index = 0, type = 'drop', style }) {
   const { theme: t } = useTheme()
   const p = useRef(new Animated.Value(0)).current
+  // textura HW solo mientras anima: evita el parpadeo de sombras/bordes en Android
+  const [animating, setAnimating] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
       p.setValue(0)
+      setAnimating(true)
       const anim = Animated.spring(p, {
         toValue: 1,
         tension:  t.cartoon ? 70 : 60,
@@ -29,7 +32,7 @@ export default function CartoonEntrance({ children, index = 0, type = 'drop', st
         delay: index * (t.cartoon ? 70 : 45),
         useNativeDriver: true,
       })
-      anim.start()
+      anim.start(({ finished }) => { if (finished) setAnimating(false) })
       return () => anim.stop()
     }, [t.cartoon, index])
   )
@@ -51,7 +54,11 @@ export default function CartoonEntrance({ children, index = 0, type = 'drop', st
   }
 
   return (
-    <Animated.View style={[style, { opacity, transform }]}>
+    <Animated.View
+      renderToHardwareTextureAndroid={animating}
+      shouldRasterizeIOS={animating}
+      style={[style, { opacity, transform }]}
+    >
       {children}
     </Animated.View>
   )

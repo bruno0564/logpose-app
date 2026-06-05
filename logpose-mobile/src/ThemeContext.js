@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { darkTheme, lightTheme, cupheadTheme } from './theme'
-import { setGlobalCartoonFont } from './applyCartoonFont'
 
 const ThemeContext = createContext(null)
 
@@ -35,8 +34,8 @@ export function ThemeProvider({ children }) {
     ? cupheadTheme
     : (dark ? darkTheme : lightTheme)
 
-  // Aplica (o quita) la fuente cartoon globalmente antes de pintar los hijos.
-  setGlobalCartoonFont(theme.cartoon ? theme.fontTitle : null)
+  // La fuente del cuerpo se aplica ahora vía el componente <Text> propio
+  // (src/components/Text.js), que lee theme.fontBody. Ya no hace falta parche global.
 
   // Cuphead es fondo claro → la barra de estado va en oscuro
   const statusBarStyle = appStyle === 'cuphead' ? 'dark' : (dark ? 'light' : 'dark')

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
-import { View, Text, Switch, TouchableOpacity, TextInput, StyleSheet, Share } from 'react-native'
+import { View, Switch, TouchableOpacity, StyleSheet, Share } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import { getServerUrl, updateServerUrl } from '../api/client'
@@ -157,10 +160,10 @@ export default function SettingsScreen() {
               </View>
             </View>
           ) : (
-            <TouchableOpacity style={s.urlDisplayRow} onPress={openEdit} activeOpacity={0.7}>
+            <PressableScale style={s.urlDisplayRow} onPress={openEdit}>
               <Text style={s.urlText} numberOfLines={1}>{urlDisplay}</Text>
               <Text style={s.urlEditHint}>✎</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
 
@@ -209,10 +212,10 @@ const makeStyles = (t) => StyleSheet.create({
   styleCheck:      { position: 'absolute', top: 5, right: 6, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   styleCheckMark:  { fontSize: 10, fontWeight: '700' },
   urlDisplayRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, width: '100%', borderWidth: t.cartoon ? 2 : 1, borderColor: t.border2 },
-  urlText:         { flex: 1, color: t.text2, fontSize: 13, fontFamily: 'Inter_400Regular' },
+  urlText:         { flex: 1, color: t.text2, fontSize: 13, fontFamily: 'DMSans_400Regular' },
   urlEditHint:     { color: t.text3, fontSize: 16 },
   urlEditRow:      { width: '100%', gap: 8 },
-  urlInput:        { backgroundColor: t.surface2, color: t.text, borderRadius: 8, padding: 12, fontSize: 14, borderWidth: t.cartoon ? 2 : 1, borderColor: t.accent, fontFamily: 'Inter_400Regular' },
+  urlInput:        { backgroundColor: t.surface2, color: t.text, borderRadius: 8, padding: 12, fontSize: 14, borderWidth: t.cartoon ? 2 : 1, borderColor: t.accent, fontFamily: 'DMSans_400Regular' },
   urlBtns:         { flexDirection: 'row', gap: 8 },
   urlBtnSave:      { flex: 1, backgroundColor: t.accent, borderRadius: 8, padding: 11, alignItems: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   urlBtnSaveText:  { color: t.cartoon ? t.bg : t.text, fontWeight: '700', fontSize: 14, fontFamily: t.fontTitle },

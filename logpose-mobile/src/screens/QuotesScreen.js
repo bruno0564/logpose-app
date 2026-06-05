@@ -1,9 +1,12 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
+  View, TouchableOpacity, ScrollView,
   Modal, StyleSheet,
 } from 'react-native'
+import Text from '../components/Text'
+import TextInput from '../components/TextInput'
+import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import GradientButton from '../components/GradientButton'
@@ -105,9 +108,9 @@ export default function QuotesScreen() {
     <FadeInView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{tr('quotes.title')}</Text>
-        <TouchableOpacity style={s.addBtn} onPress={openAdd}>
+        <PressableScale style={s.addBtn} onPress={openAdd}>
           <Text style={s.addBtnText}>+</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       <ScrollView contentContainerStyle={s.content}>

@@ -1,4 +1,6 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native'
+import { View, StyleSheet, ScrollView, Dimensions } from 'react-native'
+import Text from '../components/Text'
+import PressableScale from '../components/PressableScale'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -30,8 +32,7 @@ function MoreCard({ item }) {
   const w = cardWidth()
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.75}
+    <PressableScale
       onPress={() => nav.navigate(item.screen)}
       style={[styles.card(t, item.color), { width: w }]}
     >
@@ -40,7 +41,7 @@ function MoreCard({ item }) {
       </View>
       <Text style={styles.label(t)}>{tr(item.labelKey)}</Text>
       <Text style={styles.desc(t)}>{tr(item.descKey)}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   )
 }
 
