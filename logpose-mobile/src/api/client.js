@@ -43,6 +43,19 @@ export async function isServerReachable() {
   }
 }
 
+// Prueba una URL arbitraria (sin guardarla). Normaliza igual que updateServerUrl.
+export async function pingServer(raw) {
+  let url = (raw || '').trim().replace(/\/$/, '')
+  if (!url) return false
+  if (!url.includes('://')) url = 'http://' + url
+  try {
+    await fetchWithTimeout(`${url}/`)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function fetchAllBodyWeightFromServer() {
   const res = await fetchWithTimeout(`${_server}/body-weight/`)
   return res.json()
