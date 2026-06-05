@@ -9,7 +9,7 @@ import TextInput from '../components/TextInput'
 import GradientButton from '../components/GradientButton'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import DatePicker from '../components/DatePicker'
 import { LineChart } from 'react-native-chart-kit'
 import {
   getLocalEntries, insertLocalEntry, updateLocalEntry, markSynced,
@@ -182,17 +182,12 @@ export default function BodyWeightScreen() {
           <Text style={s.datePickerText}>{date}</Text>
           <Text style={s.datePickerIcon}>📅</Text>
         </TouchableOpacity>
-        {showAddPicker && (
-          <DateTimePicker
-            value={new Date(date + 'T12:00:00')}
-            mode="date"
-            display="calendar"
-            onChange={(_, selected) => {
-              setShowAddPicker(false)
-              if (selected) setDate(selected.toISOString().split('T')[0])
-            }}
-          />
-        )}
+        <DatePicker
+          visible={showAddPicker}
+          value={date}
+          onClose={() => setShowAddPicker(false)}
+          onSelect={setDate}
+        />
         <TextInput
           style={s.input}
           placeholder={tr('bodyWeight.notePh')}
@@ -223,28 +218,18 @@ export default function BodyWeightScreen() {
           </TouchableOpacity>
         </View>
 
-        {showFromPicker && (
-          <DateTimePicker
-            value={filterFrom ? new Date(filterFrom + 'T12:00:00') : new Date()}
-            mode="date"
-            display="calendar"
-            onChange={(_, selected) => {
-              setShowFromPicker(false)
-              if (selected) setFilterFrom(selected.toISOString().split('T')[0])
-            }}
-          />
-        )}
-        {showToPicker && (
-          <DateTimePicker
-            value={filterTo ? new Date(filterTo + 'T12:00:00') : new Date()}
-            mode="date"
-            display="calendar"
-            onChange={(_, selected) => {
-              setShowToPicker(false)
-              if (selected) setFilterTo(selected.toISOString().split('T')[0])
-            }}
-          />
-        )}
+        <DatePicker
+          visible={showFromPicker}
+          value={filterFrom}
+          onClose={() => setShowFromPicker(false)}
+          onSelect={setFilterFrom}
+        />
+        <DatePicker
+          visible={showToPicker}
+          value={filterTo}
+          onClose={() => setShowToPicker(false)}
+          onSelect={setFilterTo}
+        />
 
         {loading ? (
           <ActivityIndicator color={t.accent} style={{ marginTop: 16 }} />
@@ -326,17 +311,12 @@ export default function BodyWeightScreen() {
               <Text style={s.datePickerText}>{editEntry?.date ?? ''}</Text>
               <Text style={s.datePickerIcon}>📅</Text>
             </TouchableOpacity>
-            {showEditPicker && (
-              <DateTimePicker
-                value={new Date((editEntry?.date ?? new Date().toISOString().split('T')[0]) + 'T12:00:00')}
-                mode="date"
-                display="calendar"
-                onChange={(_, selected) => {
-                  setShowEditPicker(false)
-                  if (selected) setEditEntry(e => ({ ...e, date: selected.toISOString().split('T')[0] }))
-                }}
-              />
-            )}
+            <DatePicker
+              visible={showEditPicker}
+              value={editEntry?.date ?? ''}
+              onClose={() => setShowEditPicker(false)}
+              onSelect={(d) => setEditEntry(e => ({ ...e, date: d }))}
+            />
             <TextInput
               style={s.input}
               placeholder={tr('bodyWeight.notePh')}

@@ -10,6 +10,7 @@ import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import DateTimePicker from '@react-native-community/datetimepicker'
+import DatePicker from '../components/DatePicker'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
   markCalendarEventPendingDelete, purgeCalendarEvent,
@@ -421,17 +422,12 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
                 </Text>
                 <Text>📅</Text>
               </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={form.date ? new Date(form.date + 'T12:00:00') : new Date()}
-                  mode="date"
-                  display="calendar"
-                  onChange={(_, selected) => {
-                    setShowDatePicker(false)
-                    if (selected) setForm(f => ({ ...f, date: selected.toISOString().split('T')[0] }))
-                  }}
-                />
-              )}
+              <DatePicker
+                visible={showDatePicker}
+                value={form.date}
+                onClose={() => setShowDatePicker(false)}
+                onSelect={(d) => setForm(f => ({ ...f, date: d }))}
+              />
             </>
           )}
 

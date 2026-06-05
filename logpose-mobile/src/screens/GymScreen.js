@@ -9,7 +9,7 @@ import TextInput from '../components/TextInput'
 import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import DatePicker from '../components/DatePicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LineChart } from 'react-native-chart-kit'
 import {
@@ -812,17 +812,12 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
             <Text style={{ color: t.text, fontSize: 14 }}>{date}</Text>
             <Text>📅</Text>
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date(date + 'T12:00:00')}
-              mode="date"
-              display="calendar"
-              onChange={(_, selected) => {
-                setShowDatePicker(false)
-                if (selected) setDate(selected.toISOString().split('T')[0])
-              }}
-            />
-          )}
+          <DatePicker
+            visible={showDatePicker}
+            value={date}
+            onClose={() => setShowDatePicker(false)}
+            onSelect={setDate}
+          />
         </View>
 
         {dayExercises.map(ex => (
