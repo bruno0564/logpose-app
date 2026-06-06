@@ -160,7 +160,7 @@ export default function TasksScreen() {
         await pruneStaleTaskItemsForList(localListId, new Set(serverItems.map(i => i.id)))
       }
       await pruneStaleTaskLists(new Set(serverLists.map(l => l.id)))
-    } catch {} finally {
+    } catch (e) { console.warn('tasks sync failed:', e) } finally {
       syncingTasks = false
       await loadLists()
       if (activeListRef.current) await loadItems(activeListRef.current.id)

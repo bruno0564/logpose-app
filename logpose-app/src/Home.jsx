@@ -55,7 +55,7 @@ export default function Home() {
       const serverQuotes = await fetchAllQuotesFromServer()
       for (const q of serverQuotes) await upsertQuoteFromServer(q)
       await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
-    } catch {} finally {
+    } catch (e) { console.warn('home sync failed:', e) } finally {
       syncingHome = false
       await load()
     }

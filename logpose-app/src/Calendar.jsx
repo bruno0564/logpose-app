@@ -108,7 +108,7 @@ export default function Calendar() {
       const serverEvents = await fetchAllCalendarEventsFromServer()
       for (const e of serverEvents) await upsertCalendarEventFromServer(e)
       await pruneStaleCalendarEvents(new Set(serverEvents.map(e => e.id)))
-    } catch {} finally {
+    } catch (e) { console.warn('calendar sync failed:', e) } finally {
       syncingCalendar = false
       await loadEvents()
     }

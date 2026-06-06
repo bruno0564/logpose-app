@@ -80,7 +80,7 @@ export default function JournalScreen() {
       const serverEntries = await fetchAllJournalEntriesFromServer()
       for (const e of serverEntries) await upsertJournalEntryFromServer(e)
       await pruneStaleJournalEntries(new Set(serverEntries.map(e => e.id)))
-    } catch {} finally {
+    } catch (e) { console.warn('journal sync failed:', e) } finally {
       syncingJournal = false
       await loadToday()
       await loadStreak()
