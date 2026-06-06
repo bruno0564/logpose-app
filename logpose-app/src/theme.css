@@ -1,36 +1,40 @@
 :root {
-  --app-font: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  /* Tema "Bitácora / Instrumento" (paridad con el móvil): neutros tinta
+     azul-verde, acento latón (la aguja de la brújula), teal náutico secundario.
+     Cuerpo en DM Sans, títulos/números hero en Fraunces (serif con carácter). */
+  --app-font:   'DM Sans Variable', system-ui, -apple-system, sans-serif;
+  --font-title: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
 
   /* Fondos */
-  --bg:        #0a0a0a;
-  --surface:   #111111;
-  --surface-2: #181818;
+  --bg:        #0b1519;
+  --surface:   #10212a;
+  --surface-2: #162c36;
 
   /* Bordes */
-  --border:    #1e1e1e;
-  --border-2:  #2a2a2a;
+  --border:    #1d3540;
+  --border-2:  #244350;
 
-  /* Accent */
-  --accent:          #818cf8;
-  --accent-hover:    #6366f1;
-  --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
-  --accent-glow:     rgba(129, 140, 248, 0.15);
-  --accent-subtle:   rgba(129, 140, 248, 0.06);
+  /* Accent — latón + teal náutico */
+  --accent:          #d9a441;
+  --accent-hover:    #c8922f;
+  --accent-gradient: linear-gradient(135deg, #d9a441 0%, #3a9d92 100%);
+  --accent-glow:     rgba(217, 164, 65, 0.15);
+  --accent-subtle:   rgba(217, 164, 65, 0.07);
 
   /* Texto */
-  --text:   #f0f0f0;
-  --text-2: #888;
-  --text-3: #444;
-  --text-4: #2e2e2e;
+  --text:   #eaf0ec;
+  --text-2: #9fb0ab;
+  --text-3: #5e726f;
+  --text-4: #2b3d43;
 
   /* Estados */
-  --danger:        #ef4444;
-  --danger-bg:     rgba(127, 29, 29, 0.6);
-  --danger-bg-h:   rgba(127, 29, 29, 0.9);
-  --danger-text:   #fca5a5;
-  --danger-border: rgba(239, 68, 68, 0.3);
-  --danger-subtle: rgba(239, 68, 68, 0.08);
-  --success:       #22c55e;
+  --danger:        #e5544b;
+  --danger-bg:     rgba(94, 31, 27, 0.6);
+  --danger-bg-h:   rgba(94, 31, 27, 0.9);
+  --danger-text:   #f3a39c;
+  --danger-border: rgba(229, 84, 75, 0.3);
+  --danger-subtle: rgba(229, 84, 75, 0.08);
+  --success:       #46b08a;
 
   /* Overlays */
   --overlay: rgba(0, 0, 0, 0.7);
@@ -41,7 +45,7 @@
   --radius-lg: 14px;
 
   /* Sombras */
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 6px 22px rgba(0, 0, 0, 0.45);
 
   /* Tipografía */
   --font-xs:   0.68rem;
@@ -55,35 +59,38 @@
 }
 
 [data-theme="light"] {
-  --bg:        #f8f8f8;
-  --surface:   #ffffff;
-  --surface-2: #f0f0f0;
-  --border:    #e0e0e0;
-  --border-2:  #d0d0d0;
-  --accent:          #818cf8;
-  --accent-hover:    #6366f1;
-  --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
-  --accent-glow:     rgba(129, 140, 248, 0.12);
-  --accent-subtle:   rgba(129, 140, 248, 0.06);
-  --text:   #111111;
-  --text-2: #555555;
-  --text-3: #999999;
-  --text-4: #cccccc;
-  --danger:        #ef4444;
-  --danger-bg:     rgba(254, 226, 226, 0.9);
-  --danger-bg-h:   #fee2e2;
-  --danger-text:   #991b1b;
-  --danger-border: rgba(239, 68, 68, 0.3);
-  --danger-subtle: rgba(239, 68, 68, 0.08);
-  --success:       #22c55e;
-  --overlay: rgba(0, 0, 0, 0.6);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  /* Variante clara de "Bitácora": fondo carta náutica (cálido, no blanco
+     clínico), tinta navy para el texto, latón más hondo para contraste. */
+  --bg:        #f4efe4;
+  --surface:   #fbf8f1;
+  --surface-2: #f1ece0;
+  --border:    #e3dccb;
+  --border-2:  #d8cfb8;
+  --accent:          #b07a1c;
+  --accent-hover:    #97681a;
+  --accent-gradient: linear-gradient(135deg, #b07a1c 0%, #2f7d74 100%);
+  --accent-glow:     rgba(176, 122, 28, 0.12);
+  --accent-subtle:   rgba(176, 122, 28, 0.06);
+  --text:   #13242c;
+  --text-2: #4a5a5c;
+  --text-3: #8a8270;
+  --text-4: #d8cfb8;
+  --danger:        #c0392b;
+  --danger-bg:     rgba(246, 224, 220, 0.9);
+  --danger-bg-h:   #f6e0dc;
+  --danger-text:   #9a2a1e;
+  --danger-border: rgba(192, 57, 43, 0.3);
+  --danger-subtle: rgba(192, 57, 43, 0.08);
+  --success:       #2f7d5e;
+  --overlay: rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 6px 20px rgba(58, 47, 20, 0.1);
 }
 
 /* ── Estilos cartoon (sobreescriben dark/light) ───── */
 
 [data-style="warm"] {
   --app-font:      'FredokaOne', sans-serif;
+  --font-title:    var(--app-font);
   --bg:            #f2dda4;
   --surface:       #fdf5e0;
   --surface-2:     #f5e9c8;
@@ -111,6 +118,7 @@
 
 [data-style="tv"] {
   --app-font:      'FredokaOne', sans-serif;
+  --font-title:    var(--app-font);
   --bg:            #2a2a2a;
   --surface:       #333333;
   --surface-2:     #3a3a3a;
@@ -138,6 +146,7 @@
 
 [data-style="tv-pixel"] {
   --app-font:      'PressStart2P', sans-serif;
+  --font-title:    var(--app-font);
   --bg:            #2a2a2a;
   --surface:       #333333;
   --surface-2:     #3a3a3a;
@@ -165,6 +174,7 @@
 
 [data-style="cuphead"] {
   --app-font:      'LuckiestGuy', sans-serif;
+  --font-title:    var(--app-font);
   --bg:            #f0d9a0;
   --surface:       #faecc8;
   --surface-2:     #f5e4b8;
