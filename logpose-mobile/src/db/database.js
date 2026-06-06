@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 let db
 
@@ -43,8 +44,16 @@ export async function openDB() {
     try { await db.runAsync(col) } catch {}
   }
 
-  for (const text of REMOVED_QUOTES) {
-    await db.runAsync('DELETE FROM quotes WHERE text = ?', [text])
+  // Limpieza única de las frases semilla antiguas (solo la primera vez tras
+  // actualizar). Antes corría en CADA arranque: borraba en bucle frases que el
+  // servidor volvía a traer (churn) y podía cargarse una frase del usuario con el
+  // mismo texto. Ahora: una sola vez, y solo frases locales (server_id IS NULL).
+  const seedCleanupDone = await AsyncStorage.getItem('removedSeedQuotes_v1')
+  if (!seedCleanupDone) {
+    for (const text of REMOVED_QUOTES) {
+      await db.runAsync('DELETE FROM quotes WHERE text = ? AND server_id IS NULL', [text])
+    }
+    await AsyncStorage.setItem('removedSeedQuotes_v1', '1')
   }
 
   await db.execAsync(`
@@ -236,7 +245,7 @@ export async function upsertQuoteFromServer(serverQuote) {
 
 export async function pruneStaleQuotes(validServerIds) {
   const db = await openDB()
-  const rows = await db.getAllAsync('SELECT id, server_id FROM quotes WHERE server_id IS NOT NULL')
+  const rows = await db.getAllAsync('SELECT id, server_id FROM quotes WHERE server_id IS NOT NULL AND pending_delete = 0')
   for (const row of rows) {
     if (!validServerIds.has(row.server_id)) {
       await db.runAsync('DELETE FROM quotes WHERE id = ?', [row.id])
@@ -360,20 +369,22 @@ export async function updateLocalRoutine(id, name) {
 
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
-  const row = await db.getFirstAsync('SELECT server_id FROM routines WHERE id = ?', [id])
-  const res = await db.getAllAsync('SELECT id, server_id FROM routine_exercises WHERE local_routine_id = ?', [id])
-  for (const re of res) {
-    if (re.server_id) {
-      await db.runAsync('UPDATE routine_exercises SET pending_delete = 1 WHERE id = ?', [re.id])
-    } else {
-      await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [re.id])
+  await db.withTransactionAsync(async () => {
+    const row = await db.getFirstAsync('SELECT server_id FROM routines WHERE id = ?', [id])
+    const res = await db.getAllAsync('SELECT id, server_id FROM routine_exercises WHERE local_routine_id = ?', [id])
+    for (const re of res) {
+      if (re.server_id) {
+        await db.runAsync('UPDATE routine_exercises SET pending_delete = 1 WHERE id = ?', [re.id])
+      } else {
+        await db.runAsync('DELETE FROM routine_exercises WHERE id = ?', [re.id])
+      }
     }
-  }
-  if (row?.server_id) {
-    await db.runAsync('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
-  } else {
-    await db.runAsync('DELETE FROM routines WHERE id = ?', [id])
-  }
+    if (row?.server_id) {
+      await db.runAsync('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
+    } else {
+      await db.runAsync('DELETE FROM routines WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function getUnsyncedRoutines() {
@@ -635,6 +646,16 @@ export async function purgeLocalSession(localId) {
   await db.runAsync('DELETE FROM workout_sessions WHERE id = ?', [localId])
 }
 
+// Borra localmente las sesiones que ya no existen en el servidor (p.ej. borradas
+// desde otro dispositivo). Cascada a sus sets vía purgeLocalSession.
+export async function pruneStaleSessions(validServerIds) {
+  const db = await openDB()
+  const rows = await db.getAllAsync('SELECT id, server_id FROM workout_sessions WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) await purgeLocalSession(row.id)
+  }
+}
+
 export async function upsertSessionFromServer(serverSession) {
   const db = await openDB()
   let localRoutineId = null
@@ -735,6 +756,15 @@ export async function purgeLocalSet(localId) {
   await db.runAsync('DELETE FROM workout_sets WHERE id = ?', [localId])
 }
 
+// Borra localmente las series que ya no existen en el servidor.
+export async function pruneStaleSets(validServerIds) {
+  const db = await openDB()
+  const rows = await db.getAllAsync('SELECT id, server_id FROM workout_sets WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) await db.runAsync('DELETE FROM workout_sets WHERE id = ?', [row.id])
+  }
+}
+
 export async function upsertSetFromServer(serverSet) {
   const db = await openDB()
   const sessionRow = await db.getFirstAsync('SELECT id FROM workout_sessions WHERE server_id = ?', [serverSet.session_id])
@@ -774,13 +804,15 @@ export async function purgeLocalQuote(id) {
 
 export async function purgeLocalRoutine(id) {
   const db = await openDB()
-  const sessions = await db.getAllAsync('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [id])
-  for (const s of sessions) {
-    await db.runAsync('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
-  }
-  await db.runAsync('DELETE FROM workout_sessions WHERE local_routine_id = ?', [id])
-  await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
-  await db.runAsync('DELETE FROM routines WHERE id = ?', [id])
+  await db.withTransactionAsync(async () => {
+    const sessions = await db.getAllAsync('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [id])
+    for (const s of sessions) {
+      await db.runAsync('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
+    }
+    await db.runAsync('DELETE FROM workout_sessions WHERE local_routine_id = ?', [id])
+    await db.runAsync('DELETE FROM routine_exercises WHERE local_routine_id = ?', [id])
+    await db.runAsync('DELETE FROM routines WHERE id = ?', [id])
+  })
 }
 
 export async function updateLocalQuote(id, text, author) {
@@ -844,15 +876,17 @@ export async function insertTaskList(name) {
 
 export async function deleteTaskList(id) {
   const db = await openDB()
-  const row = await db.getFirstAsync('SELECT server_id FROM task_lists WHERE id = ?', [id])
-  if (row?.server_id) {
-    await db.runAsync('UPDATE task_lists SET pending_delete = 1 WHERE id = ?', [id])
-    await db.runAsync('UPDATE task_items SET pending_delete = 1 WHERE local_list_id = ? AND server_id IS NOT NULL', [id])
-    await db.runAsync('DELETE FROM task_items WHERE local_list_id = ? AND server_id IS NULL', [id])
-  } else {
-    await db.runAsync('DELETE FROM task_items WHERE local_list_id = ?', [id])
-    await db.runAsync('DELETE FROM task_lists WHERE id = ?', [id])
-  }
+  await db.withTransactionAsync(async () => {
+    const row = await db.getFirstAsync('SELECT server_id FROM task_lists WHERE id = ?', [id])
+    if (row?.server_id) {
+      await db.runAsync('UPDATE task_lists SET pending_delete = 1 WHERE id = ?', [id])
+      await db.runAsync('UPDATE task_items SET pending_delete = 1 WHERE local_list_id = ? AND server_id IS NOT NULL', [id])
+      await db.runAsync('DELETE FROM task_items WHERE local_list_id = ? AND server_id IS NULL', [id])
+    } else {
+      await db.runAsync('DELETE FROM task_items WHERE local_list_id = ?', [id])
+      await db.runAsync('DELETE FROM task_lists WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function deleteLocalTaskList(id) {
@@ -980,7 +1014,7 @@ export async function upsertTaskItemFromServer(serverItem, localListId) {
 
 export async function pruneStaleTaskLists(validServerIds) {
   const db = await openDB()
-  const rows = await db.getAllAsync('SELECT id, server_id FROM task_lists WHERE server_id IS NOT NULL')
+  const rows = await db.getAllAsync('SELECT id, server_id FROM task_lists WHERE server_id IS NOT NULL AND pending_delete = 0')
   for (const row of rows) {
     if (!validServerIds.has(row.server_id)) {
       await db.runAsync('DELETE FROM task_items WHERE local_list_id = ?', [row.id])
@@ -1154,6 +1188,10 @@ function mergeJournalContent(local, remote) {
   if (!l) return r
   if (!r) return l
   if (l === r) return l
+  // Idempotencia: si una versión ya contiene a la otra (caso típico al sincronizar
+  // entre 3+ dispositivos), no re-concatenamos — evitamos que el contenido crezca.
+  if (l.includes(r)) return l
+  if (r.includes(l)) return r
   return `${l}\n\n---\n\n${r}`
 }
 
@@ -1213,23 +1251,25 @@ export async function updateHabitCategory(id, data) {
 
 export async function deleteLocalHabitCategory(id) {
   const db = await openDB()
-  const cat = await db.getFirstAsync('SELECT server_id FROM habit_categories WHERE id = ?', [id])
-  const habitsInCat = await db.getAllAsync('SELECT id, server_id FROM habits WHERE local_category_id = ?', [id])
-  for (const h of habitsInCat) {
-    if (h.server_id) {
-      await db.runAsync('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [h.id])
-      await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [h.id])
-      await db.runAsync('UPDATE habits SET pending_delete = 1 WHERE id = ?', [h.id])
-    } else {
-      await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ?', [h.id])
-      await db.runAsync('DELETE FROM habits WHERE id = ?', [h.id])
+  await db.withTransactionAsync(async () => {
+    const cat = await db.getFirstAsync('SELECT server_id FROM habit_categories WHERE id = ?', [id])
+    const habitsInCat = await db.getAllAsync('SELECT id, server_id FROM habits WHERE local_category_id = ?', [id])
+    for (const h of habitsInCat) {
+      if (h.server_id) {
+        await db.runAsync('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [h.id])
+        await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [h.id])
+        await db.runAsync('UPDATE habits SET pending_delete = 1 WHERE id = ?', [h.id])
+      } else {
+        await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ?', [h.id])
+        await db.runAsync('DELETE FROM habits WHERE id = ?', [h.id])
+      }
     }
-  }
-  if (cat?.server_id) {
-    await db.runAsync('UPDATE habit_categories SET pending_delete = 1 WHERE id = ?', [id])
-  } else {
-    await db.runAsync('DELETE FROM habit_categories WHERE id = ?', [id])
-  }
+    if (cat?.server_id) {
+      await db.runAsync('UPDATE habit_categories SET pending_delete = 1 WHERE id = ?', [id])
+    } else {
+      await db.runAsync('DELETE FROM habit_categories WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function getHabits() {
@@ -1255,15 +1295,17 @@ export async function updateHabit(id, data) {
 
 export async function deleteLocalHabit(id) {
   const db = await openDB()
-  const h = await db.getFirstAsync('SELECT server_id FROM habits WHERE id = ?', [id])
-  if (h?.server_id) {
-    await db.runAsync('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [id])
-    await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [id])
-    await db.runAsync('UPDATE habits SET pending_delete = 1 WHERE id = ?', [id])
-  } else {
-    await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ?', [id])
-    await db.runAsync('DELETE FROM habits WHERE id = ?', [id])
-  }
+  await db.withTransactionAsync(async () => {
+    const h = await db.getFirstAsync('SELECT server_id FROM habits WHERE id = ?', [id])
+    if (h?.server_id) {
+      await db.runAsync('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [id])
+      await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [id])
+      await db.runAsync('UPDATE habits SET pending_delete = 1 WHERE id = ?', [id])
+    } else {
+      await db.runAsync('DELETE FROM habit_logs WHERE local_habit_id = ?', [id])
+      await db.runAsync('DELETE FROM habits WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function getHabitLogs(month) {
@@ -1385,9 +1427,15 @@ export async function upsertHabitLogFromServer(log, localHabitId) {
     await db.runAsync('INSERT INTO habit_logs (server_id, local_habit_id, date, synced) VALUES (?, ?, ?, 1)', [log.id, localHabitId, log.date])
   }
 }
-export async function pruneStaleHabitLogs(serverIds) {
+// IMPORTANTE: el servidor solo devuelve los logs del `month` pedido, así que el
+// prune debe limitarse a ESE mes. Si no, borraría los logs locales sincronizados
+// de los demás meses (no están en serverIds porque no se pidieron).
+export async function pruneStaleHabitLogs(serverIds, month) {
   const db = await openDB()
-  const rows = await db.getAllAsync('SELECT id, server_id FROM habit_logs WHERE server_id IS NOT NULL AND pending_delete = 0')
+  const rows = await db.getAllAsync(
+    'SELECT id, server_id FROM habit_logs WHERE server_id IS NOT NULL AND pending_delete = 0 AND date LIKE ?',
+    [`${month}%`]
+  )
   for (const row of rows) {
     if (!serverIds.has(row.server_id)) await db.runAsync('DELETE FROM habit_logs WHERE id = ?', [row.id])
   }

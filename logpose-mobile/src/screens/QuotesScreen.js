@@ -59,7 +59,7 @@ export default function QuotesScreen() {
       const serverQuotes = await fetchAllQuotesFromServer()
       for (const q of serverQuotes) await upsertQuoteFromServer(q)
       await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
-    } catch {} finally {
+    } catch (e) { console.warn('quotes sync failed:', e) } finally {
       syncingQuotes = false
       await loadQuotes()
     }

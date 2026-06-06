@@ -149,7 +149,7 @@ export default function HabitsScreen() {
         const localHabitId = hsidToLid[l.habit_id]
         if (localHabitId) await upsertHabitLogFromServer(l, localHabitId)
       }
-      await pruneStaleHabitLogs(new Set(serverLogs.map(l => l.id)))
+      await pruneStaleHabitLogs(new Set(serverLogs.map(l => l.id)), monthStr)
     } catch (e) {
       console.warn('habits sync failed:', e)
     }

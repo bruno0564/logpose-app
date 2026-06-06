@@ -2,6 +2,21 @@ import Database from '@tauri-apps/plugin-sql'
 
 let db
 
+// Envuelve una serie de sentencias en una transacción: o se aplican todas o
+// ninguna. Evita estados parciales si la app muere a media operación (p.ej.
+// borrar una rutina y dejar routine_exercises huérfanos).
+async function withTx(database, fn) {
+  await database.execute('BEGIN')
+  try {
+    const result = await fn()
+    await database.execute('COMMIT')
+    return result
+  } catch (e) {
+    try { await database.execute('ROLLBACK') } catch {}
+    throw e
+  }
+}
+
 export async function openDB() {
   if (db) return db
   const instance = await Database.load('sqlite:logpose.db')
@@ -335,7 +350,7 @@ export async function purgeLocalQuote(localId) {
 
 export async function pruneStaleQuotes(validServerIds) {
   const db = await openDB()
-  const rows = await db.select('SELECT id, server_id FROM quotes WHERE server_id IS NOT NULL')
+  const rows = await db.select('SELECT id, server_id FROM quotes WHERE server_id IS NOT NULL AND pending_delete = 0')
   for (const row of rows) {
     if (!validServerIds.has(row.server_id)) {
       await db.execute('DELETE FROM quotes WHERE id = ?', [row.id])
@@ -368,20 +383,22 @@ export async function updateLocalRoutine(id, name) {
 
 export async function deleteLocalRoutine(id) {
   const db = await openDB()
-  const rows = await db.select('SELECT server_id FROM routines WHERE id = ?', [id])
-  const res = await db.select('SELECT id, server_id FROM routine_exercises WHERE local_routine_id = ?', [id])
-  for (const re of res) {
-    if (re.server_id) {
-      await db.execute('UPDATE routine_exercises SET pending_delete = 1 WHERE id = ?', [re.id])
-    } else {
-      await db.execute('DELETE FROM routine_exercises WHERE id = ?', [re.id])
+  await withTx(db, async () => {
+    const rows = await db.select('SELECT server_id FROM routines WHERE id = ?', [id])
+    const res = await db.select('SELECT id, server_id FROM routine_exercises WHERE local_routine_id = ?', [id])
+    for (const re of res) {
+      if (re.server_id) {
+        await db.execute('UPDATE routine_exercises SET pending_delete = 1 WHERE id = ?', [re.id])
+      } else {
+        await db.execute('DELETE FROM routine_exercises WHERE id = ?', [re.id])
+      }
     }
-  }
-  if (rows[0]?.server_id) {
-    await db.execute('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
-  } else {
-    await db.execute('DELETE FROM routines WHERE id = ?', [id])
-  }
+    if (rows[0]?.server_id) {
+      await db.execute('UPDATE routines SET pending_delete = 1 WHERE id = ?', [id])
+    } else {
+      await db.execute('DELETE FROM routines WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function getUnsyncedRoutines() {
@@ -404,13 +421,15 @@ export async function markRoutineSynced(localId, serverId) {
 
 export async function purgeLocalRoutine(localId) {
   const db = await openDB()
-  const sessions = await db.select('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [localId])
-  for (const s of sessions) {
-    await db.execute('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
-  }
-  await db.execute('DELETE FROM workout_sessions WHERE local_routine_id = ?', [localId])
-  await db.execute('DELETE FROM routine_exercises WHERE local_routine_id = ?', [localId])
-  await db.execute('DELETE FROM routines WHERE id = ?', [localId])
+  await withTx(db, async () => {
+    const sessions = await db.select('SELECT id FROM workout_sessions WHERE local_routine_id = ?', [localId])
+    for (const s of sessions) {
+      await db.execute('DELETE FROM workout_sets WHERE local_session_id = ?', [s.id])
+    }
+    await db.execute('DELETE FROM workout_sessions WHERE local_routine_id = ?', [localId])
+    await db.execute('DELETE FROM routine_exercises WHERE local_routine_id = ?', [localId])
+    await db.execute('DELETE FROM routines WHERE id = ?', [localId])
+  })
 }
 
 export async function getActiveRoutine() {
@@ -481,15 +500,17 @@ export async function insertTaskList(name) {
 
 export async function deleteTaskList(localId) {
   const db = await openDB()
-  const rows = await db.select('SELECT server_id FROM task_lists WHERE id = ?', [localId])
-  if (rows[0]?.server_id) {
-    await db.execute('UPDATE task_items SET pending_delete = 1 WHERE local_list_id = ? AND server_id IS NOT NULL', [localId])
-    await db.execute('DELETE FROM task_items WHERE local_list_id = ? AND server_id IS NULL', [localId])
-    await db.execute('UPDATE task_lists SET pending_delete = 1 WHERE id = ?', [localId])
-  } else {
-    await db.execute('DELETE FROM task_items WHERE local_list_id = ?', [localId])
-    await db.execute('DELETE FROM task_lists WHERE id = ?', [localId])
-  }
+  await withTx(db, async () => {
+    const rows = await db.select('SELECT server_id FROM task_lists WHERE id = ?', [localId])
+    if (rows[0]?.server_id) {
+      await db.execute('UPDATE task_items SET pending_delete = 1 WHERE local_list_id = ? AND server_id IS NOT NULL', [localId])
+      await db.execute('DELETE FROM task_items WHERE local_list_id = ? AND server_id IS NULL', [localId])
+      await db.execute('UPDATE task_lists SET pending_delete = 1 WHERE id = ?', [localId])
+    } else {
+      await db.execute('DELETE FROM task_items WHERE local_list_id = ?', [localId])
+      await db.execute('DELETE FROM task_lists WHERE id = ?', [localId])
+    }
+  })
 }
 
 export async function getUnsyncedTaskLists() {
@@ -618,7 +639,7 @@ export async function upsertTaskItemFromServer(serverItem, localListId) {
 
 export async function pruneStaleTaskLists(validServerIds) {
   const db = await openDB()
-  const rows = await db.select('SELECT id, server_id FROM task_lists WHERE server_id IS NOT NULL')
+  const rows = await db.select('SELECT id, server_id FROM task_lists WHERE server_id IS NOT NULL AND pending_delete = 0')
   for (const row of rows) {
     if (!validServerIds.has(row.server_id)) {
       await db.execute('DELETE FROM task_items WHERE local_list_id = ?', [row.id])
@@ -853,6 +874,17 @@ export async function purgeLocalSession(localId) {
   await db.execute('DELETE FROM workout_sessions WHERE id = ?', [localId])
 }
 
+// Borra localmente las sesiones que ya no existen en el servidor (p.ej. borradas
+// desde otro dispositivo). Sin esto, una sesión borrada en otro equipo persistía
+// aquí para siempre. Cascada a sus sets vía purgeLocalSession.
+export async function pruneStaleSessions(validServerIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM workout_sessions WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) await purgeLocalSession(row.id)
+  }
+}
+
 export async function upsertSessionFromServer(serverSession) {
   const db = await openDB()
   let localRoutineId = null
@@ -943,6 +975,15 @@ export async function markSetSynced(localId, serverId) {
 export async function purgeLocalSet(localId) {
   const db = await openDB()
   await db.execute('DELETE FROM workout_sets WHERE id = ?', [localId])
+}
+
+// Borra localmente las series que ya no existen en el servidor.
+export async function pruneStaleSets(validServerIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM workout_sets WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) await db.execute('DELETE FROM workout_sets WHERE id = ?', [row.id])
+  }
 }
 
 export async function upsertSetFromServer(serverSet) {
@@ -1145,6 +1186,10 @@ function mergeJournalContent(local, remote) {
   if (!l) return r
   if (!r) return l
   if (l === r) return l
+  // Idempotencia: si una versión ya contiene a la otra (caso típico al sincronizar
+  // entre 3+ dispositivos), no re-concatenamos — evitamos que el contenido crezca.
+  if (l.includes(r)) return l
+  if (r.includes(l)) return r
   return `${l}\n\n---\n\n${r}`
 }
 
@@ -1209,23 +1254,25 @@ export async function updateHabitCategory(id, data) {
 
 export async function deleteLocalHabitCategory(id) {
   const db = await openDB()
-  const [cat] = await db.select('SELECT server_id FROM habit_categories WHERE id = ?', [id])
-  const habits = await db.select('SELECT id, server_id FROM habits WHERE local_category_id = ?', [id])
-  for (const h of habits) {
-    if (h.server_id) {
-      await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [h.id])
-      await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [h.id])
-      await db.execute('UPDATE habits SET pending_delete = 1 WHERE id = ?', [h.id])
-    } else {
-      await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ?', [h.id])
-      await db.execute('DELETE FROM habits WHERE id = ?', [h.id])
+  await withTx(db, async () => {
+    const [cat] = await db.select('SELECT server_id FROM habit_categories WHERE id = ?', [id])
+    const habits = await db.select('SELECT id, server_id FROM habits WHERE local_category_id = ?', [id])
+    for (const h of habits) {
+      if (h.server_id) {
+        await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [h.id])
+        await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [h.id])
+        await db.execute('UPDATE habits SET pending_delete = 1 WHERE id = ?', [h.id])
+      } else {
+        await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ?', [h.id])
+        await db.execute('DELETE FROM habits WHERE id = ?', [h.id])
+      }
     }
-  }
-  if (cat?.server_id) {
-    await db.execute('UPDATE habit_categories SET pending_delete = 1 WHERE id = ?', [id])
-  } else {
-    await db.execute('DELETE FROM habit_categories WHERE id = ?', [id])
-  }
+    if (cat?.server_id) {
+      await db.execute('UPDATE habit_categories SET pending_delete = 1 WHERE id = ?', [id])
+    } else {
+      await db.execute('DELETE FROM habit_categories WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function getHabits() {
@@ -1251,15 +1298,17 @@ export async function updateHabit(id, data) {
 
 export async function deleteLocalHabit(id) {
   const db = await openDB()
-  const [h] = await db.select('SELECT server_id FROM habits WHERE id = ?', [id])
-  if (h?.server_id) {
-    await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [id])
-    await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [id])
-    await db.execute('UPDATE habits SET pending_delete = 1 WHERE id = ?', [id])
-  } else {
-    await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ?', [id])
-    await db.execute('DELETE FROM habits WHERE id = ?', [id])
-  }
+  await withTx(db, async () => {
+    const [h] = await db.select('SELECT server_id FROM habits WHERE id = ?', [id])
+    if (h?.server_id) {
+      await db.execute('UPDATE habit_logs SET pending_delete = 1 WHERE local_habit_id = ? AND server_id IS NOT NULL', [id])
+      await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ? AND server_id IS NULL', [id])
+      await db.execute('UPDATE habits SET pending_delete = 1 WHERE id = ?', [id])
+    } else {
+      await db.execute('DELETE FROM habit_logs WHERE local_habit_id = ?', [id])
+      await db.execute('DELETE FROM habits WHERE id = ?', [id])
+    }
+  })
 }
 
 export async function getHabitLogs(month) {
@@ -1399,9 +1448,16 @@ export async function upsertHabitLogFromServer(log, localHabitId) {
     )
   }
 }
-export async function pruneStaleHabitLogs(serverIds) {
+// IMPORTANTE: el servidor solo devuelve los logs del `month` pedido, así que el
+// prune debe limitarse a ESE mes. Si no, borraría los logs locales sincronizados
+// de los demás meses (no están en serverIds porque no se pidieron). El histórico
+// reaparecería al volver al mes con conexión, pero offline se perdería.
+export async function pruneStaleHabitLogs(serverIds, month) {
   const db = await openDB()
-  const rows = await db.select('SELECT id, server_id FROM habit_logs WHERE server_id IS NOT NULL AND pending_delete = 0')
+  const rows = await db.select(
+    'SELECT id, server_id FROM habit_logs WHERE server_id IS NOT NULL AND pending_delete = 0 AND date LIKE ?',
+    [`${month}%`]
+  )
   for (const row of rows) {
     if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM habit_logs WHERE id = ?', [row.id])
   }

@@ -25,8 +25,8 @@ import {
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine, restoreActiveRoutineByServerId,
   getAllSessions, getSetsForSession, getExerciseProgression,
-  getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer,
-  getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer,
+  getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer, pruneStaleSessions,
+  getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer, pruneStaleSets,
 } from '../db/database'
 import {
   isServerReachable,
@@ -143,6 +143,7 @@ export default function GymScreen() {
       }
       const serverSessions = await fetchAllSessionsFromServer()
       for (const s of serverSessions) await upsertSessionFromServer(s)
+      await pruneStaleSessions(new Set(serverSessions.map(s => s.id)))
 
       for (const ws of await getPendingDeleteSets()) {
         try { await deleteSetFromServer(ws.server_id) } catch {}
@@ -154,8 +155,9 @@ export default function GymScreen() {
       }
       const serverSets = await fetchAllSetsFromServer()
       for (const ws of serverSets) await upsertSetFromServer(ws)
+      await pruneStaleSets(new Set(serverSets.map(ws => ws.id)))
 
-    } catch {} finally {
+    } catch (e) { console.warn('gym sync failed:', e) } finally {
       syncingGym = false
       await loadRoutines()
       await loadExercises()

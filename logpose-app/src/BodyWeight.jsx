@@ -81,7 +81,7 @@ function BodyWeight() {
         await upsertFromServer(entry)
       }
       await pruneEntriesDeletedFromServer(serverIds)
-    } catch {} finally {
+    } catch (e) { console.warn('bodyweight sync failed:', e) } finally {
       syncingRef.current = false
       await loadLocal()
     }
