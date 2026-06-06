@@ -1,84 +1,84 @@
 # logpose-app
 
-Frontend de **Logpose**, una app personal de life tracking. El nombre es una referencia a One Piece — el Log Pose es el instrumento de navegación que registra cada isla visitada.
+Frontend for **Logpose**, a personal life-tracking app. The name is a One Piece reference — the Log Pose is the navigation instrument that records every island you visit.
 
-## Qué es
+## What it is
 
-Interfaz de usuario en dos plataformas que comparten los mismos datos vía sincronización con `logpose-api`:
+A user interface on two platforms that share the same data via sync with `logpose-api`:
 
-- **Desktop** — app nativa en Linux construida con React + Tauri 2
-- **Móvil** — app Android construida con React Native + Expo (APK standalone)
+- **Desktop** — native Linux app built with React + Tauri 2
+- **Mobile** — Android app built with React Native + Expo (standalone APK)
 
 ## Stack
 
-| Plataforma | Tecnología |
+| Platform | Technology |
 |---|---|
 | Desktop | React 19 · Vite · Tauri 2 · `@tauri-apps/plugin-sql` |
-| Móvil | React Native 0.81 · Expo 54 · `expo-sqlite` |
+| Mobile | React Native 0.81 · Expo 54 · `expo-sqlite` |
 
-## Módulos
+## Modules
 
-| Módulo | Desktop | Móvil | Descripción |
+| Module | Desktop | Mobile | Description |
 |---|---|---|---|
-| Body Weight | ✅ | ✅ | Registro de peso con gráfica de evolución y filtro por fechas |
-| Gym | ✅ | ✅ | Rutinas semanales, catálogo de ejercicios, registro de series (peso + reps), gráfica de progresión |
-| Calendario | ✅ | ✅ | Vistas día/semana/mes, eventos con recurrencia diaria/semanal, integración con días de gym |
-| Tareas | ✅ | ✅ | Listas de tareas con items, estado completado |
-| Diario | ✅ | ✅ | Entrada diaria, racha de días consecutivos, historial |
-| Frases | ✅ | ✅ | Frases motivacionales con autor, se muestra una aleatoria en Inicio |
-| Inicio | ✅ | ✅ | Saludo, fecha y frase del día |
-| Ajustes | ✅ | ✅ | Tema visual (Normal / Cálido / Tele antigua / Pixel / Cuphead), modo oscuro/claro, idioma (ES/EN) |
+| Body Weight | ✅ | ✅ | Weight log with evolution chart and date filter |
+| Gym | ✅ | ✅ | Weekly routines, exercise catalogue, set logging (weight + reps), progression chart |
+| Calendar | ✅ | ✅ | Day/week/month views, events with daily/weekly recurrence, integration with gym days |
+| Tasks | ✅ | ✅ | Task lists with items, completed state |
+| Journal | ✅ | ✅ | Daily entry, consecutive-day streak, history |
+| Quotes | ✅ | ✅ | Motivational quotes with author, a random one shown on Home |
+| Home | ✅ | ✅ | Greeting, date and quote of the day |
+| Settings | ✅ | ✅ | Visual theme (Normal / Warm / Old TV / Pixel / Cuphead), dark/light mode, language (ES/EN) |
 
-## Arquitectura local-first
+## Local-first architecture
 
-Todas las pantallas funcionan sin conexión. Cada registro en SQLite tiene tres campos de control:
+Every screen works offline. Each record in SQLite has three control fields:
 
-- `server_id` — id en el servidor (null si aún no se ha sincronizado)
+- `server_id` — id on the server (null if not yet synced)
 - `synced` — 0/1
-- `pending_delete` — 1 si está marcado para borrar del servidor
+- `pending_delete` — 1 if marked for deletion on the server
 
-El ciclo de sync se ejecuta al entrar en cada pantalla: push deletes → push unsynced → pull server → prune stale. Si el servidor no responde en 3 segundos se omite silenciosamente y los datos locales siguen siendo la fuente de verdad.
+The sync cycle runs when entering each screen: push deletes → push unsynced → pull server → prune stale. If the server doesn't respond within 3 seconds it's skipped silently and local data remains the source of truth.
 
-## Estructura del repo
+## Repo structure
 
 ```
-logpose-app/           — app de escritorio (React + Tauri)
+logpose-app/           — desktop app (React + Tauri)
   src/
     App.jsx            — sidebar + routing
-    db/database.js     — SQLite local: tablas, CRUD y sync helpers
-    api/client.js      — llamadas HTTP a logpose-api con timeout de 3s
-    *.jsx              — una pantalla por módulo
-    translations/      — strings en ES e EN
-logpose-mobile/        — app móvil (React Native + Expo)
+    db/database.js     — local SQLite: tables, CRUD and sync helpers
+    api/client.js      — HTTP calls to logpose-api with a 3s timeout
+    *.jsx              — one screen per module
+    translations/      — strings in ES and EN
+logpose-mobile/        — mobile app (React Native + Expo)
   src/
-    screens/           — una pantalla por módulo
-    db/database.js     — SQLite local (expo-sqlite): misma lógica que desktop
-    api/client.js      — llamadas HTTP (servidor en archlinux.local:8000)
-    ThemeContext.js    — tema persistido en AsyncStorage
-    LangContext.js     — idioma persistido en AsyncStorage
+    screens/           — one screen per module
+    db/database.js     — local SQLite (expo-sqlite): same logic as desktop
+    api/client.js      — HTTP calls (server at archlinux.local:8000)
+    ThemeContext.js    — theme persisted in AsyncStorage
+    LangContext.js     — language persisted in AsyncStorage
 ```
 
-## Cómo arrancar en desarrollo
+## Running in development
 
 ```bash
-# Desktop — requiere Tauri para acceder a SQLite nativo
+# Desktop — requires Tauri for native SQLite access
 cd logpose-app && npx tauri dev
 
-# Móvil
+# Mobile
 cd logpose-mobile && npx expo start
 ```
 
-Requiere `logpose-api` corriendo con `--host 0.0.0.0` en la misma red.
+Requires `logpose-api` running with `--host 0.0.0.0` on the same network.
 
-El desktop usa `localhost:8000`. El móvil descubre el servidor vía mDNS (`archlinux.local:8000`).
+Desktop uses `localhost:8000`. Mobile discovers the server via mDNS (`archlinux.local:8000`).
 
-## Compilar
+## Building
 
 ```bash
-# Desktop — binario nativo Linux
+# Desktop — native Linux binary
 cd logpose-app && npx tauri build
-# Binario: src-tauri/target/release/app
+# Binary: src-tauri/target/release/app
 
-# Móvil — APK standalone (sin Expo Go)
+# Mobile — standalone APK (no Expo Go)
 cd logpose-mobile && eas build --platform android --profile preview
 ```
