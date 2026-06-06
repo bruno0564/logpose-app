@@ -13,7 +13,7 @@ import {
   fetchAllHabitsFromServer, postHabitToServer, putHabitToServer, deleteHabitFromServer,
   fetchHabitLogsFromServer, postHabitLogToServer, deleteHabitLogFromServer,
 } from './api/client'
-import { IconClose } from './Icons.jsx'
+import { IconClose, IconEdit } from './Icons.jsx'
 
 let syncingHabits = false
 
@@ -316,7 +316,7 @@ export default function Habits() {
               <span className={`habits-rate ${rate >= 80 ? 'habits-rate--good' : rate >= 50 ? 'habits-rate--mid' : 'habits-rate--bad'}`}>
                 {rate}% — {rateLabel}
               </span>
-              <button className="btn-icon" title="Edit category" onClick={() => openEditCat(activeCat)}>✎</button>
+              <button className="btn-icon" title="Edit category" onClick={() => openEditCat(activeCat)}><IconEdit /></button>
               <button className="btn-primary" style={{ fontSize: '0.78rem' }} onClick={openCreateHabit}>+ Habit</button>
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function Habits() {
                   <tr key={habit.id} className="habits-grid-row">
                     <td className="habits-grid-habit-name">
                       <span className="habits-name-text">{habit.name}</span>
-                      <button className="habits-edit-btn" onClick={e => { e.stopPropagation(); openEditHabit(habit) }}>✎</button>
+                      <button className="habits-edit-btn" onClick={e => { e.stopPropagation(); openEditHabit(habit) }}><IconEdit /></button>
                     </td>
                     {Array.from({ length: days }, (_, i) => {
                       const done      = isDone(habit.id, i + 1)
