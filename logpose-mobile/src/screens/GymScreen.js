@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import { Ionicons } from '@expo/vector-icons'
 import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
@@ -330,7 +331,7 @@ export default function GymScreen() {
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity onPress={() => { setEditingRoutineId(r.id); setEditRoutineName(r.name) }} hitSlop={10}>
-                          <Text style={{ color: t.text3, fontSize: 16, lineHeight: 18 }}>✎</Text>
+                          <Ionicons name="pencil" size={15} color={t.text3} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={10}>
                           <Text style={s.deleteBtn}>×</Text>
@@ -667,7 +668,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                       <Text style={s.exerciseName}>{ex.name}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <TouchableOpacity onPress={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }} hitSlop={8}>
-                          <Text style={{ color: t.text3, fontSize: 15, lineHeight: 17 }}>✎</Text>
+                          <Ionicons name="pencil" size={14} color={t.text3} />
                         </TouchableOpacity>
                         {alreadyAdded.has(ex.id) ? (
                           <Text style={s.addedMark}>✓</Text>

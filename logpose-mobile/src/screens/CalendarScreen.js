@@ -9,8 +9,8 @@ import TextInput from '../components/TextInput'
 import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
-import DateTimePicker from '@react-native-community/datetimepicker'
 import DatePicker from '../components/DatePicker'
+import TimePicker from '../components/TimePicker'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
   markCalendarEventPendingDelete, purgeCalendarEvent,
@@ -350,17 +350,6 @@ export default function CalendarScreen() {
 
 // ── Event modal ───────────────────────────────────────────────────────────────
 
-function timeStrToDate(str) {
-  const [h, m] = (str || '00:00').split(':').map(Number)
-  const d = new Date()
-  d.setHours(h || 0, m || 0, 0, 0)
-  return d
-}
-
-function dateToTimeStr(d) {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
 function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
@@ -467,30 +456,18 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
               <Text>🕐</Text>
             </TouchableOpacity>
           </View>
-          {showStartPicker && (
-            <DateTimePicker
-              value={timeStrToDate(form.start_time)}
-              mode="time"
-              is24Hour
-              display="spinner"
-              onChange={(_, selected) => {
-                setShowStartPicker(false)
-                if (selected) setForm(f => ({ ...f, start_time: dateToTimeStr(selected) }))
-              }}
-            />
-          )}
-          {showEndPicker && (
-            <DateTimePicker
-              value={timeStrToDate(form.end_time)}
-              mode="time"
-              is24Hour
-              display="spinner"
-              onChange={(_, selected) => {
-                setShowEndPicker(false)
-                if (selected) setForm(f => ({ ...f, end_time: dateToTimeStr(selected) }))
-              }}
-            />
-          )}
+          <TimePicker
+            visible={showStartPicker}
+            value={form.start_time}
+            onClose={() => setShowStartPicker(false)}
+            onSelect={(time) => setForm(f => ({ ...f, start_time: time }))}
+          />
+          <TimePicker
+            visible={showEndPicker}
+            value={form.end_time}
+            onClose={() => setShowEndPicker(false)}
+            onSelect={(time) => setForm(f => ({ ...f, end_time: time }))}
+          />
 
           <View style={s.colorRow}>
             {COLORS.map(c => (

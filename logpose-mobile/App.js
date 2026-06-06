@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
-import Text from './src/components/Text'
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -25,25 +24,24 @@ import { isServerReachable, initServerUrl } from './src/api/client'
 
 const Tab = createBottomTabNavigator()
 
+// Indicador de conexión discreto: solo un puntito arriba a la derecha.
+// Verde tenue = servidor conectado; rojo = sin servidor (modo local).
 function ServerStatus({ online }) {
   const { theme: t } = useTheme()
-  const { t: tr } = useLang()
   const insets = useSafeAreaInsets()
   return (
     <View style={{
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingTop: insets.top + 6,
-      paddingBottom: 8,
+      flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingTop: insets.top + 4,
+      paddingBottom: 4,
       backgroundColor: t.bg,
     }}>
       <View style={{
-        width: 6, height: 6, borderRadius: 3, marginRight: 6,
-        backgroundColor: online ? t.success : t.text4,
+        width: 7, height: 7, borderRadius: 4,
+        backgroundColor: online ? t.success : t.danger,
+        opacity: online ? 0.5 : 1,
       }} />
-      <Text style={{ color: t.text3, fontSize: 11 }}>
-        {online ? tr('server.online') : tr('server.offline')}
-      </Text>
     </View>
   )
 }

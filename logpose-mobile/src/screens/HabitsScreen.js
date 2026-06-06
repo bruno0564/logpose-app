@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import { Ionicons } from '@expo/vector-icons'
 import PressableScale from '../components/PressableScale'
 import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -324,7 +325,7 @@ export default function HabitsScreen() {
               <View style={s.nameCol}>
                 <Text style={s.habitName} numberOfLines={1}>{habit.name}</Text>
                 <TouchableOpacity style={s.editBtn} onPress={() => openEditHabit(habit)} hitSlop={8}>
-                  <Text style={s.editBtnText}>✎</Text>
+                  <Ionicons name="pencil" size={13} color={t.accent} />
                 </TouchableOpacity>
               </View>
               {dayList.map((d, i) => renderDayCell(habit, d, cellW, i === lastDay))}
@@ -419,7 +420,7 @@ export default function HabitsScreen() {
               </TouchableOpacity>
               {/* Editar categoría */}
               <TouchableOpacity style={s.btnIcon} onPress={() => openEditCat(activeCat)}>
-                <Text style={{ color: t.accent, fontSize: 16 }}>✎</Text>
+                <Ionicons name="pencil" size={15} color={t.accent} />
               </TouchableOpacity>
               {/* Añadir hábito */}
               <PressableScale style={s.btnPrimary} onPress={openCreateHabit}>

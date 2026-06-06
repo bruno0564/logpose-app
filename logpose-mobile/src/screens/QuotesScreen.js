@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import { Ionicons } from '@expo/vector-icons'
 import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
@@ -125,7 +126,7 @@ export default function QuotesScreen() {
             </View>
             <View style={s.actions}>
               <TouchableOpacity onPress={() => openEdit(q)} hitSlop={10} style={s.actionBtn}>
-                <Text style={s.editIcon}>✎</Text>
+                <Ionicons name="pencil" size={15} color={t.text3} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleDelete(q)} hitSlop={10} style={s.actionBtn}>
                 <Text style={s.deleteIcon}>×</Text>

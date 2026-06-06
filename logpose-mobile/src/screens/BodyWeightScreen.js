@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
+import { Ionicons } from '@expo/vector-icons'
 import GradientButton from '../components/GradientButton'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
@@ -278,7 +279,7 @@ export default function BodyWeightScreen() {
                 <Text style={[s.col, s.colNote, s.noteText]}>{item.note ?? '—'}</Text>
                 <View style={[s.colAction, { flexDirection: 'row', gap: 4 }]}>
                   <TouchableOpacity onPress={() => setEditEntry({ ...item, weight: String(item.weight) })}>
-                    <Text style={s.editBtn}>✎</Text>
+                    <Ionicons name="pencil" size={14} color={t.text3} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleDelete(item)}>
                     <Text style={s.del}>✕</Text>
