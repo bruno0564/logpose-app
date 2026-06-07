@@ -28,6 +28,7 @@ async function fetchWithTimeout(url, options = {}) {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
     const res = await fetch(url, { ...options, signal: controller.signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`)
     return res
   } finally {
     clearTimeout(timer)

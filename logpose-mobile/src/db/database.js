@@ -1116,7 +1116,7 @@ export async function pruneStaleCalendarEvents(serverIds) {
 
 export async function getTodayJournalEntry() {
   const db = await openDB()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('sv')
   return db.getFirstAsync('SELECT * FROM journal_entries WHERE date = ? AND pending_delete = 0', [today])
 }
 
@@ -1127,7 +1127,7 @@ export async function getAllJournalEntries() {
 
 export async function saveJournalEntry(content) {
   const db = await openDB()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('sv')
   const existing = await getTodayJournalEntry()
   if (existing) {
     await db.runAsync('UPDATE journal_entries SET content = ?, synced = 0 WHERE id = ?', [content, existing.id])
@@ -1151,10 +1151,10 @@ export async function getJournalStreak() {
   let streak = 0
   const cursor = new Date()
   cursor.setHours(12, 0, 0, 0)
-  const todayStr = cursor.toISOString().slice(0, 10)
+  const todayStr = cursor.toLocaleDateString('sv')
   if (!dates.has(todayStr)) cursor.setDate(cursor.getDate() - 1)
   while (true) {
-    const d = cursor.toISOString().slice(0, 10)
+    const d = cursor.toLocaleDateString('sv')
     if (!dates.has(d)) break
     streak++
     cursor.setDate(cursor.getDate() - 1)
@@ -1350,7 +1350,7 @@ export async function upsertHabitCategoryFromServer(cat) {
   const db = await openDB()
   const existing = await db.getFirstAsync('SELECT id FROM habit_categories WHERE server_id = ?', [cat.id])
   if (existing) {
-    await db.runAsync('UPDATE habit_categories SET name = ?, color = ?, synced = 1 WHERE server_id = ?', [cat.name, cat.color, cat.id])
+    await db.runAsync('UPDATE habit_categories SET name = ?, color = ?, synced = 1, pending_delete = 0 WHERE server_id = ?', [cat.name, cat.color, cat.id])
   } else {
     await db.runAsync('INSERT INTO habit_categories (server_id, name, color, synced) VALUES (?, ?, ?, 1)', [cat.id, cat.name, cat.color])
   }
@@ -1384,7 +1384,7 @@ export async function upsertHabitFromServer(habit, localCategoryId) {
   const existing = await db.getFirstAsync('SELECT id FROM habits WHERE server_id = ?', [habit.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1 WHERE server_id = ?',
+      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
       [habit.name, habit.days_of_week, habit.position, habit.id]
     )
   } else {

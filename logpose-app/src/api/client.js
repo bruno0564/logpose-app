@@ -5,7 +5,9 @@ async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
-    return await fetch(url, { ...options, signal: controller.signal })
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`)
+    return res
   } finally {
     clearTimeout(timer)
   }

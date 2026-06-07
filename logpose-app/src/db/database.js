@@ -1113,7 +1113,7 @@ export async function pruneStaleCalendarEvents(serverIds) {
 
 export async function getTodayJournalEntry() {
   const db = await openDB()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('sv')
   const rows = await db.select('SELECT * FROM journal_entries WHERE date = ? AND pending_delete = 0', [today])
   return rows[0] ?? null
 }
@@ -1125,7 +1125,7 @@ export async function getAllJournalEntries() {
 
 export async function saveJournalEntry(content) {
   const db = await openDB()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('sv')
   const existing = await getTodayJournalEntry()
   if (existing) {
     await db.execute('UPDATE journal_entries SET content = ?, synced = 0 WHERE id = ?', [content, existing.id])
@@ -1149,10 +1149,10 @@ export async function getJournalStreak() {
   let streak = 0
   const cursor = new Date()
   cursor.setHours(12, 0, 0, 0)
-  const todayStr = cursor.toISOString().slice(0, 10)
+  const todayStr = cursor.toLocaleDateString('sv')
   if (!dates.has(todayStr)) cursor.setDate(cursor.getDate() - 1)
   while (true) {
-    const d = cursor.toISOString().slice(0, 10)
+    const d = cursor.toLocaleDateString('sv')
     if (!dates.has(d)) break
     streak++
     cursor.setDate(cursor.getDate() - 1)
@@ -1363,7 +1363,7 @@ export async function upsertHabitCategoryFromServer(cat) {
   const rows = await db.select('SELECT * FROM habit_categories WHERE server_id = ?', [cat.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE habit_categories SET name = ?, color = ?, synced = 1 WHERE server_id = ?',
+      'UPDATE habit_categories SET name = ?, color = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
       [cat.name, cat.color, cat.id]
     )
   } else {
@@ -1402,7 +1402,7 @@ export async function upsertHabitFromServer(habit, localCategoryId) {
   const rows = await db.select('SELECT * FROM habits WHERE server_id = ?', [habit.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1 WHERE server_id = ?',
+      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
       [habit.name, habit.days_of_week, habit.position, habit.id]
     )
   } else {
