@@ -753,7 +753,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const s = makeStyles(t)
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(new Date().toLocaleDateString('sv'))
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [sets, setSets] = useState(() => {
     const init = {}
