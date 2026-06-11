@@ -119,6 +119,8 @@ export default {
     createAndAdd: 'Create and add',
     deleteExercise: 'Delete exercise',
     deleteExerciseConfirm: 'Delete this exercise? It will also be removed from any routines that use it.',
+    editRoutine: 'Edit',
+    editDone: 'Done',
     exerciseNamePh: 'Name',
     musclePh: 'Muscle group (optional)',
     noExercisesYet: 'No exercises yet.',

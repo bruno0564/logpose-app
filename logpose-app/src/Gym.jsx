@@ -479,6 +479,7 @@ function StatsView({ exercises }) {
 function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange, onSync }) {
   const { t: tr } = useLang()
   const [pickerDay, setPickerDay] = useState(null)
+  const [editing, setEditing] = useState(false)
   const days = tr('common.days')
 
   // Reordenar dentro de un día: renumera posiciones 0..n-1 y marca synced=0
@@ -518,7 +519,18 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
         >
           {tr('common.back')}
         </button>
-        <h1 className="page-title">{routine.name}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <h1 className="page-title" style={{ margin: 0 }}>{routine.name}</h1>
+          <button
+            onClick={() => setEditing(e => !e)}
+            className={editing ? 'btn-primary' : ''}
+            style={editing
+              ? { fontSize: '0.8rem', padding: '0.3rem 0.85rem' }
+              : { background: 'none', border: '1px solid var(--border-2)', color: 'var(--text-2)', borderRadius: 'var(--radius-sm)', padding: '0.3rem 0.85rem', cursor: 'pointer', fontSize: '0.8rem' }}
+          >
+            {editing ? tr('gym.editDone') : tr('gym.editRoutine')}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 480 }}>
@@ -529,21 +541,24 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dayExs.length > 0 ? '0.6rem' : 0 }}>
                 <span style={{ color: 'var(--text)', fontSize: '0.88rem', fontWeight: 600 }}>{dayName}</span>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  {dayExs.length > 0 && (
+                  {editing ? (
                     <button
-                      className="btn-primary"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                      onClick={() => onTrain(idx)}
+                      onClick={() => setPickerDay(idx)}
+                      style={{ background: 'none', border: '1px solid var(--border-2)', color: 'var(--text-2)', borderRadius: 'var(--radius-sm)', padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1 }}
                     >
-                      {tr('gym.trainBtn')}
+                      +
                     </button>
+                  ) : (
+                    dayExs.length > 0 && (
+                      <button
+                        className="btn-primary"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        onClick={() => onTrain(idx)}
+                      >
+                        {tr('gym.trainBtn')}
+                      </button>
+                    )
                   )}
-                  <button
-                    onClick={() => setPickerDay(idx)}
-                    style={{ background: 'none', border: '1px solid var(--border-2)', color: 'var(--text-2)', borderRadius: 'var(--radius-sm)', padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1 }}
-                  >
-                    +
-                  </button>
                 </div>
               </div>
 
@@ -559,22 +574,24 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                         )}
                         {re.exercise_name}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
-                        <button className="btn-icon" disabled={i === 0} style={{ opacity: i === 0 ? 0.25 : 1 }}
-                          onClick={() => moveExercise(dayExs, i, -1)} title={tr('gym.moveUp')}>
-                          <IconChevronUp size={13} />
-                        </button>
-                        <button className="btn-icon" disabled={i === dayExs.length - 1} style={{ opacity: i === dayExs.length - 1 ? 0.25 : 1 }}
-                          onClick={() => moveExercise(dayExs, i, 1)} title={tr('gym.moveDown')}>
-                          <IconChevronDown size={13} />
-                        </button>
-                        <button
-                          className="btn-delete"
-                          onClick={async () => { await deleteRoutineExercise(re.id); await onExercisesChange(); onSync() }}
-                        >
-                          <IconClose size={12} />
-                        </button>
-                      </div>
+                      {editing && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+                          <button className="btn-icon" disabled={i === 0} style={{ opacity: i === 0 ? 0.25 : 1 }}
+                            onClick={() => moveExercise(dayExs, i, -1)} title={tr('gym.moveUp')}>
+                            <IconChevronUp size={13} />
+                          </button>
+                          <button className="btn-icon" disabled={i === dayExs.length - 1} style={{ opacity: i === dayExs.length - 1 ? 0.25 : 1 }}
+                            onClick={() => moveExercise(dayExs, i, 1)} title={tr('gym.moveDown')}>
+                            <IconChevronDown size={13} />
+                          </button>
+                          <button
+                            className="btn-delete"
+                            onClick={async () => { await deleteRoutineExercise(re.id); await onExercisesChange(); onSync() }}
+                          >
+                            <IconClose size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -99,6 +99,8 @@ export default {
     createAndAdd: 'Create and add',
     moveUp: 'Move up',
     moveDown: 'Move down',
+    editRoutine: 'Edit',
+    editDone: 'Done',
     deleteExercise: 'Delete exercise',
     deleteExerciseConfirm: 'Delete this exercise? It will also be removed from any routines that use it.',
     exerciseNamePh: 'Name',

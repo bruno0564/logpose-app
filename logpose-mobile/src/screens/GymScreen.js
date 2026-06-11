@@ -508,6 +508,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const [pickerDay, setPickerDay] = useState(null)
+  const [editing, setEditing] = useState(false)
   const days = tr('common.days')
 
   // Reordenar dentro de un día: renumera posiciones 0..n-1 y marca synced=0 en
@@ -541,7 +542,12 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
       <TouchableOpacity onPress={onBack} style={{ marginBottom: 12 }}>
         <Text style={s.backBtn}>{tr('common.back')}</Text>
       </TouchableOpacity>
-      <Text style={s.title}>{routine.name}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <Text style={[s.title, { flex: 1 }]} numberOfLines={1}>{routine.name}</Text>
+        <TouchableOpacity onPress={() => setEditing(e => !e)} style={editing ? s.btnPrimary : s.btnOutline}>
+          <Text style={editing ? s.btnPrimaryText : s.btnOutlineText}>{editing ? tr('gym.editDone') : tr('gym.editRoutine')}</Text>
+        </TouchableOpacity>
+      </View>
       <View style={{ height: 16 }} />
 
       {days.map((dayName, idx) => {
@@ -551,14 +557,17 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: dayExs.length > 0 ? 8 : 0 }}>
               <Text style={s.dayName}>{dayName}</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                {dayExs.length > 0 && (
-                  <PressableScale style={s.btnPrimary} onPress={() => onTrain(idx)}>
-                    <Text style={s.btnPrimaryText}>{tr('gym.trainBtn')}</Text>
+                {editing ? (
+                  <PressableScale style={s.btnOutline} onPress={() => setPickerDay(idx)}>
+                    <Text style={s.btnOutlineText}>+</Text>
                   </PressableScale>
+                ) : (
+                  dayExs.length > 0 && (
+                    <PressableScale style={s.btnPrimary} onPress={() => onTrain(idx)}>
+                      <Text style={s.btnPrimaryText}>{tr('gym.trainBtn')}</Text>
+                    </PressableScale>
+                  )
                 )}
-                <PressableScale style={s.btnOutline} onPress={() => setPickerDay(idx)}>
-                  <Text style={s.btnOutlineText}>+</Text>
-                </PressableScale>
               </View>
             </View>
 
@@ -570,17 +579,19 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                   <Text style={[s.exerciseName, { flex: 1 }]} numberOfLines={1}>
                     {re.muscle_group ? `[${re.muscle_group}] ` : ''}{re.exercise_name}
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <TouchableOpacity disabled={i === 0} onPress={() => moveExercise(dayExs, i, -1)} hitSlop={8}>
-                      <Ionicons name="chevron-up" size={18} color={i === 0 ? t.text3 : t.text2} style={{ opacity: i === 0 ? 0.3 : 1 }} />
-                    </TouchableOpacity>
-                    <TouchableOpacity disabled={i === dayExs.length - 1} onPress={() => moveExercise(dayExs, i, 1)} hitSlop={8}>
-                      <Ionicons name="chevron-down" size={18} color={i === dayExs.length - 1 ? t.text3 : t.text2} style={{ opacity: i === dayExs.length - 1 ? 0.3 : 1 }} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={async () => { await deleteRoutineExercise(re.id); await onExercisesChange(); onSync() }} hitSlop={10}>
-                      <Text style={s.deleteSmall}>×</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {editing && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <TouchableOpacity disabled={i === 0} onPress={() => moveExercise(dayExs, i, -1)} hitSlop={8}>
+                        <Ionicons name="chevron-up" size={18} color={i === 0 ? t.text3 : t.text2} style={{ opacity: i === 0 ? 0.3 : 1 }} />
+                      </TouchableOpacity>
+                      <TouchableOpacity disabled={i === dayExs.length - 1} onPress={() => moveExercise(dayExs, i, 1)} hitSlop={8}>
+                        <Ionicons name="chevron-down" size={18} color={i === dayExs.length - 1 ? t.text3 : t.text2} style={{ opacity: i === dayExs.length - 1 ? 0.3 : 1 }} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={async () => { await deleteRoutineExercise(re.id); await onExercisesChange(); onSync() }} hitSlop={10}>
+                        <Text style={s.deleteSmall}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))
             )}

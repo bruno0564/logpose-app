@@ -97,6 +97,8 @@ export default {
     createAndAdd: 'Crear y añadir',
     moveUp: 'Subir',
     moveDown: 'Bajar',
+    editRoutine: 'Editar',
+    editDone: 'Hecho',
     deleteExercise: 'Borrar ejercicio',
     deleteExerciseConfirm: '¿Borrar este ejercicio? Se quitará también de las rutinas donde esté.',
     exerciseNamePh: 'Nombre',
