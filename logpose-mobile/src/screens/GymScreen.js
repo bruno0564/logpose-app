@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, TouchableOpacity, ScrollView,
+  View, TouchableOpacity, Pressable, ScrollView,
   Modal, StyleSheet, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native'
 import Text from '../components/Text'
@@ -17,10 +17,10 @@ import {
   getRoutines, insertLocalRoutine, updateLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
-  getExercises, insertLocalExercise, updateLocalExercise,
+  getExercises, insertLocalExercise, updateLocalExercise, deleteLocalExercise,
   getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
-  insertRoutineExercise, deleteRoutineExercise,
+  insertRoutineExercise, deleteRoutineExercise, updateRoutineExercisePosition,
   getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine, restoreActiveRoutineByServerId,
@@ -32,7 +32,7 @@ import {
   isServerReachable,
   fetchAllRoutinesFromServer, postRoutineToServer, putRoutineToServer, deleteRoutineFromServer,
   fetchAllExercisesFromServer, postExerciseToServer, putExerciseToServer, deleteExerciseFromServer,
-  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
+  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, putRoutineExerciseToServer, deleteRoutineExerciseFromServer,
   fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
   postSessionToServer, postSetToServer,
 } from '../api/client'
@@ -126,8 +126,13 @@ export default function GymScreen() {
         await purgeLocalRoutineExercise(re.id)
       }
       for (const re of await getUnsyncedRoutineExercises()) {
-        const created = await postRoutineExerciseToServer(re)
-        await markRoutineExerciseSynced(re.id, created.id)
+        if (re.server_id) {
+          await putRoutineExerciseToServer(re.server_id, re)
+          await markRoutineExerciseSynced(re.id, re.server_id)
+        } else {
+          const created = await postRoutineExerciseToServer(re)
+          await markRoutineExerciseSynced(re.id, created.id)
+        }
       }
       const serverREs = await fetchAllRoutineExercisesFromServer()
       for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
@@ -228,6 +233,7 @@ export default function GymScreen() {
         onTrain={(day) => { setSelectedDay(day); setView('train') }}
         onExercisesChange={() => loadRoutineExercises(selectedRoutine)}
         onExercisesListChange={loadExercises}
+        onSync={syncGym}
       />
     )
   }
@@ -497,12 +503,27 @@ function StatsView({ exercises }) {
 
 // ── Routine Detail ────────────────────────────────────────────────────────────
 
-function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange }) {
+function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange, onSync }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const [pickerDay, setPickerDay] = useState(null)
   const days = tr('common.days')
+
+  // Reordenar dentro de un día: renumera posiciones 0..n-1 y marca synced=0 en
+  // las que cambian; la sync hará PATCH (conserva server_id, no duplica).
+  async function moveExercise(dayExs, idx, dir) {
+    const target = idx + dir
+    if (target < 0 || target >= dayExs.length) return
+    const arr = [...dayExs]
+    const [moved] = arr.splice(idx, 1)
+    arr.splice(target, 0, moved)
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].position !== i) await updateRoutineExercisePosition(arr[i].id, i)
+    }
+    await onExercisesChange()
+    onSync()
+  }
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -514,6 +535,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
         routineExercises={routineExercises}
         onClose={() => setPickerDay(null)}
         onAdded={() => { onExercisesChange(); onExercisesListChange() }}
+        onSync={onSync}
       />
 
       <TouchableOpacity onPress={onBack} style={{ marginBottom: 12 }}>
@@ -543,14 +565,22 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
             {dayExs.length === 0 ? (
               <Text style={s.restText}>{tr('gym.restDay')}</Text>
             ) : (
-              dayExs.map(re => (
+              dayExs.map((re, i) => (
                 <View key={re.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 3 }}>
-                  <Text style={s.exerciseName}>
+                  <Text style={[s.exerciseName, { flex: 1 }]} numberOfLines={1}>
                     {re.muscle_group ? `[${re.muscle_group}] ` : ''}{re.exercise_name}
                   </Text>
-                  <TouchableOpacity onPress={async () => { await deleteRoutineExercise(re.id); onExercisesChange() }} hitSlop={10}>
-                    <Text style={s.deleteSmall}>×</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <TouchableOpacity disabled={i === 0} onPress={() => moveExercise(dayExs, i, -1)} hitSlop={8}>
+                      <Ionicons name="chevron-up" size={18} color={i === 0 ? t.text3 : t.text2} style={{ opacity: i === 0 ? 0.3 : 1 }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity disabled={i === dayExs.length - 1} onPress={() => moveExercise(dayExs, i, 1)} hitSlop={8}>
+                      <Ionicons name="chevron-down" size={18} color={i === dayExs.length - 1 ? t.text3 : t.text2} style={{ opacity: i === dayExs.length - 1 ? 0.3 : 1 }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={async () => { await deleteRoutineExercise(re.id); await onExercisesChange(); onSync() }} hitSlop={10}>
+                      <Text style={s.deleteSmall}>×</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
@@ -574,7 +604,7 @@ const MUSCLE_SUBGROUPS = {
   'Antebrazo': ['Flexores', 'Extensores'],
 }
 
-function ExercisePickerModal({ visible, day, routine, exercises, routineExercises, onClose, onAdded }) {
+function ExercisePickerModal({ visible, day, routine, exercises, routineExercises, onClose, onAdded, onSync }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const s = makeStyles(t)
@@ -588,6 +618,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
   const [editExMuscle, setEditExMuscle] = useState('')
   const [editExSubgroup, setEditExSubgroup] = useState('')
   const [editExUnilateral, setEditExUnilateral] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
@@ -617,6 +648,13 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
     onAdded()
   }
 
+  async function confirmDeleteExercise() {
+    await deleteLocalExercise(deleteTarget.id)
+    setDeleteTarget(null)
+    onAdded()
+    onSync()
+  }
+
   async function handleCreate() {
     if (!newName.trim()) return
     const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null, newUnilateral)
@@ -630,9 +668,11 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
   }
 
   return (
+    <>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={s.modal}>
+      <View style={s.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={s.modal}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>{tr('gym.addTitle', { day: days[day] })}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
@@ -640,7 +680,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ maxHeight: 380 }}>
+          <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled">
             {Object.keys(grouped).sort().map(group => (
               <View key={group} style={{ marginBottom: 14 }}>
                 <Text style={s.groupLabel}>{group}</Text>
@@ -684,6 +724,9 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <TouchableOpacity onPress={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || ''); setEditExUnilateral(!!ex.is_unilateral) }} hitSlop={8}>
                           <Ionicons name="pencil" size={14} color={t.text3} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setDeleteTarget(ex)} hitSlop={8}>
+                          <Ionicons name="trash-outline" size={14} color={t.danger} />
                         </TouchableOpacity>
                         {alreadyAdded.has(ex.id) ? (
                           <Text style={s.addedMark}>✓</Text>
@@ -764,9 +807,16 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
               <Text style={s.btnPrimaryText}>{tr('gym.createAndAdd')}</Text>
             </PressableScale>
           </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </View>
+      </View>
     </Modal>
+    <ConfirmModal
+      visible={!!deleteTarget}
+      message={tr('gym.deleteExerciseConfirm')}
+      onConfirm={confirmDeleteExercise}
+      onCancel={() => setDeleteTarget(null)}
+    />
+    </>
   )
 }
 
@@ -843,7 +893,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={{ color: t.text, fontSize: 14 }}>{date}</Text>
-            <Text>📅</Text>
+            <Ionicons name="calendar-outline" size={16} color={t.text3} />
           </TouchableOpacity>
           <DatePicker
             visible={showDatePicker}

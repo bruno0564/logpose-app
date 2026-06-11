@@ -145,6 +145,15 @@ export async function postRoutineExerciseToServer(re) {
   return res.json()
 }
 
+export async function putRoutineExerciseToServer(serverId, re) {
+  const res = await fetchWithTimeout(`${_server}/gym/routine-exercises/${serverId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ day_of_week: re.day_of_week, position: re.position }),
+  })
+  return res.json()
+}
+
 export async function deleteRoutineExerciseFromServer(serverId) {
   await fetchWithTimeout(`${_server}/gym/routine-exercises/${serverId}`, { method: 'DELETE' })
 }

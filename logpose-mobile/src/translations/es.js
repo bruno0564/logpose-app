@@ -115,6 +115,8 @@ export default {
     noExercisesDay: 'Sin ejercicios en este día.',
     newExercise: 'Nuevo ejercicio',
     createAndAdd: 'Crear y añadir',
+    deleteExercise: 'Borrar ejercicio',
+    deleteExerciseConfirm: '¿Borrar este ejercicio? Se quitará también de las rutinas donde esté.',
     exerciseNamePh: 'Nombre',
     musclePh: 'Músculo (opcional)',
     noExercisesYet: 'Sin ejercicios todavía.',

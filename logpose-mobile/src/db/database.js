@@ -548,6 +548,11 @@ export async function deleteRoutineExercise(id) {
   }
 }
 
+export async function updateRoutineExercisePosition(id, position) {
+  const db = await openDB()
+  await db.runAsync('UPDATE routine_exercises SET position = ?, synced = 0 WHERE id = ?', [position, id])
+}
+
 export async function getUnsyncedRoutineExercises() {
   const db = await openDB()
   return db.getAllAsync(`

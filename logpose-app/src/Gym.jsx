@@ -4,10 +4,10 @@ import {
   getRoutines, insertLocalRoutine, updateLocalRoutine, deleteLocalRoutine, purgeLocalRoutine,
   getUnsyncedRoutines, getPendingDeleteRoutines,
   markRoutineSynced, upsertRoutineFromServer, pruneStaleRoutines,
-  getExercises, insertLocalExercise, updateLocalExercise,
+  getExercises, insertLocalExercise, updateLocalExercise, deleteLocalExercise,
   getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
-  insertRoutineExercise, deleteRoutineExercise,
+  insertRoutineExercise, deleteRoutineExercise, updateRoutineExercisePosition,
   getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine,
@@ -19,7 +19,7 @@ import {
   isServerReachable,
   fetchAllRoutinesFromServer, postRoutineToServer, putRoutineToServer, deleteRoutineFromServer,
   fetchAllExercisesFromServer, postExerciseToServer, putExerciseToServer, deleteExerciseFromServer,
-  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, deleteRoutineExerciseFromServer,
+  fetchAllRoutineExercisesFromServer, postRoutineExerciseToServer, putRoutineExerciseToServer, deleteRoutineExerciseFromServer,
   fetchAllSessionsFromServer, fetchAllSetsFromServer, deleteSessionFromServer, deleteSetFromServer,
   postSessionToServer, postSetToServer,
 } from './api/client'
@@ -109,8 +109,13 @@ export default function Gym() {
         await purgeLocalRoutineExercise(re.id)
       }
       for (const re of await getUnsyncedRoutineExercises()) {
-        const created = await postRoutineExerciseToServer(re)
-        await markRoutineExerciseSynced(re.id, created.id)
+        if (re.server_id) {
+          await putRoutineExerciseToServer(re.server_id, re)
+          await markRoutineExerciseSynced(re.id, re.server_id)
+        } else {
+          const created = await postRoutineExerciseToServer(re)
+          await markRoutineExerciseSynced(re.id, created.id)
+        }
       }
       const serverREs = await fetchAllRoutineExercisesFromServer()
       for (const re of serverREs) await upsertRoutineExerciseFromServer(re)
@@ -210,12 +215,13 @@ export default function Gym() {
         onTrain={(day) => { setSelectedDay(day); setView('train') }}
         onExercisesChange={() => loadRoutineExercises(selectedRoutine)}
         onExercisesListChange={loadExercises}
+        onSync={syncGym}
       />
     )
   }
 
   return (
-    <div className="page">
+    <>
       {confirmTarget && (
         <ConfirmModal
           message={tr('gym.confirmDeleteRoutine', { name: confirmTarget.name })}
@@ -223,6 +229,7 @@ export default function Gym() {
           onCancel={() => setConfirmTarget(null)}
         />
       )}
+    <div className="page">
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 className="page-title">{tr('gym.title')}</h1>
@@ -340,6 +347,7 @@ export default function Gym() {
         </div>
       )}
     </div>
+    </>
   )
 }
 
@@ -468,13 +476,28 @@ function StatsView({ exercises }) {
 
 // ── Routine Detail ────────────────────────────────────────────────────────────
 
-function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange }) {
+function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange, onSync }) {
   const { t: tr } = useLang()
   const [pickerDay, setPickerDay] = useState(null)
   const days = tr('common.days')
 
+  // Reordenar dentro de un día: renumera posiciones 0..n-1 y marca synced=0
+  // en las que cambian; la sync hará PATCH (conserva server_id, no duplica).
+  async function moveExercise(dayExs, idx, dir) {
+    const target = idx + dir
+    if (target < 0 || target >= dayExs.length) return
+    const arr = [...dayExs]
+    const [moved] = arr.splice(idx, 1)
+    arr.splice(target, 0, moved)
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].position !== i) await updateRoutineExercisePosition(arr[i].id, i)
+    }
+    await onExercisesChange()
+    onSync()
+  }
+
   return (
-    <div className="page">
+    <>
       {pickerDay !== null && (
         <ExercisePickerModal
           day={pickerDay}
@@ -483,8 +506,10 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
           routineExercises={routineExercises}
           onClose={() => setPickerDay(null)}
           onAdded={() => { onExercisesChange(); onExercisesListChange() }}
+          onSync={onSync}
         />
       )}
+    <div className="page">
 
       <div className="page-header">
         <button
@@ -526,7 +551,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                 <span style={{ color: 'var(--text-3)', fontSize: '0.78rem' }}>{tr('gym.restDay')}</span>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  {dayExs.map(re => (
+                  {dayExs.map((re, i) => (
                     <div key={re.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-2)', fontSize: '0.82rem' }}>
                         {re.muscle_group && (
@@ -534,12 +559,22 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                         )}
                         {re.exercise_name}
                       </span>
-                      <button
-                        className="btn-delete"
-                        onClick={async () => { await deleteRoutineExercise(re.id); onExercisesChange() }}
-                      >
-                        <IconClose size={12} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+                        <button className="btn-icon" disabled={i === 0} style={{ opacity: i === 0 ? 0.25 : 1 }}
+                          onClick={() => moveExercise(dayExs, i, -1)} title={tr('gym.moveUp')}>
+                          <IconChevronUp size={13} />
+                        </button>
+                        <button className="btn-icon" disabled={i === dayExs.length - 1} style={{ opacity: i === dayExs.length - 1 ? 0.25 : 1 }}
+                          onClick={() => moveExercise(dayExs, i, 1)} title={tr('gym.moveDown')}>
+                          <IconChevronDown size={13} />
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={async () => { await deleteRoutineExercise(re.id); await onExercisesChange(); onSync() }}
+                        >
+                          <IconClose size={12} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -549,6 +584,7 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
         })}
       </div>
     </div>
+    </>
   )
 }
 
@@ -565,7 +601,7 @@ const MUSCLE_SUBGROUPS = {
   'Antebrazo': ['Flexores', 'Extensores'],
 }
 
-function ExercisePickerModal({ day, routine, exercises, routineExercises, onClose, onAdded }) {
+function ExercisePickerModal({ day, routine, exercises, routineExercises, onClose, onAdded, onSync }) {
   const { t: tr } = useLang()
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
@@ -577,6 +613,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
   const [editExMuscle, setEditExMuscle] = useState('')
   const [editExSubgroup, setEditExSubgroup] = useState('')
   const [editExUnilateral, setEditExUnilateral] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
@@ -603,6 +640,13 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
     onAdded()
   }
 
+  async function confirmDeleteExercise() {
+    await deleteLocalExercise(deleteTarget.id)
+    setDeleteTarget(null)
+    onAdded()        // recarga catálogo + ejercicios de la rutina (cascada local)
+    onSync()
+  }
+
   async function handleCreate(e) {
     e.preventDefault()
     if (!newName.trim()) return
@@ -617,18 +661,19 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <>
+    <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.32)' }} onClick={onClose}>
       <div
         className="modal"
-        style={{ maxWidth: 380, maxHeight: '75vh', overflowY: 'auto' }}
+        style={{ maxWidth: 380, maxHeight: '80vh', overflow: 'hidden', padding: 0, gap: 0 }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="modal-header">
+        <div className="modal-header" style={{ padding: '1.25rem 1.5rem 0.85rem' }}>
           <span>{tr('gym.addTitle', { day: days[day] })}</span>
           <button onClick={onClose} className="btn-delete"><IconClose /></button>
         </div>
 
-        <div style={{ padding: '1rem' }}>
+        <div style={{ padding: '0.25rem 1.5rem 1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {Object.keys(grouped).sort().map(group => (
             <div key={group} style={{ marginBottom: '1rem' }}>
               <p style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.35rem' }}>{group}</p>
@@ -678,6 +723,9 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                         onClick={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || ''); setEditExUnilateral(!!ex.is_unilateral) }}
                       >
                         <IconEdit size={13} />
+                      </button>
+                      <button className="btn-delete" onClick={() => setDeleteTarget(ex)} title={tr('gym.deleteExercise')}>
+                        <IconClose size={12} />
                       </button>
                       {alreadyAdded.has(ex.id) ? (
                         <IconCheck size={13} style={{ color: 'var(--success)' }} />
@@ -772,6 +820,14 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
         </div>
       </div>
     </div>
+    {deleteTarget && (
+      <ConfirmModal
+        message={tr('gym.deleteExerciseConfirm')}
+        onConfirm={confirmDeleteExercise}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    )}
+    </>
   )
 }
 
