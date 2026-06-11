@@ -153,6 +153,7 @@ export default {
     notesPh: 'Notes (optional)',
     freqLabel: 'Frequency',
     daysLabel: 'Days',
+    atLeastOneDay: 'Select at least one day',
     startTimeLabel: 'Start time',
     endTimeLabel: 'End time',
     notesLabel: 'Notes (optional)',

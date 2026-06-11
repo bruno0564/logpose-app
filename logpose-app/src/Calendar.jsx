@@ -155,6 +155,7 @@ export default function Calendar() {
   async function handleSave(e) {
     e.preventDefault()
     if (form.recurrence === 'none' && !form.date) return  // antes lo cubría el `required` nativo
+    if (form.recurrence === 'weekly' && form.days_of_week.length === 0) return  // evita days_of_week="" (rompería el sync)
     const data = {
       title:       form.title.trim(),
       recurrence:  form.recurrence,
@@ -311,6 +312,11 @@ export default function Calendar() {
                       </button>
                     ))}
                   </div>
+                  {form.days_of_week.length === 0 && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--danger-text)', marginTop: '0.25rem', display: 'block' }}>
+                      {tr('calendar.atLeastOneDay')}
+                    </span>
+                  )}
                 </div>
               )}
 

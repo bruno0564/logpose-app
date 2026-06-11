@@ -27,7 +27,7 @@ import {
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 
-const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626']
+const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#ea580c', '#dc2626']
 
 function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -155,8 +155,11 @@ export default function CalendarScreen() {
 
   async function handleSave() {
     if (!form.title.trim()) return
+    if (form.recurrence === 'weekly' && !form.days_of_week) return  // evita days_of_week="" (rompería el sync)
     const data = {
       ...form,
+      title: form.title.trim(),
+      notes: form.notes.trim() || null,
       date: form.recurrence === 'none' ? form.date : null,
       days_of_week: form.recurrence === 'weekly' ? form.days_of_week : null,
     }
@@ -423,6 +426,9 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
                 </TouchableOpacity>
               ))}
             </View>
+          )}
+          {form.recurrence === 'weekly' && selectedDays.length === 0 && (
+            <Text style={{ color: '#f87171', fontSize: 12, marginBottom: 8 }}>{tr('calendar.atLeastOneDay')}</Text>
           )}
 
           <View style={s.timeRow}>
