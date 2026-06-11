@@ -8,6 +8,7 @@ export default {
     saved: 'Guardado',
     deleted: 'Eliminado',
     delete: 'Eliminar',
+    close: 'Cerrar',
     confirm: 'Confirmar',
     back: '← Volver',
     add: 'Añadir',
@@ -201,5 +202,6 @@ export default {
     photos: 'Fotos',
     addPhoto: 'Añadir foto',
     noPhotos: 'Sin fotos para este día.',
+    deletePhotoMsg: '¿Eliminar esta foto?',
   },
 }

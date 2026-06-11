@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   getTodayJournalEntry, getAllJournalEntries, saveJournalEntry, getJournalStreak,
   getUnsyncedJournalEntries, getPendingDeleteJournalEntries,
@@ -14,6 +15,8 @@ import {
 } from './api/client'
 import { saveImageBytes, readImageBytes, deleteImageFile, imageObjectURL } from './imageStore'
 import { useLang } from './LangContext.jsx'
+import { IconClose, IconChevronLeft, IconChevronRight } from './Icons.jsx'
+import ConfirmModal from './ConfirmModal.jsx'
 
 // Fecha local de hoy (no UTC) — coherente con la capa de DB; se recalcula en
 // cada llamada para no quedar desfasada si la app sigue abierta tras medianoche.
@@ -35,7 +38,10 @@ export default function Journal() {
   const [streak, setStreak] = useState(0)
   const [history, setHistory] = useState([])
   const [images, setImages] = useState([])          // imágenes de HOY (con object URL)
-  const [lightbox, setLightbox] = useState(null)    // url ampliada o null
+  const [lightboxIndex, setLightboxIndex] = useState(null)  // índice de la foto ampliada, o null
+  const [confirmDeleteImg, setConfirmDeleteImg] = useState(null)  // foto pendiente de confirmar borrado
+  const [zoom, setZoom] = useState(1)               // escala del lightbox
+  const [pan, setPan] = useState({ x: 0, y: 0 })    // desplazamiento al arrastrar ampliado
   const fileInputRef = useRef(null)
   const urlsRef = useRef([])                         // object URLs vivos, para revocarlos
 
@@ -139,6 +145,38 @@ export default function Journal() {
     loadToday().then(() => { loadStreak(); loadImages(); syncJournal() })
     return () => revokeAllUrls()
   }, [])
+
+  // Navegación del lightbox por teclado: Escape cierra, ←/→ cambian de foto
+  useEffect(() => {
+    if (lightboxIndex == null) return
+    const onKey = e => {
+      if (e.key === 'Escape') setLightboxIndex(null)
+      else if (e.key === 'ArrowLeft') setLightboxIndex(i => Math.max(0, i - 1))
+      else if (e.key === 'ArrowRight') setLightboxIndex(i => Math.min(images.length - 1, i + 1))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxIndex, images.length])
+
+  // Al abrir/cambiar de foto, reseteamos el zoom y el desplazamiento.
+  useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }) }, [lightboxIndex])
+
+  function onWheelZoom(e) {
+    e.preventDefault()
+    const next = Math.max(1, Math.min(5, zoom - e.deltaY * 0.0015))
+    setZoom(next)
+    if (next === 1) setPan({ x: 0, y: 0 })
+  }
+
+  function startDrag(e) {
+    if (zoom <= 1) return
+    e.preventDefault(); e.stopPropagation()
+    const start = { x: e.clientX, y: e.clientY, baseX: pan.x, baseY: pan.y }
+    const move = ev => setPan({ x: start.baseX + (ev.clientX - start.x), y: start.baseY + (ev.clientY - start.y) })
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
 
   async function handleSave() {
     if (!draft.trim()) return
@@ -285,20 +323,20 @@ export default function Journal() {
             <p style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{tr('journal.noPhotos')}</p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.5rem' }}>
-              {images.map(img => (
+              {images.map((img, i) => (
                 <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-2)' }}>
                   <img
                     src={img.url}
                     alt=""
                     style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', display: 'block' }}
-                    onClick={() => setLightbox(img.url)}
+                    onClick={() => setLightboxIndex(i)}
                   />
                   <button
-                    onClick={() => handleDeleteImage(img)}
+                    onClick={() => setConfirmDeleteImg(img)}
                     title={tr('common.delete')}
-                    style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.8rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    ×
+                    <IconClose size={13} />
                   </button>
                 </div>
               ))}
@@ -307,13 +345,64 @@ export default function Journal() {
         </div>
       </div>
 
-      {lightbox && (
+      {/* Portal a document.body: el lightbox usa position:fixed y .page lleva un
+          transform persistente (animación fadeUp con fill-mode both) que rompería
+          el fixed confinándolo a .page. El portal lo saca a la raíz del body. */}
+      {lightboxIndex != null && images[lightboxIndex] && createPortal(
         <div
-          onClick={() => setLightbox(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, cursor: 'zoom-out', padding: '2rem' }}
+          onClick={() => setLightboxIndex(null)}
+          style={{ position: 'fixed', inset: 0, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, cursor: 'zoom-out', padding: '2rem' }}
         >
-          <img src={lightbox} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 'var(--radius-sm)' }} />
-        </div>
+          <button
+            onClick={() => setLightboxIndex(null)}
+            title={tr('common.close')}
+            aria-label={tr('common.close')}
+            style={{ position: 'fixed', top: 16, right: 20, width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+          >
+            <IconClose size={20} />
+          </button>
+          {lightboxIndex > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); setLightboxIndex(i => Math.max(0, i - 1)) }}
+              aria-label="prev"
+              style={{ position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+            >
+              <IconChevronLeft size={24} />
+            </button>
+          )}
+          {lightboxIndex < images.length - 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); setLightboxIndex(i => Math.min(images.length - 1, i + 1)) }}
+              aria-label="next"
+              style={{ position: 'fixed', right: 16, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+            >
+              <IconChevronRight size={24} />
+            </button>
+          )}
+          <img
+            src={images[lightboxIndex].url}
+            alt=""
+            onClick={e => e.stopPropagation()}
+            onWheel={onWheelZoom}
+            onMouseDown={startDrag}
+            onDoubleClick={e => { e.stopPropagation(); setZoom(z => (z > 1 ? 1 : 2)); setPan({ x: 0, y: 0 }) }}
+            draggable={false}
+            style={{
+              maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 'var(--radius-sm)',
+              transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+              cursor: zoom > 1 ? 'grab' : 'zoom-in',
+            }}
+          />
+        </div>,
+        document.body
+      )}
+
+      {confirmDeleteImg && (
+        <ConfirmModal
+          message={tr('journal.deletePhotoMsg')}
+          onConfirm={async () => { const img = confirmDeleteImg; setConfirmDeleteImg(null); await handleDeleteImage(img) }}
+          onCancel={() => setConfirmDeleteImg(null)}
+        />
       )}
     </div>
   )

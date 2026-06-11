@@ -219,6 +219,7 @@ export default {
     photos: 'Fotos',
     addPhoto: 'Añadir foto',
     noPhotos: 'Sin fotos para este día.',
+    deletePhotoMsg: '¿Eliminar esta foto?',
   },
   habits: {
     title: 'Hábitos',

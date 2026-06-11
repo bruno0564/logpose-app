@@ -10,6 +10,7 @@ export default {
     saved: 'Saved',
     deleted: 'Deleted',
     delete: 'Delete',
+    close: 'Close',
     confirm: 'Confirm',
     back: '← Back',
     add: 'Add',
@@ -204,5 +205,6 @@ export default {
     photos: 'Photos',
     addPhoto: 'Add photo',
     noPhotos: 'No photos for this day.',
+    deletePhotoMsg: 'Delete this photo?',
   },
 }

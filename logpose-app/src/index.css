@@ -713,7 +713,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--overlay);
+  background: transparent;   /* sin oscurecido de fondo (preferencia del usuario) */
   display: flex;
   align-items: center;
   justify-content: center;

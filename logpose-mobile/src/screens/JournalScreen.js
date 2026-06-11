@@ -10,6 +10,7 @@ import Text from '../components/Text'
 import TextInput from '../components/TextInput'
 import GradientButton from '../components/GradientButton'
 import FadeInView from '../components/FadeInView'
+import ImageGallery from '../components/ImageGallery'
 import { titleShadow } from '../cartoonStyles'
 import {
   getTodayJournalEntry, getAllJournalEntries, saveJournalEntry, getJournalStreak,
@@ -50,7 +51,8 @@ export default function JournalScreen() {
   const [streak, setStreak] = useState(0)
   const [history, setHistory] = useState([])
   const [images, setImages] = useState([])
-  const [lightbox, setLightbox] = useState(null)
+  const [lightboxIndex, setLightboxIndex] = useState(null)
+  const [confirmDeleteImg, setConfirmDeleteImg] = useState(null)
 
   const loadImages = useCallback(async () => {
     setImages(await getJournalImagesForDate(today()))
@@ -268,12 +270,12 @@ export default function JournalScreen() {
             <Text style={s.hint}>{tr('journal.noPhotos')}</Text>
           ) : (
             <View style={s.grid}>
-              {images.map(img => (
+              {images.map((img, i) => (
                 <View key={img.id} style={s.thumbWrap}>
-                  <TouchableOpacity activeOpacity={0.85} onPress={() => setLightbox(img.local_uri)}>
+                  <TouchableOpacity activeOpacity={0.85} onPress={() => setLightboxIndex(i)}>
                     <Image source={{ uri: img.local_uri }} style={s.thumb} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={s.thumbDelete} onPress={() => handleDeleteImage(img)} hitSlop={8}>
+                  <TouchableOpacity style={s.thumbDelete} onPress={() => setConfirmDeleteImg(img)} hitSlop={8}>
                     <Text style={s.thumbDeleteText}>×</Text>
                   </TouchableOpacity>
                 </View>
@@ -283,9 +285,28 @@ export default function JournalScreen() {
         </View>
       </ScrollView>
 
-      <Modal visible={!!lightbox} transparent animationType="fade" onRequestClose={() => setLightbox(null)}>
-        <TouchableOpacity style={s.lightbox} activeOpacity={1} onPress={() => setLightbox(null)}>
-          {lightbox && <Image source={{ uri: lightbox }} style={s.lightboxImg} resizeMode="contain" />}
+      <Modal visible={lightboxIndex != null} transparent animationType="fade" onRequestClose={() => setLightboxIndex(null)}>
+        {lightboxIndex != null && (
+          <ImageGallery images={images} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+        )}
+      </Modal>
+
+      <Modal visible={!!confirmDeleteImg} transparent animationType="fade" onRequestClose={() => setConfirmDeleteImg(null)}>
+        <TouchableOpacity style={s.confirmOverlay} activeOpacity={1} onPress={() => setConfirmDeleteImg(null)}>
+          <TouchableOpacity activeOpacity={1} style={s.confirmCard}>
+            <Text style={s.confirmMsg}>{tr('journal.deletePhotoMsg')}</Text>
+            <View style={s.confirmRow}>
+              <TouchableOpacity style={s.confirmCancel} onPress={() => setConfirmDeleteImg(null)}>
+                <Text style={s.confirmCancelText}>{tr('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.confirmDelete}
+                onPress={async () => { const img = confirmDeleteImg; setConfirmDeleteImg(null); await handleDeleteImage(img) }}
+              >
+                <Text style={s.confirmDeleteText}>{tr('common.delete')}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </KeyboardAvoidingView>
@@ -317,8 +338,14 @@ const makeStyles = (t) => StyleSheet.create({
   thumb:       { width: 96, height: 96, borderRadius: 8, borderWidth: 1, borderColor: t.border2, backgroundColor: t.surface2 },
   thumbDelete: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   thumbDeleteText: { color: '#fff', fontSize: 15, lineHeight: 17, fontWeight: '700' },
-  lightbox:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  lightboxImg: { width: '100%', height: '100%' },
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  confirmCard: { backgroundColor: t.surface, borderRadius: 14, padding: 20, width: '100%', maxWidth: 340, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor, ...t.shadow },
+  confirmMsg:  { color: t.text, fontSize: 15, fontWeight: '600', marginBottom: 18 },
+  confirmRow:  { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  confirmCancel: { backgroundColor: t.border, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 9 },
+  confirmCancelText: { color: t.text2, fontSize: 14, fontWeight: '600' },
+  confirmDelete: { backgroundColor: t.dangerBg, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 9 },
+  confirmDeleteText: { color: t.dangerText, fontSize: 14, fontWeight: '600' },
   btnPrimary:  { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 16, paddingVertical: 9, borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   btnPrimaryText: { color: t.cartoon ? t.bg : t.text, fontSize: 14, fontWeight: '600', fontFamily: t.fontTitle },
   btnCancel:   { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
