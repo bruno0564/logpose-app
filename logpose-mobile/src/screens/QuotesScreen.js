@@ -83,10 +83,12 @@ export default function QuotesScreen() {
 
   async function handleSave() {
     if (!form.text.trim()) return
+    const text = form.text.trim()
+    const author = form.author.trim()
     if (editingQuote === 'new') {
-      await insertLocalQuote(form.text, form.author)
+      await insertLocalQuote(text, author)
     } else {
-      await updateLocalQuote(editingQuote.id, form.text, form.author)
+      await updateLocalQuote(editingQuote.id, text, author)
     }
     setEditingQuote(null)
     await loadQuotes()
