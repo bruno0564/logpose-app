@@ -1224,21 +1224,24 @@ export async function upsertJournalEntryFromServer(entry) {
   const db = await openDB()
   const byId = await db.select('SELECT * FROM journal_entries WHERE server_id = ?', [entry.id])
   if (byId.length > 0) {
-    const merged = mergeJournalContent(byId[0].content, entry.content)
-    const needsSync = merged !== entry.content ? 0 : 1
+    // Si la copia local es un espejo limpio del servidor (synced=1), el servidor
+    // manda y sobrescribimos. Solo fusionamos si hay ediciones locales sin subir
+    // (synced=0): ahí sí es un conflicto real entre dos dispositivos.
+    const content = byId[0].synced ? entry.content : mergeJournalContent(byId[0].content, entry.content)
+    const needsSync = content === entry.content ? 1 : 0
     await db.execute(
       'UPDATE journal_entries SET date = ?, content = ?, synced = ? WHERE server_id = ?',
-      [entry.date, merged, needsSync, entry.id]
+      [entry.date, content, needsSync, entry.id]
     )
     return
   }
   const byDate = await db.select('SELECT * FROM journal_entries WHERE date = ?', [entry.date])
   if (byDate.length > 0) {
-    const merged = mergeJournalContent(byDate[0].content, entry.content)
-    const needsSync = merged !== entry.content ? 0 : 1
+    const content = byDate[0].synced ? entry.content : mergeJournalContent(byDate[0].content, entry.content)
+    const needsSync = content === entry.content ? 1 : 0
     await db.execute(
       'UPDATE journal_entries SET server_id = ?, content = ?, synced = ? WHERE id = ?',
-      [entry.id, merged, needsSync, byDate[0].id]
+      [entry.id, content, needsSync, byDate[0].id]
     )
   } else {
     await db.execute(

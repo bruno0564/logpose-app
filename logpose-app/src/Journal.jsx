@@ -15,7 +15,9 @@ import {
 import { saveImageBytes, readImageBytes, deleteImageFile, imageObjectURL } from './imageStore'
 import { useLang } from './LangContext.jsx'
 
-const TODAY = new Date().toISOString().slice(0, 10)
+// Fecha local de hoy (no UTC) — coherente con la capa de DB; se recalcula en
+// cada llamada para no quedar desfasada si la app sigue abierta tras medianoche.
+const today = () => new Date().toLocaleDateString('sv')
 
 let syncingJournal = false
 
@@ -45,7 +47,7 @@ export default function Journal() {
 
   const loadImages = useCallback(async () => {
     revokeAllUrls()
-    const rows = await getJournalImagesForDate(TODAY)
+    const rows = await getJournalImagesForDate(today())
     const withUrls = []
     for (const r of rows) {
       try { withUrls.push({ ...r, url: trackUrl(await imageObjectURL(r.local_path, r.content_type)) }) }
@@ -158,7 +160,7 @@ export default function Journal() {
       if (!file.type.startsWith('image/')) continue
       const bytes = new Uint8Array(await file.arrayBuffer())
       const localPath = await saveImageBytes(bytes, file.type)
-      await insertLocalJournalImage(TODAY, localPath, file.type, pos++)
+      await insertLocalJournalImage(today(), localPath, file.type, pos++)
     }
     await loadImages()
     syncJournal()
@@ -173,7 +175,7 @@ export default function Journal() {
 
   async function openHistory() {
     const all = await getAllJournalEntries()
-    setHistory(all.filter(e => e.date !== TODAY))
+    setHistory(all.filter(e => e.date !== today()))
     setView('history')
   }
 
@@ -236,7 +238,7 @@ export default function Journal() {
           </div>
         </div>
         <p style={{ color: 'var(--text-3)', fontSize: '0.82rem', marginTop: '0.4rem', textTransform: 'capitalize' }}>
-          {formatDate(TODAY)}
+          {formatDate(today())}
         </p>
       </div>
 

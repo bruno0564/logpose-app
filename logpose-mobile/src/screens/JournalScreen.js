@@ -28,7 +28,9 @@ import { saveImageFromUri, downloadImageToFile, deleteImageFile } from '../image
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 
-const TODAY = new Date().toISOString().slice(0, 10)
+// Fecha local de hoy (no UTC) — coherente con la capa de DB; se recalcula en
+// cada llamada para no quedar desfasada si la app sigue abierta tras medianoche.
+const today = () => new Date().toLocaleDateString('sv')
 
 let syncingJournal = false
 
@@ -51,7 +53,7 @@ export default function JournalScreen() {
   const [lightbox, setLightbox] = useState(null)
 
   const loadImages = useCallback(async () => {
-    setImages(await getJournalImagesForDate(TODAY))
+    setImages(await getJournalImagesForDate(today()))
   }, [])
 
   function formatDate(dateStr) {
@@ -162,7 +164,7 @@ export default function JournalScreen() {
     for (const asset of result.assets) {
       const contentType = asset.mimeType || 'image/jpeg'
       const localUri = await saveImageFromUri(asset.uri, contentType)
-      await insertLocalJournalImage(TODAY, localUri, contentType, pos++)
+      await insertLocalJournalImage(today(), localUri, contentType, pos++)
     }
     await loadImages()
     syncJournal()
@@ -177,7 +179,7 @@ export default function JournalScreen() {
 
   async function openHistory() {
     const all = await getAllJournalEntries()
-    setHistory(all.filter(e => e.date !== TODAY))
+    setHistory(all.filter(e => e.date !== today()))
     setView('history')
   }
 
@@ -216,7 +218,7 @@ export default function JournalScreen() {
         <View style={s.header}>
           <View>
             <Text style={s.title}>{tr('journal.title')}</Text>
-            <Text style={s.dateLabel}>{formatDate(TODAY)}</Text>
+            <Text style={s.dateLabel}>{formatDate(today())}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {streak > 0 && (
