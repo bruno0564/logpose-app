@@ -62,6 +62,7 @@ export default {
     chartHint: 'Añade al menos 2 registros para ver la gráfica.',
     noRecords: 'Sin registros.',
     noRecordsRange: 'Sin registros en ese rango.',
+    updatedDay: 'Registro del día actualizado',
     tableDate: 'Fecha',
     tableWeight: 'Peso',
     tableNote: 'Nota',

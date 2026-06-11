@@ -286,6 +286,32 @@
   color: var(--text-2);
 }
 
+/* DateField / NumberField propios en modo cartoon */
+[data-cartoon] .datefield-trigger {
+  border: 3px solid var(--text);
+  border-radius: 10px 8px 12px 8px / 8px 12px 8px 10px;
+  box-shadow: 3px 3px 0 var(--text);
+  background: var(--surface);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+[data-cartoon] .datefield-trigger:hover,
+[data-cartoon] .datefield-trigger:focus {
+  box-shadow: 5px 5px 0 var(--accent);
+  transform: translate(-1px, -1px);
+  border-color: var(--accent);
+}
+[data-cartoon] .datefield-pop {
+  border: 3px solid var(--text);
+  border-radius: 12px 10px 14px 10px / 10px 14px 10px 12px;
+  box-shadow: 4px 4px 0 var(--text);
+}
+[data-cartoon] .numfield-steppers {
+  top: 3px;
+  right: 3px;
+  bottom: 3px;
+  border-left: 3px solid var(--text);
+}
+
 /* ── Tablas ──────────────────────────────────────────────────────────── */
 [data-cartoon] .table th {
   background: var(--text);

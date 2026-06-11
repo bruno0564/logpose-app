@@ -29,6 +29,7 @@ export default function BodyWeightScreen() {
   const { theme: t } = useTheme()
   const { t: tr, tp } = useLang()
   const s = makeStyles(t)
+  const todayStr = new Date().toISOString().split('T')[0]  // tope: no pesarse en el futuro
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -181,11 +182,12 @@ export default function BodyWeightScreen() {
         />
         <TouchableOpacity style={s.datePicker} onPress={() => setShowAddPicker(true)}>
           <Text style={s.datePickerText}>{date}</Text>
-          <Text style={s.datePickerIcon}>📅</Text>
+          <Ionicons name="calendar-outline" size={16} color={t.text3} />
         </TouchableOpacity>
         <DatePicker
           visible={showAddPicker}
           value={date}
+          max={todayStr}
           onClose={() => setShowAddPicker(false)}
           onSelect={setDate}
         />
@@ -310,11 +312,12 @@ export default function BodyWeightScreen() {
             />
             <TouchableOpacity style={s.datePicker} onPress={() => setShowEditPicker(true)}>
               <Text style={s.datePickerText}>{editEntry?.date ?? ''}</Text>
-              <Text style={s.datePickerIcon}>📅</Text>
+              <Ionicons name="calendar-outline" size={16} color={t.text3} />
             </TouchableOpacity>
             <DatePicker
               visible={showEditPicker}
               value={editEntry?.date ?? ''}
+              max={todayStr}
               onClose={() => setShowEditPicker(false)}
               onSelect={(d) => setEditEntry(e => ({ ...e, date: d }))}
             />

@@ -14,7 +14,7 @@ const WD = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const pad = n => String(n).padStart(2, '0')
 const toStr = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 
-export default function DatePicker({ visible, value, onSelect, onClose }) {
+export default function DatePicker({ visible, value, onSelect, onClose, min, max }) {
   const { theme: t } = useTheme()
   const base = () => (value ? new Date(value + 'T12:00:00') : new Date())
   const [cursor, setCursor] = useState(() => { const d = base(); return new Date(d.getFullYear(), d.getMonth(), 1) })
@@ -37,18 +37,26 @@ export default function DatePicker({ visible, value, onSelect, onClose }) {
   const monthLabel = cursor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
     .replace(/^\w/, c => c.toUpperCase())
 
+  // navegación: no dejar saltar a un mes entero fuera de [min, max]
+  const pLast = new Date(year, month, 0)       // último día del mes anterior
+  const nFirst = new Date(year, month + 1, 1)  // primer día del mes siguiente
+  const prevLast  = toStr(pLast.getFullYear(), pLast.getMonth(), pLast.getDate())
+  const nextFirst = toStr(nFirst.getFullYear(), nFirst.getMonth(), nFirst.getDate())
+  const prevDisabled = min && prevLast < min
+  const nextDisabled = max && nextFirst > max
+
   const s = makeStyles(t)
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} style={s.card}>
           <View style={s.header}>
-            <TouchableOpacity onPress={() => setCursor(new Date(year, month - 1, 1))} hitSlop={10}>
-              <Text style={s.arrow}>‹</Text>
+            <TouchableOpacity disabled={prevDisabled} onPress={() => setCursor(new Date(year, month - 1, 1))} hitSlop={10}>
+              <Text style={[s.arrow, prevDisabled && s.arrowOff]}>‹</Text>
             </TouchableOpacity>
             <Text style={s.monthLabel}>{monthLabel}</Text>
-            <TouchableOpacity onPress={() => setCursor(new Date(year, month + 1, 1))} hitSlop={10}>
-              <Text style={s.arrow}>›</Text>
+            <TouchableOpacity disabled={nextDisabled} onPress={() => setCursor(new Date(year, month + 1, 1))} hitSlop={10}>
+              <Text style={[s.arrow, nextDisabled && s.arrowOff]}>›</Text>
             </TouchableOpacity>
           </View>
 
@@ -62,10 +70,11 @@ export default function DatePicker({ visible, value, onSelect, onClose }) {
               const ds    = toStr(year, month, d)
               const sel   = ds === value
               const today = ds === todayStr
+              const off   = (min && ds < min) || (max && ds > max)
               return (
-                <TouchableOpacity key={i} style={s.cell} onPress={() => { onSelect(ds); onClose() }}>
+                <TouchableOpacity key={i} style={s.cell} disabled={off} onPress={() => { onSelect(ds); onClose() }}>
                   <View style={[s.dayInner, today && s.todayInner, sel && s.selInner]}>
-                    <Text style={[s.dayText, today && { color: t.accent }, sel && s.selText]}>{d}</Text>
+                    <Text style={[s.dayText, today && { color: t.accent }, sel && s.selText, off && s.dayOff]}>{d}</Text>
                   </View>
                 </TouchableOpacity>
               )
@@ -96,5 +105,7 @@ function makeStyles(t) {
     selInner:   { backgroundColor: t.accent },
     dayText:    { color: t.text2, fontSize: 14 },
     selText:    { color: '#fff', fontWeight: '700' },
+    dayOff:     { color: t.text3, opacity: 0.35 },
+    arrowOff:   { opacity: 0.3 },
   })
 }

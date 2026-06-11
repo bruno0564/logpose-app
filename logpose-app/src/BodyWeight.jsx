@@ -8,6 +8,8 @@ import { isServerReachable, fetchAllBodyWeightFromServer, postBodyWeightToServer
 import { useLang } from './LangContext.jsx'
 import { IconEdit, IconClose } from './Icons.jsx'
 import { useToast } from './Toast.jsx'
+import DateField from './DateField.jsx'
+import NumberField from './NumberField.jsx'
 
 function today() { return new Date().toISOString().split('T')[0] }
 function daysAgo(n) { return new Date(Date.now() - n * 86400000).toISOString().split('T')[0] }
@@ -104,11 +106,20 @@ function BodyWeight() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    await insertLocalEntry(parseFloat(form.weight), form.date, form.note || null)
+    const weight = parseFloat(form.weight)
+    const note = form.note || null
+    // Una pesada por día: si la fecha ya tiene registro, lo sobrescribimos
+    // (updateLocalEntry conserva server_id y marca synced=0 → la sync hará PUT).
+    const existing = entries.find(en => en.date === form.date)
+    if (existing) {
+      await updateLocalEntry(existing.id, weight, form.date, note)
+    } else {
+      await insertLocalEntry(weight, form.date, note)
+    }
     setForm({ weight: '', date: today(), note: '' })
     await loadLocal()
     sync()
-    toast(tr('common.saved'))
+    toast(tr(existing ? 'bodyWeight.updatedDay' : 'common.saved'))
   }
 
   async function handleDelete(entry) {
@@ -124,11 +135,22 @@ function BodyWeight() {
 
   async function handleEdit(e) {
     e.preventDefault()
-    await updateLocalEntry(editEntry.id, parseFloat(editEntry.weight), editEntry.date, editEntry.note || null)
+    const weight = parseFloat(editEntry.weight)
+    const note = editEntry.note || null
+    // Si al editar la fecha choca con OTRO registro, fusionamos: actualizamos
+    // ese (conserva su server_id) y borramos el que estábamos editando.
+    const collision = entries.find(en => en.date === editEntry.date && en.id !== editEntry.id)
+    if (collision) {
+      await updateLocalEntry(collision.id, weight, editEntry.date, note)
+      if (editEntry.server_id) await markPendingDelete(editEntry.id)
+      else await deleteLocalEntry(editEntry.id)
+    } else {
+      await updateLocalEntry(editEntry.id, weight, editEntry.date, note)
+    }
     setEditEntry(null)
     await loadLocal()
     sync()
-    toast(tr('common.saved'))
+    toast(tr(collision ? 'bodyWeight.updatedDay' : 'common.saved'))
   }
 
   const displayed = entries.filter(e => {
@@ -167,13 +189,13 @@ function BodyWeight() {
         <form onSubmit={handleSubmit} className="form">
           <div className="field">
             <label>{tr('bodyWeight.weightPh')}</label>
-            <input type="number" step="0.1" placeholder="75.5" value={form.weight}
-              onChange={e => setForm(f => ({ ...f, weight: e.target.value }))} required />
+            <NumberField placeholder="75.5" value={form.weight} required
+              onChange={v => setForm(f => ({ ...f, weight: v }))} />
           </div>
           <div className="field">
             <label>{tr('common.date')}</label>
-            <input type="date" value={form.date}
-              onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
+            <DateField value={form.date} max={today()}
+              onChange={v => setForm(f => ({ ...f, date: v }))} />
           </div>
           <div className="field">
             <label>{tr('bodyWeight.notePh')}</label>
@@ -192,11 +214,11 @@ function BodyWeight() {
         <div className="bw-filter-row">
           <div className="field">
             <label>{tr('bodyWeight.filterFrom')}</label>
-            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
+            <DateField value={filterFrom} onChange={setFilterFrom} />
           </div>
           <div className="field">
             <label>{tr('bodyWeight.filterTo')}</label>
-            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+            <DateField value={filterTo} onChange={setFilterTo} />
           </div>
           <button className="bw-filter-reset" onClick={() => { setFilterFrom(daysAgo(30)); setFilterTo(today()) }}>
             {tr('bodyWeight.last30Days')}
@@ -272,13 +294,13 @@ function BodyWeight() {
             <form onSubmit={handleEdit} className="form" style={{ flexDirection: 'column' }}>
               <div className="field">
                 <label>{tr('bodyWeight.weightPh')}</label>
-                <input type="number" step="0.1" value={editEntry.weight}
-                  onChange={e => setEditEntry(v => ({ ...v, weight: e.target.value }))} required />
+                <NumberField value={editEntry.weight} required
+                  onChange={val => setEditEntry(v => ({ ...v, weight: val }))} />
               </div>
               <div className="field">
                 <label>{tr('common.date')}</label>
-                <input type="date" value={editEntry.date}
-                  onChange={e => setEditEntry(v => ({ ...v, date: e.target.value }))} required />
+                <DateField value={editEntry.date} max={today()}
+                  onChange={val => setEditEntry(v => ({ ...v, date: val }))} />
               </div>
               <div className="field">
                 <label>{tr('bodyWeight.notePh')}</label>

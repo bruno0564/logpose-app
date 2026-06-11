@@ -25,6 +25,7 @@ import {
 } from './api/client'
 import { useLang } from './LangContext.jsx'
 import { IconEdit, IconClose, IconCheck, IconChevronDown, IconChevronUp } from './Icons.jsx'
+import DateField from './DateField.jsx'
 
 let syncingGym = false
 
@@ -845,12 +846,9 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
       <div style={{ maxWidth: 480 }}>
         <div className="card" style={{ marginBottom: '1rem', padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ color: 'var(--text-2)', fontSize: '0.85rem', minWidth: 'fit-content' }}>{tr('common.date')}</span>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', padding: '0.3rem 0.5rem', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
-          />
+          <div style={{ flex: 1, maxWidth: 200 }}>
+            <DateField value={date} onChange={setDate} />
+          </div>
         </div>
 
         {dayExercises.map(ex => (

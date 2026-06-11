@@ -14,6 +14,7 @@ import {
 } from './api/client'
 import { useLang } from './LangContext.jsx'
 import { IconClose, IconChevronLeft, IconChevronRight } from './Icons.jsx'
+import DateField from './DateField.jsx'
 
 let syncingCalendar = false
 
@@ -156,6 +157,7 @@ export default function Calendar() {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (form.recurrence === 'none' && !form.date) return  // antes lo cubría el `required` nativo
     const data = {
       title:       form.title.trim(),
       recurrence:  form.recurrence,
@@ -289,8 +291,8 @@ export default function Calendar() {
               {form.recurrence === 'none' && (
                 <div className="field">
                   <label>{tr('common.date')}</label>
-                  <input type="date" required value={form.date}
-                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+                  <DateField value={form.date}
+                    onChange={v => setForm(f => ({ ...f, date: v }))} />
                 </div>
               )}
 

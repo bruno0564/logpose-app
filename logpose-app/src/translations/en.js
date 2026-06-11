@@ -64,6 +64,7 @@ export default {
     chartHint: 'Add at least 2 entries to see the chart.',
     noRecords: 'No entries.',
     noRecordsRange: 'No entries in that range.',
+    updatedDay: "Day's entry updated",
     tableDate: 'Date',
     tableWeight: 'Weight',
     tableNote: 'Note',

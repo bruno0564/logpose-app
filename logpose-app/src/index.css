@@ -284,6 +284,173 @@ body {
   cursor: pointer;
 }
 
+/* ── Number field (stepper propio) ───────────────── */
+
+.numfield {
+  position: relative;
+  display: flex;
+}
+
+.numfield input {
+  width: 100%;
+  padding-right: 1.9rem;
+}
+
+/* ocultar las flechas nativas del WebView en TODOS los number inputs;
+   el stepper propio (.numfield) es opt-in donde aporta */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+.numfield-steppers {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  overflow: hidden;
+}
+
+.numfield-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--surface-2);
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.numfield-step:first-child { border-bottom: 1px solid var(--border-2); }
+.numfield-step:hover { color: var(--accent); background: var(--accent-subtle); }
+.numfield-step:active { transform: scale(0.92); }
+
+/* ── Date field (calendario propio) ──────────────── */
+
+.datefield {
+  position: relative;
+}
+
+.datefield-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 110px;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--font-base);
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.datefield-trigger:hover { border-color: var(--text-4); }
+.datefield-trigger:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.datefield-placeholder { color: var(--text-4); }
+.datefield-cal { display: flex; color: var(--text-3); }
+
+.datefield-pop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 268px;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.datefield-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.datefield-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.datefield-nav:hover { background: var(--surface-2); }
+
+.datefield-month {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  font-family: var(--font-title);
+  color: var(--text);
+}
+
+.datefield-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.25rem;
+}
+
+.datefield-wd {
+  text-align: center;
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.datefield-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.datefield-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.datefield-day {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: var(--font-sm);
+  color: var(--text-2);
+  transition: background 0.12s, color 0.12s;
+}
+
+.datefield-day:hover { background: var(--surface-2); }
+.datefield-day.is-today { border: 1px solid var(--accent); color: var(--accent); }
+.datefield-day.is-sel { background: var(--accent); color: #fff; font-weight: 700; }
+.datefield-day.is-off { color: var(--text-4); opacity: 0.35; cursor: not-allowed; }
+.datefield-day.is-off:hover { background: none; }
+
+.datefield-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+.datefield-nav:disabled:hover { background: none; }
+
 .field--action {
   padding-bottom: 0;
 }
