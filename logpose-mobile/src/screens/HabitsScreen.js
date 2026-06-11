@@ -337,7 +337,7 @@ export default function HabitsScreen() {
               <View style={s.nameCol}>
                 <Text style={s.habitName} numberOfLines={1}>{habit.name}</Text>
                 <TouchableOpacity style={s.editBtn} onPress={() => openEditHabit(habit)} hitSlop={8}>
-                  <Ionicons name="pencil" size={13} color={t.accent} />
+                  <Ionicons name="pencil" size={13} color={t.text3} />
                 </TouchableOpacity>
               </View>
               {dayList.map((d, i) => renderDayCell(habit, d, cellW, i === lastDay))}
@@ -428,11 +428,11 @@ export default function HabitsScreen() {
                 style={s.viewToggle}
                 onPress={() => setViewMode(m => m === 'week' ? 'month' : 'week')}
               >
-                <Text style={s.viewToggleText}>{viewMode === 'week' ? '📅 Mes' : '7 días'}</Text>
+                <Text style={s.viewToggleText}>{viewMode === 'week' ? 'Mes' : '7 días'}</Text>
               </TouchableOpacity>
               {/* Editar categoría */}
               <TouchableOpacity style={s.btnIcon} onPress={() => openEditCat(activeCat)}>
-                <Ionicons name="pencil" size={15} color={t.accent} />
+                <Ionicons name="pencil" size={15} color={t.text3} />
               </TouchableOpacity>
               {/* Añadir hábito */}
               <PressableScale style={s.btnPrimary} onPress={openCreateHabit}>
