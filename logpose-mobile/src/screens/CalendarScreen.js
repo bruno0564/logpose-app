@@ -10,6 +10,7 @@ import PressableScale from '../components/PressableScale'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 import DatePicker from '../components/DatePicker'
+import { Ionicons } from '@expo/vector-icons'
 import TimePicker from '../components/TimePicker'
 import {
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
@@ -409,7 +410,7 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
                 <Text style={{ color: form.date ? t.text : t.text3, fontSize: 14 }}>
                   {form.date || tr('calendar.datePh')}
                 </Text>
-                <Text>📅</Text>
+                <Ionicons name="calendar-outline" size={16} color={t.text3} />
               </TouchableOpacity>
               <DatePicker
                 visible={showDatePicker}

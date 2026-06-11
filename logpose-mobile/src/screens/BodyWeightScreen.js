@@ -98,7 +98,15 @@ export default function BodyWeightScreen() {
 
   async function handleAdd() {
     if (!weight || !date) return
-    await insertLocalEntry(parseFloat(weight), date, note)
+    const w = parseFloat(weight)
+    // Una pesada por día: si la fecha ya tiene registro, lo sobrescribimos
+    // (updateLocalEntry conserva server_id y marca synced=0 → la sync hará PUT).
+    const existing = entries.find(en => en.date === date)
+    if (existing) {
+      await updateLocalEntry(existing.id, w, date, note || null)
+    } else {
+      await insertLocalEntry(w, date, note || null)
+    }
     setWeight('')
     setNote('')
     await loadLocal()
@@ -114,7 +122,18 @@ export default function BodyWeightScreen() {
 
   async function handleEditSave() {
     if (!editEntry?.weight || !editEntry?.date) return
-    await updateLocalEntry(editEntry.id, parseFloat(editEntry.weight), editEntry.date, editEntry.note || null)
+    const w = parseFloat(editEntry.weight)
+    const note2 = editEntry.note || null
+    // Si al editar la fecha choca con OTRO registro, fusionamos: actualizamos
+    // ese (conserva su server_id) y borramos el que estábamos editando.
+    const collision = entries.find(en => en.date === editEntry.date && en.id !== editEntry.id)
+    if (collision) {
+      await updateLocalEntry(collision.id, w, editEntry.date, note2)
+      if (editEntry.server_id) await markPendingDelete(editEntry.id)
+      else await deleteLocalEntry(editEntry.id)
+    } else {
+      await updateLocalEntry(editEntry.id, w, editEntry.date, note2)
+    }
     setEditEntry(null)
     await loadLocal()
     await sync()
