@@ -14,6 +14,7 @@ import {
   fetchHabitLogsFromServer, postHabitLogToServer, deleteHabitLogFromServer,
 } from './api/client'
 import { IconClose, IconEdit } from './Icons.jsx'
+import { useLang } from './LangContext.jsx'
 
 let syncingHabits = false
 
@@ -55,6 +56,7 @@ function HabitCheck({ done }) {
 }
 
 export default function Habits() {
+  const { t: tr, locale } = useLang()
   const now        = new Date()
   const [cursor, setCursor]         = useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const [categories, setCategories] = useState([])
@@ -244,14 +246,6 @@ export default function Habits() {
     const d   = (new Date(year, month, day).getDay() + 6) % 7
     return dow.includes(d)
   }
-  function expectedDaysInMonth(habit) {
-    const dow = parseDow(habit.days_of_week)
-    let count = 0
-    for (let d = 1; d <= days; d++) {
-      if (dow.includes((new Date(year, month, d).getDay() + 6) % 7)) count++
-    }
-    return count
-  }
   function completedExpected(habitId, habit) {
     const dow = parseDow(habit.days_of_week)
     return logs.filter(l => {
@@ -260,8 +254,23 @@ export default function Habits() {
       return dow.includes((new Date(year, month, dd).getDay() + 6) % 7)
     }).length
   }
+  // Días esperados que YA han pasado: en el mes actual cuenta hasta hoy; en un
+  // mes pasado, el mes entero; en uno futuro, 0. El % se mide sobre esto para no
+  // penalizar a principio de mes por días que aún no han llegado.
+  function expectedDaysElapsed(habit) {
+    const dow = parseDow(habit.days_of_week)
+    const isThisMonth = year === now.getFullYear() && month === now.getMonth()
+    const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth())
+    if (isFuture) return 0
+    const lastDay = isThisMonth ? now.getDate() : days
+    let count = 0
+    for (let d = 1; d <= lastDay; d++) {
+      if (dow.includes((new Date(year, month, d).getDay() + 6) % 7)) count++
+    }
+    return count
+  }
   function pct(habitId, habit) {
-    const expected = expectedDaysInMonth(habit)
+    const expected = expectedDaysElapsed(habit)
     if (expected === 0) return 0
     return Math.round((completedExpected(habitId, habit) / expected) * 100)
   }
@@ -271,7 +280,7 @@ export default function Habits() {
   }
 
   const rate = overallPct()
-  const rateLabel = rate >= 80 ? 'ON FIRE 🔥' : rate >= 50 ? 'KEEP GOING' : rate > 0 ? 'NEEDS WORK' : '—'
+  const rateLabel = rate >= 80 ? tr('habits.rateOnFire') : rate >= 50 ? tr('habits.rateKeepGoing') : rate > 0 ? tr('habits.rateNeedsWork') : '—'
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -280,8 +289,8 @@ export default function Habits() {
       <div className="page habits-page">
         <div className="page-header" style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 className="page-title">Habits</h1>
-            <button className="btn-primary" onClick={openCreateCat}>+ Category</button>
+            <h1 className="page-title">{tr('habits.title')}</h1>
+            <button className="btn-primary" onClick={openCreateCat}>{tr('habits.addCategory')}</button>
           </div>
         </div>
 
@@ -308,7 +317,7 @@ export default function Habits() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button className="cal-arrow" onClick={() => setCursor(new Date(year, month - 1, 1))}>‹</button>
               <span className="habits-month-label">
-                {cursor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}
+                {cursor.toLocaleDateString(locale(), { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}
               </span>
               <button className="cal-arrow" onClick={() => setCursor(new Date(year, month + 1, 1))}>›</button>
             </div>
@@ -316,15 +325,15 @@ export default function Habits() {
               <span className={`habits-rate ${rate >= 80 ? 'habits-rate--good' : rate >= 50 ? 'habits-rate--mid' : 'habits-rate--bad'}`}>
                 {rate}% — {rateLabel}
               </span>
-              <button className="btn-icon" title="Edit category" onClick={() => openEditCat(activeCat)}><IconEdit /></button>
-              <button className="btn-primary" style={{ fontSize: '0.78rem' }} onClick={openCreateHabit}>+ Habit</button>
+              <button className="btn-icon" title={tr('habits.editCategory')} onClick={() => openEditCat(activeCat)}><IconEdit /></button>
+              <button className="btn-primary" style={{ fontSize: '0.78rem' }} onClick={openCreateHabit}>{tr('habits.addHabit')}</button>
             </div>
           </div>
         )}
 
         {/* Grid */}
         {activeCat && visibleHabits.length === 0 && (
-          <p className="hint" style={{ marginTop: '2rem' }}>No habits yet — add one above.</p>
+          <p className="hint" style={{ marginTop: '2rem' }}>{tr('habits.noHabits')}</p>
         )}
 
         {activeCat && visibleHabits.length > 0 && (
@@ -332,14 +341,14 @@ export default function Habits() {
             <table className="habits-grid">
               <thead>
                 <tr>
-                  <th className="habits-grid-label-col">Habit</th>
+                  <th className="habits-grid-label-col">{tr('habits.habitColumn')}</th>
                   {Array.from({ length: days }, (_, i) => {
                     const ds      = toDateStr(year, month, i + 1)
                     const d       = new Date(year, month, i + 1)
                     const dow     = (d.getDay() + 6) % 7
                     const isWkd   = dow === 5 || dow === 6
                     const isFuture = ds > todayStr
-                    const letter  = d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 1).toUpperCase()
+                    const letter  = d.toLocaleDateString(locale(), { weekday: 'short' }).slice(0, 1).toUpperCase()
                     return (
                       <th key={i} className={[
                         'habits-grid-day-th',
@@ -393,7 +402,7 @@ export default function Habits() {
                       )
                     })}
                     <td className={`habits-grid-pct habits-grid-pct--sep ${pctClass}`}>{p}%</td>
-                    <td className={`habits-grid-pct ${pctClass}`}>{completedExpected(habit.id, habit)}/{expectedDaysInMonth(habit)}</td>
+                    <td className={`habits-grid-pct ${pctClass}`}>{completedExpected(habit.id, habit)}/{expectedDaysElapsed(habit)}</td>
                   </tr>
                   )
                 })}
@@ -404,8 +413,8 @@ export default function Habits() {
 
         {categories.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: '4rem', color: 'var(--text-4)' }}>
-            <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>No categories yet.</p>
-            <p style={{ fontSize: '0.85rem' }}>Create a category to get started.</p>
+            <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>{tr('habits.noCategoriesTitle')}</p>
+            <p style={{ fontSize: '0.85rem' }}>{tr('habits.noCategoriesSub')}</p>
           </div>
         )}
       </div>
@@ -415,17 +424,17 @@ export default function Habits() {
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{modal.mode === 'create' ? 'New category' : 'Edit category'}</h3>
+              <h3>{modal.mode === 'create' ? tr('habits.newCategory') : tr('habits.editCategory')}</h3>
               <button className="btn-delete" onClick={() => setModal(null)}><IconClose /></button>
             </div>
             <form onSubmit={handleSaveCat} className="form" style={{ flexDirection: 'column', gap: '0.85rem' }}>
               <div className="field">
-                <label>Name</label>
+                <label>{tr('habits.categoryName')}</label>
                 <input type="text" required autoFocus value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div className="field">
-                <label>Color</label>
+                <label>{tr('habits.color')}</label>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                   {CATEGORY_COLORS.map(c => (
                     <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
@@ -435,9 +444,9 @@ export default function Habits() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {modal.mode === 'edit'
-                  ? <button type="button" className="btn-delete" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }} onClick={handleDeleteCat}>Delete</button>
+                  ? <button type="button" className="btn-delete" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }} onClick={handleDeleteCat}>{tr('common.delete')}</button>
                   : <span />}
-                <button type="submit" className="btn-primary">Save</button>
+                <button type="submit" className="btn-primary">{tr('common.save')}</button>
               </div>
             </form>
           </div>
@@ -448,17 +457,17 @@ export default function Habits() {
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <div className="modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{modal.mode === 'create' ? 'New habit' : 'Edit habit'}</h3>
+              <h3>{modal.mode === 'create' ? tr('habits.newHabit') : tr('habits.editHabit')}</h3>
               <button className="btn-delete" onClick={() => setModal(null)}><IconClose /></button>
             </div>
             <form onSubmit={handleSaveHabit} className="form" style={{ flexDirection: 'column', gap: '0.85rem' }}>
               <div className="field">
-                <label>Habit name</label>
+                <label>{tr('habits.habitName')}</label>
                 <input type="text" required autoFocus value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div className="field">
-                <label>Días de la semana</label>
+                <label>{tr('habits.daysOfWeek')}</label>
                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                   {['L','M','X','J','V','S','D'].map((label, i) => (
                     <button key={i} type="button"
@@ -476,15 +485,15 @@ export default function Habits() {
                 </div>
                 {form.dow?.length === 0 && (
                   <span style={{ fontSize: '0.72rem', color: 'var(--danger-text)', marginTop: '0.25rem' }}>
-                    Selecciona al menos un día
+                    {tr('habits.atLeastOneDay')}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {modal.mode === 'edit'
-                  ? <button type="button" className="btn-delete" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }} onClick={handleDeleteHabit}>Delete</button>
+                  ? <button type="button" className="btn-delete" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }} onClick={handleDeleteHabit}>{tr('common.delete')}</button>
                   : <span />}
-                <button type="submit" className="btn-primary">Save</button>
+                <button type="submit" className="btn-primary">{tr('common.save')}</button>
               </div>
             </form>
           </div>

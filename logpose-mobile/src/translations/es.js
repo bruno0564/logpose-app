@@ -236,5 +236,6 @@ export default {
     addHabit: '+ Hábito',
     addCategory: '+ Categoría',
     atLeastOneDay: 'Selecciona al menos un día',
+    deleteConfirm: '¿Eliminar "{name}"?',
   },
 }

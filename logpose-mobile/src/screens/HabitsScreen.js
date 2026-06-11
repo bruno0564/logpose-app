@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   View, ScrollView, TouchableOpacity,
-  Modal, StyleSheet, Alert, useWindowDimensions,
+  Modal, StyleSheet, useWindowDimensions,
 } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
@@ -70,6 +70,7 @@ export default function HabitsScreen() {
   const [activeCatId, setActiveCatId] = useState(null)
   const [modal, setModal]         = useState(null)
   const [form, setForm]           = useState({})
+  const [confirmDelete, setConfirmDelete] = useState(null)  // {type:'cat'|'habit', data}
   const [viewMode, setViewMode]   = useState('week')   // 'week' | 'month'
   const [weekCenter, setWeekCenter] = useState(4)       // día central de la ventana de 7
 
@@ -171,10 +172,17 @@ export default function HabitsScreen() {
     const dow = parseDow(habit.days_of_week)
     return dow.includes((new Date(year, month, day).getDay() + 6) % 7)
   }
-  function expectedDaysInMonth(habit) {
+  // Días esperados que YA han pasado: en el mes actual hasta hoy; en un mes
+  // pasado, el mes entero; en uno futuro, 0. El % se mide sobre esto para no
+  // penalizar a principio de mes por días que aún no han llegado.
+  function expectedDaysElapsed(habit) {
     const dow = parseDow(habit.days_of_week)
+    const isThisMonth = year === now.getFullYear() && month === now.getMonth()
+    const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth())
+    if (isFuture) return 0
+    const lastDay = isThisMonth ? now.getDate() : days
     let n = 0
-    for (let d = 1; d <= days; d++) {
+    for (let d = 1; d <= lastDay; d++) {
       if (dow.includes((new Date(year, month, d).getDay() + 6) % 7)) n++
     }
     return n
@@ -188,7 +196,7 @@ export default function HabitsScreen() {
     }).length
   }
   function pct(habitId, habit) {
-    const exp = expectedDaysInMonth(habit)
+    const exp = expectedDaysElapsed(habit)
     return exp === 0 ? 0 : Math.round((completedExpected(habitId, habit) / exp) * 100)
   }
   function overallPct() {
@@ -221,12 +229,7 @@ export default function HabitsScreen() {
     setModal(null); await load(); sync()
   }
   function handleDeleteCat() {
-    Alert.alert(tr('habits.editCategory'), `Delete "${modal.data.name}"?`, [
-      { text: tr('common.cancel'), style: 'cancel' },
-      { text: tr('common.delete'), style: 'destructive', onPress: async () => {
-        await deleteLocalHabitCategory(modal.data.id); setActiveCatId(null); setModal(null); await load(); sync()
-      }},
-    ])
+    setConfirmDelete({ type: 'cat', data: modal.data })
   }
 
   function openCreateHabit() { setForm({ name: '', dow: [0,1,2,3,4,5,6] }); setModal({ type: 'habit', mode: 'create' }) }
@@ -246,12 +249,21 @@ export default function HabitsScreen() {
     setModal(null); await load(); sync()
   }
   function handleDeleteHabit() {
-    Alert.alert(tr('habits.editHabit'), `Delete "${modal.data.name}"?`, [
-      { text: tr('common.cancel'), style: 'cancel' },
-      { text: tr('common.delete'), style: 'destructive', onPress: async () => {
-        await deleteLocalHabit(modal.data.id); setModal(null); await load(); sync()
-      }},
-    ])
+    setConfirmDelete({ type: 'habit', data: modal.data })
+  }
+
+  async function doConfirmedDelete() {
+    const cd = confirmDelete
+    setConfirmDelete(null)
+    if (cd.type === 'cat') {
+      await deleteLocalHabitCategory(cd.data.id)
+      setActiveCatId(null)
+    } else {
+      await deleteLocalHabit(cd.data.id)
+    }
+    setModal(null)
+    await load()
+    sync()
   }
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -334,7 +346,7 @@ export default function HabitsScreen() {
               </View>
               <View style={s.pctCol}>
                 <Text style={[s.pctText, { color: pctColor }]}>
-                  {completedExpected(habit.id, habit)}/{expectedDaysInMonth(habit)}
+                  {completedExpected(habit.id, habit)}/{expectedDaysElapsed(habit)}
                 </Text>
               </View>
             </View>
@@ -526,6 +538,28 @@ export default function HabitsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Confirmación de borrado (estilo de la app, en vez de Alert nativo) */}
+      <Modal visible={!!confirmDelete} transparent animationType="fade" onRequestClose={() => setConfirmDelete(null)}>
+        <TouchableOpacity style={s.confirmOverlay} activeOpacity={1} onPress={() => setConfirmDelete(null)}>
+          <TouchableOpacity activeOpacity={1} style={s.confirmCard}>
+            <Text style={s.modalTitle}>
+              {confirmDelete?.type === 'cat' ? tr('habits.editCategory') : tr('habits.editHabit')}
+            </Text>
+            <Text style={{ color: t.text2, fontSize: 14, marginBottom: 16 }}>
+              {tr('habits.deleteConfirm', { name: confirmDelete?.data?.name ?? '' })}
+            </Text>
+            <View style={s.confirmRow}>
+              <TouchableOpacity style={s.btnCancel} onPress={() => setConfirmDelete(null)}>
+                <Text style={s.btnCancelText}>{tr('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.confirmDanger} onPress={doConfirmedDelete}>
+                <Text style={s.btnDangerText}>{tr('common.delete')}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </FadeInView>
   )
 }
@@ -641,5 +675,11 @@ function makeStyles(t) {
     btnIcon:        { padding: 6 },
     btnDanger:      { borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#7f1d1d33', marginRight: 'auto' },
     btnDangerText:  { color: '#f87171', fontWeight: '700', fontSize: 13 },
+
+    // Confirmación de borrado (centrada)
+    confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+    confirmCard:    { backgroundColor: t.surface, borderRadius: 14, padding: 20, width: '100%', maxWidth: 340, borderWidth: t.cardBorderWidth, borderColor: t.cardBorderColor },
+    confirmRow:     { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+    confirmDanger:  { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: t.dangerBg },
   })
 }

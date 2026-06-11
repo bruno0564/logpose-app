@@ -1541,6 +1541,13 @@ input[type="number"] { -moz-appearance: textfield; }
   background: var(--accent);
   margin: 0 auto;
   box-shadow: 0 0 0 2px var(--accent-subtle);
+  /* Entrada "pop" al marcar (muelle con rebote), igual que en el móvil */
+  animation: habits-check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes habits-check-pop {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
 /* Salida al desmarcar (todos los temas): encoge + se desvanece */
