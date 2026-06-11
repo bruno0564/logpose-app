@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  getActiveTrainingDays,
   getCalendarEvents, insertCalendarEvent, updateCalendarEvent,
   markCalendarEventPendingDelete, purgeCalendarEvent,
   markCalendarEventSynced, getUnsyncedCalendarEvents,
@@ -79,7 +78,6 @@ export default function Calendar() {
   const todayStr = toDateStr(now)
   const [view, setView]     = useState('month')
   const [cursor, setCursor] = useState(new Date(now))
-  const [gymDays, setGymDays]   = useState(new Set())
   const [events, setEvents]     = useState([])
   const [modal, setModal]       = useState(null)
   const [form, setForm]         = useState(EMPTY_FORM)
@@ -116,7 +114,6 @@ export default function Calendar() {
   }, [loadEvents])
 
   useEffect(() => {
-    getActiveTrainingDays().then(rows => setGymDays(new Set(rows.map(r => r.day_of_week))))
     loadEvents().then(() => sync())
   }, [])
 
@@ -158,6 +155,7 @@ export default function Calendar() {
   async function handleSave(e) {
     e.preventDefault()
     if (form.recurrence === 'none' && !form.date) return  // antes lo cubría el `required` nativo
+    if (form.recurrence === 'weekly' && form.days_of_week.length === 0) return  // evita days_of_week="" (rompería el sync)
     const data = {
       title:       form.title.trim(),
       recurrence:  form.recurrence,
@@ -244,7 +242,7 @@ export default function Calendar() {
         </div>
 
         {view === 'month' && (
-          <MonthView cursor={cursor} todayStr={todayStr} gymDays={gymDays} events={events}
+          <MonthView cursor={cursor} todayStr={todayStr} events={events}
             onDayClick={openDay} onEventClick={openEdit}
             onSlotClick={d => openCreate({ recurrence: 'none', date: toDateStr(d) })} />
         )}
@@ -314,6 +312,11 @@ export default function Calendar() {
                       </button>
                     ))}
                   </div>
+                  {form.days_of_week.length === 0 && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--danger-text)', marginTop: '0.25rem', display: 'block' }}>
+                      {tr('calendar.atLeastOneDay')}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -370,7 +373,7 @@ export default function Calendar() {
 
 // ── Month View ────────────────────────────────────────────────────────────────
 
-function MonthView({ cursor, todayStr, gymDays, events, onDayClick, onEventClick, onSlotClick }) {
+function MonthView({ cursor, todayStr, events, onDayClick, onEventClick, onSlotClick }) {
   const { t: tr } = useLang()
   const daysShort = tr('common.daysShort')
   const year = cursor.getFullYear(), month = cursor.getMonth()
@@ -387,14 +390,12 @@ function MonthView({ cursor, todayStr, gymDays, events, onDayClick, onEventClick
           const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
           const isToday = dateStr === todayStr
           const dow = (new Date(year, month, day).getDay() + 6) % 7
-          const hasGym = gymDays.has(dow)
           const dayEvents = eventsForDate(events, dateStr, dow)
           return (
             <div key={i} className={`cal-month-cell${isToday?' cal-month-cell--today':''}`}
               onClick={() => onSlotClick(new Date(year, month, day))}>
               <div className="cal-month-cell-top">
                 <span className="cal-month-day-num">{day}</span>
-                {hasGym && <span className="cal-dot cal-dot--gym">🏋</span>}
               </div>
               <div className="cal-month-events">
                 {dayEvents.slice(0, 3).map(ev => (

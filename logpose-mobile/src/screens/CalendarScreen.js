@@ -17,7 +17,7 @@ import {
   markCalendarEventPendingDelete, purgeCalendarEvent,
   markCalendarEventSynced, getUnsyncedCalendarEvents,
   getPendingDeleteCalendarEvents, upsertCalendarEventFromServer,
-  getActiveTrainingDays, pruneStaleCalendarEvents,
+  pruneStaleCalendarEvents,
 } from '../db/database'
 import {
   isServerReachable,
@@ -27,7 +27,7 @@ import {
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 
-const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626']
+const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#ea580c', '#dc2626']
 
 function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -93,7 +93,6 @@ export default function CalendarScreen() {
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [events, setEvents] = useState([])
-  const [gymDays, setGymDays] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
@@ -102,8 +101,6 @@ export default function CalendarScreen() {
 
   const loadEvents = useCallback(async () => {
     setEvents(await getCalendarEvents())
-    const days = await getActiveTrainingDays()
-    setGymDays(days.map(d => d.day_of_week))
   }, [])
 
   const sync = useCallback(async () => {
@@ -158,8 +155,11 @@ export default function CalendarScreen() {
 
   async function handleSave() {
     if (!form.title.trim()) return
+    if (form.recurrence === 'weekly' && !form.days_of_week) return  // evita days_of_week="" (rompería el sync)
     const data = {
       ...form,
+      title: form.title.trim(),
+      notes: form.notes.trim() || null,
       date: form.recurrence === 'none' ? form.date : null,
       days_of_week: form.recurrence === 'weekly' ? form.days_of_week : null,
     }
@@ -194,7 +194,6 @@ export default function CalendarScreen() {
     const dayEvents = eventsForDate(events, dateStr, dow)
       .slice()
       .sort((a, b) => (a.start_time || '') < (b.start_time || '') ? -1 : 1)
-    const isGym = gymDays.includes(dow)
 
     const days = t => t('common.days')
     const dayName = tr('common.days')[dow]
@@ -214,12 +213,6 @@ export default function CalendarScreen() {
             <Text style={s.addBtnText}>+</Text>
           </PressableScale>
         </View>
-
-        {isGym && (
-          <View style={s.gymBanner}>
-            <Text style={s.gymBannerText}>{tr('calendar.gymDay')}</Text>
-          </View>
-        )}
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {dayEvents.length === 0 ? (
@@ -310,7 +303,6 @@ export default function CalendarScreen() {
             const dateStr = toDateStr(d)
             const dow = (d.getDay() + 6) % 7
             const isToday = isThisMonth && day === today.getDate()
-            const isGym = gymDays.includes(dow)
             const dayEvs = eventsForDate(events, dateStr, dow)
             return (
               <TouchableOpacity key={i} style={s.cell} onPress={() => setSelectedDate(d)}>
@@ -318,7 +310,6 @@ export default function CalendarScreen() {
                   <View style={[s.dayWrap, isToday && s.todayWrap]}>
                     <Text style={[s.dayNum, isToday && s.todayNum]}>{day}</Text>
                   </View>
-                  {isGym && <Text style={s.gymDot}>🏋</Text>}
                 </View>
                 <View style={s.dotRow}>
                   {dayEvs.slice(0, 3).map((ev, ei) => (
@@ -436,6 +427,9 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
               ))}
             </View>
           )}
+          {form.recurrence === 'weekly' && selectedDays.length === 0 && (
+            <Text style={{ color: '#f87171', fontSize: 12, marginBottom: 8 }}>{tr('calendar.atLeastOneDay')}</Text>
+          )}
 
           <View style={s.timeRow}>
             <TouchableOpacity
@@ -513,8 +507,6 @@ const makeStyles = (t) => StyleSheet.create({
   backArrow:        { color: t.accent, fontSize: 32, lineHeight: 36 },
   dayTitle:         { color: t.text, fontSize: 18, fontWeight: '700' },
   daySubtitle:      { color: t.text3, fontSize: 13 },
-  gymBanner:        { backgroundColor: t.surface2, marginHorizontal: 16, borderRadius: 8, padding: 10, marginBottom: 4 },
-  gymBannerText:    { color: t.text2, fontSize: 13 },
   card:             { backgroundColor: t.surface2, borderRadius: 16, marginHorizontal: 16, padding: 20, borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.cardBorderColor, ...(t.cartoon ? t.shadow : {}) },
   monthRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   arrowBtn:         { padding: 8 },
@@ -529,7 +521,6 @@ const makeStyles = (t) => StyleSheet.create({
   todayWrap:        { backgroundColor: t.accent },
   dayNum:           { color: t.text2, fontSize: 13 },
   todayNum:         { color: t.text, fontWeight: '700', fontSize: 13 },
-  gymDot:           { fontSize: 9 },
   dotRow:           { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
   dot:              { width: 5, height: 5, borderRadius: 3 },
   emptyText:        { color: t.text4, fontSize: 14, textAlign: 'center', marginTop: 60 },

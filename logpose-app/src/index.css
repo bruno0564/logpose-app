@@ -1241,17 +1241,10 @@ input[type="number"] { -moz-appearance: textfield; }
   flex: 1;
 }
 
-/* ── Indicadores de actividad ────────────────────── */
-
 .cal-month-cell-top {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-}
-
-.cal-dot--gym {
-  font-size: 0.72rem;
-  line-height: 1;
 }
 
 /* ── Calendar Events ─────────────────────────────── */
