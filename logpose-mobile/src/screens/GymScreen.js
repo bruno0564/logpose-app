@@ -434,6 +434,9 @@ function StatsView({ exercises }) {
                     {exSets.map(ws => (
                       <View key={ws.id} style={{ flexDirection: 'row', gap: 16, paddingLeft: 8, paddingVertical: 2 }}>
                         <Text style={{ color: t.text3, fontSize: 12 }}>{tr('gym.serieLabel', { n: ws.set_number })}</Text>
+                        {ws.side && ws.side !== 'both' && (
+                          <Text style={{ color: t.accent, fontSize: 12, fontWeight: '700' }}>{ws.side === 'left' ? tr('gym.sideLeft') : tr('gym.sideRight')}</Text>
+                        )}
                         <Text style={{ color: t.text3, fontSize: 12 }}>{ws.weight} kg</Text>
                         <Text style={{ color: t.text3, fontSize: 12 }}>{ws.reps} reps</Text>
                       </View>
@@ -578,11 +581,13 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
   const [newSubgroup, setNewSubgroup] = useState('')
+  const [newUnilateral, setNewUnilateral] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [editingExId, setEditingExId] = useState(null)
   const [editExName, setEditExName] = useState('')
   const [editExMuscle, setEditExMuscle] = useState('')
   const [editExSubgroup, setEditExSubgroup] = useState('')
+  const [editExUnilateral, setEditExUnilateral] = useState(false)
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
@@ -614,12 +619,13 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
   async function handleCreate() {
     if (!newName.trim()) return
-    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null)
+    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null, newUnilateral)
     const pos = routineExercises.filter(re => re.day_of_week === day).length
     await insertRoutineExercise(routine.id, id, day, pos)
     setNewName('')
     setNewMuscle('')
     setNewSubgroup('')
+    setNewUnilateral(false)
     onAdded()
   }
 
@@ -652,7 +658,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                           style={s.btnPrimarySmall}
                           onPress={async () => {
                             if (!editExName.trim()) return
-                            await updateLocalExercise(ex.id, editExName.trim(), editExMuscle || null, editExSubgroup || null)
+                            await updateLocalExercise(ex.id, editExName.trim(), editExMuscle || null, editExSubgroup || null, editExUnilateral)
                             setEditingExId(null)
                             onAdded()
                           }}
@@ -662,6 +668,13 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                         <TouchableOpacity style={s.btnCancel} onPress={() => setEditingExId(null)}>
                           <Text style={s.btnCancelText}>✕</Text>
                         </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => setEditExUnilateral(v => !v)}
+                          style={[s.uniToggle, editExUnilateral && s.uniToggleOn]}
+                          hitSlop={6}
+                        >
+                          <Text style={[s.uniToggleText, editExUnilateral && s.uniToggleTextOn]}>{tr('gym.unilateralTag')}</Text>
+                        </TouchableOpacity>
                       </View>
                     )
                   }
@@ -669,7 +682,7 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                     <View key={ex.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 5 }}>
                       <Text style={s.exerciseName}>{ex.name}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <TouchableOpacity onPress={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }} hitSlop={8}>
+                        <TouchableOpacity onPress={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || ''); setEditExUnilateral(!!ex.is_unilateral) }} hitSlop={8}>
                           <Ionicons name="pencil" size={14} color={t.text3} />
                         </TouchableOpacity>
                         {alreadyAdded.has(ex.id) ? (
@@ -737,6 +750,16 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
                 ))}
               </View>
             )}
+            <TouchableOpacity
+              style={s.uniRow}
+              activeOpacity={0.7}
+              onPress={() => setNewUnilateral(v => !v)}
+            >
+              <View style={[s.checkbox, newUnilateral && s.checkboxOn]}>
+                {newUnilateral && <Text style={s.checkboxMark}>✓</Text>}
+              </View>
+              <Text style={s.uniLabel}>{tr('gym.unilateral')}</Text>
+            </TouchableOpacity>
             <PressableScale style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleCreate}>
               <Text style={s.btnPrimaryText}>{tr('gym.createAndAdd')}</Text>
             </PressableScale>
@@ -755,14 +778,14 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const s = makeStyles(t)
   const [date, setDate] = useState(new Date().toLocaleDateString('sv'))
   const [showDatePicker, setShowDatePicker] = useState(false)
+  // Un ejercicio unilateral guarda peso/reps por lado; uno bilateral, un solo valor.
+  const emptySet = (un) => un
+    ? { reps_l: '', weight_l: '', reps_r: '', weight_r: '' }
+    : { reps: '', weight: '' }
   const [sets, setSets] = useState(() => {
     const init = {}
     dayExercises.forEach(ex => {
-      init[ex.local_exercise_id] = [
-        { weight: '', reps: '' },
-        { weight: '', reps: '' },
-        { weight: '', reps: '' },
-      ]
+      init[ex.local_exercise_id] = [emptySet(ex.is_unilateral), emptySet(ex.is_unilateral), emptySet(ex.is_unilateral)]
     })
     return init
   })
@@ -783,9 +806,16 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
       for (const ex of dayExercises) {
         const exSets = sets[ex.local_exercise_id] || []
         for (let i = 0; i < exSets.length; i++) {
-          const s = exSets[i]
-          if (s.weight && s.reps) {
-            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(s.weight), parseInt(s.reps), null)
+          const sd = exSets[i]
+          if (ex.is_unilateral) {
+            if (sd.weight_l && sd.reps_l) {
+              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight_l), parseInt(sd.reps_l), null, 'left')
+            }
+            if (sd.weight_r && sd.reps_r) {
+              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight_r), parseInt(sd.reps_r), null, 'right')
+            }
+          } else if (sd.weight && sd.reps) {
+            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight), parseInt(sd.reps), null, 'both')
           }
         }
       }
@@ -827,6 +857,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
           <View key={ex.local_exercise_id} style={[s.card, { marginBottom: 12 }]}>
             <Text style={s.dayName}>
               {ex.muscle_group ? `[${ex.muscle_group}] ` : ''}{ex.exercise_name}
+              {ex.is_unilateral ? <Text style={{ color: t.accent, fontSize: 11, fontWeight: '700' }}>{'  '}{tr('gym.unilateralTag')}</Text> : null}
             </Text>
 
             <View style={{ flexDirection: 'row', marginTop: 10, marginBottom: 4 }}>
@@ -835,27 +866,46 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
               <Text style={[s.colHeader, { flex: 1 }]}>{tr('gym.kg')}</Text>
             </View>
 
-            {(sets[ex.local_exercise_id] || []).map((setData, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={[s.restText, { width: 60 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
-                <TextInput
-                  style={[s.input, { flex: 1, marginRight: 6 }]}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={t.text3}
-                  value={setData.reps}
-                  onChangeText={v => updateSet(ex.local_exercise_id, i, 'reps', v)}
-                />
-                <TextInput
-                  style={[s.input, { flex: 1 }]}
-                  keyboardType="decimal-pad"
-                  placeholder="—"
-                  placeholderTextColor={t.text3}
-                  value={setData.weight}
-                  onChangeText={v => updateSet(ex.local_exercise_id, i, 'weight', v)}
-                />
-              </View>
-            ))}
+            {ex.is_unilateral
+              ? (sets[ex.local_exercise_id] || []).map((setData, i) => (
+                <View key={i} style={{ marginBottom: 8 }}>
+                  <Text style={[s.restText, { fontSize: 12, marginBottom: 2 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
+                  {[['reps_l', 'weight_l', tr('gym.sideLeft')], ['reps_r', 'weight_r', tr('gym.sideRight')]].map(([repsField, weightField, label]) => (
+                    <View key={repsField} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <Text style={[s.restText, { width: 60, fontWeight: '600', color: t.text2 }]}>{label}</Text>
+                      <TextInput
+                        style={[s.input, { flex: 1, marginRight: 6 }]}
+                        keyboardType="number-pad" placeholder="—" placeholderTextColor={t.text3}
+                        value={setData[repsField]}
+                        onChangeText={v => updateSet(ex.local_exercise_id, i, repsField, v)}
+                      />
+                      <TextInput
+                        style={[s.input, { flex: 1 }]}
+                        keyboardType="decimal-pad" placeholder="—" placeholderTextColor={t.text3}
+                        value={setData[weightField]}
+                        onChangeText={v => updateSet(ex.local_exercise_id, i, weightField, v)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              ))
+              : (sets[ex.local_exercise_id] || []).map((setData, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={[s.restText, { width: 60 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
+                  <TextInput
+                    style={[s.input, { flex: 1, marginRight: 6 }]}
+                    keyboardType="number-pad" placeholder="—" placeholderTextColor={t.text3}
+                    value={setData.reps}
+                    onChangeText={v => updateSet(ex.local_exercise_id, i, 'reps', v)}
+                  />
+                  <TextInput
+                    style={[s.input, { flex: 1 }]}
+                    keyboardType="decimal-pad" placeholder="—" placeholderTextColor={t.text3}
+                    value={setData.weight}
+                    onChangeText={v => updateSet(ex.local_exercise_id, i, 'weight', v)}
+                  />
+                </View>
+              ))}
           </View>
         ))}
 
@@ -939,6 +989,15 @@ const makeStyles = (t) => StyleSheet.create({
   btnPrimaryText:  { color: t.cartoon ? t.bg : t.text, fontSize: 13, fontWeight: '600', fontFamily: t.fontTitle },
   btnCancel:       { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
   btnCancelText:   { color: t.text2, fontSize: 13 },
+  uniRow:          { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  checkbox:        { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: t.border2, alignItems: 'center', justifyContent: 'center' },
+  checkboxOn:      { backgroundColor: t.accent, borderColor: t.accent },
+  checkboxMark:    { color: t.cartoon ? t.bg : t.text, fontSize: 12, fontWeight: '700' },
+  uniLabel:        { color: t.text2, fontSize: 13 },
+  uniToggle:       { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: t.border2, justifyContent: 'center' },
+  uniToggleOn:     { backgroundColor: t.accent, borderColor: t.accent },
+  uniToggleText:   { color: t.text3, fontSize: 10, fontWeight: '700' },
+  uniToggleTextOn: { color: t.cartoon ? t.bg : t.text },
   btnOutline:      { borderWidth: 1, borderColor: t.border2, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
   btnOutlineText:  { color: t.text2, fontSize: 16, lineHeight: 18 },
   overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },

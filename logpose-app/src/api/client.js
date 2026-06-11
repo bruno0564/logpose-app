@@ -140,6 +140,7 @@ export async function postExerciseToServer(exercise) {
       name: exercise.name,
       muscle_group: exercise.muscle_group || null,
       muscle_subgroup: exercise.muscle_subgroup || null,
+      is_unilateral: !!exercise.is_unilateral,
     }),
   })
   return res.json()
@@ -162,6 +163,7 @@ export async function putExerciseToServer(serverId, exercise) {
       name: exercise.name,
       muscle_group: exercise.muscle_group || null,
       muscle_subgroup: exercise.muscle_subgroup || null,
+      is_unilateral: !!exercise.is_unilateral,
     }),
   })
   return res.json()
@@ -216,6 +218,7 @@ export async function postSetToServer(set) {
       weight: set.weight,
       reps: set.reps,
       note: set.note || null,
+      side: set.side || 'both',
     }),
   })
   return res.json()
@@ -336,6 +339,50 @@ export async function putJournalEntryToServer(serverId, entry) {
 
 export async function deleteJournalEntryFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/journal/${serverId}`, { method: 'DELETE' })
+}
+
+// ── Journal Images ───────────────────────────────────────────────────────────
+// Las imágenes no usan fetchWithTimeout (3 s es poco para subir/bajar bytes);
+// usan fetch directo con comprobación de res.ok.
+
+const UPLOAD_TIMEOUT_MS = 30000
+
+async function fetchImg(url, options = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`)
+    return res
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function fetchAllJournalImagesFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/journal/images/`)
+  return res.json()
+}
+
+// Sube los bytes (Uint8Array) como multipart. Devuelve el metadato creado (con id).
+export async function uploadJournalImageToServer({ date, position = 0, caption = null, bytes, contentType, filename }) {
+  const form = new FormData()
+  form.append('date', date)
+  form.append('position', String(position))
+  if (caption != null) form.append('caption', caption)
+  form.append('file', new Blob([bytes], { type: contentType }), filename || 'image')
+  const res = await fetchImg(`${SERVER}/journal/images/`, { method: 'POST', body: form })
+  return res.json()
+}
+
+// Descarga los bytes de una imagen del servidor (Uint8Array).
+export async function downloadJournalImageBytes(serverId) {
+  const res = await fetchImg(`${SERVER}/journal/images/${serverId}/file`)
+  return new Uint8Array(await res.arrayBuffer())
+}
+
+export async function deleteJournalImageFromServer(serverId) {
+  await fetchImg(`${SERVER}/journal/images/${serverId}`, { method: 'DELETE' })
 }
 
 // ── Habits ────────────────────────────────────────────────────────────────────

@@ -33,6 +33,12 @@
       "@react-native-community/datetimepicker",
       "expo-font",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Logpose necesita acceso a tus fotos para adjuntarlas al diario."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

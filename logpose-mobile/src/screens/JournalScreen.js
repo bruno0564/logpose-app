@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, TouchableOpacity, ScrollView,
+  View, TouchableOpacity, ScrollView, Image, Modal,
   StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
+import { Ionicons } from '@expo/vector-icons'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
 import GradientButton from '../components/GradientButton'
@@ -13,11 +15,16 @@ import {
   getTodayJournalEntry, getAllJournalEntries, saveJournalEntry, getJournalStreak,
   getUnsyncedJournalEntries, getPendingDeleteJournalEntries,
   markJournalEntrySynced, purgeLocalJournalEntry, upsertJournalEntryFromServer, pruneStaleJournalEntries,
+  getJournalImagesForDate, insertLocalJournalImage, deleteLocalJournalImage,
+  getUnsyncedJournalImages, getPendingDeleteJournalImages, markJournalImageSynced,
+  purgeLocalJournalImage, localJournalImageByServerId, insertSyncedJournalImage, pruneStaleJournalImages,
 } from '../db/database'
 import {
   isServerReachable,
   fetchAllJournalEntriesFromServer, postJournalEntryToServer, putJournalEntryToServer, deleteJournalEntryFromServer,
+  fetchAllJournalImagesFromServer, uploadJournalImageToServer, deleteJournalImageFromServer, journalImageFileUrl,
 } from '../api/client'
+import { saveImageFromUri, downloadImageToFile, deleteImageFile } from '../imageStore'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 
@@ -40,6 +47,12 @@ export default function JournalScreen() {
   const [saved, setSaved] = useState(false)
   const [streak, setStreak] = useState(0)
   const [history, setHistory] = useState([])
+  const [images, setImages] = useState([])
+  const [lightbox, setLightbox] = useState(null)
+
+  const loadImages = useCallback(async () => {
+    setImages(await getJournalImagesForDate(TODAY))
+  }, [])
 
   function formatDate(dateStr) {
     const [y, m, d] = dateStr.split('-')
@@ -80,17 +93,48 @@ export default function JournalScreen() {
       const serverEntries = await fetchAllJournalEntriesFromServer()
       for (const e of serverEntries) await upsertJournalEntryFromServer(e)
       await pruneStaleJournalEntries(new Set(serverEntries.map(e => e.id)))
+      await syncJournalImages()
     } catch (e) { console.warn('journal sync failed:', e) } finally {
       syncingJournal = false
       await loadToday()
       await loadStreak()
+      await loadImages()
     }
-  }, [loadToday, loadStreak])
+  }, [loadToday, loadStreak, loadImages])
+
+  // Sync binario de imágenes: sube nuevas, propaga borrados y descarga las que
+  // falten en este dispositivo.
+  async function syncJournalImages() {
+    for (const img of await getPendingDeleteJournalImages()) {
+      try { await deleteJournalImageFromServer(img.server_id) } catch {}
+      await deleteImageFile(img.local_uri)
+      await purgeLocalJournalImage(img.id)
+    }
+    for (const img of await getUnsyncedJournalImages()) {
+      try {
+        const created = await uploadJournalImageToServer({
+          date: img.date, position: img.position, caption: img.caption,
+          uri: img.local_uri, contentType: img.content_type, filename: img.local_uri.split('/').pop(),
+        })
+        await markJournalImageSynced(img.id, created.id)
+      } catch (e) { console.warn('image upload failed:', e) }
+    }
+    const serverImgs = await fetchAllJournalImagesFromServer()
+    for (const sImg of serverImgs) {
+      if (await localJournalImageByServerId(sImg.id)) continue
+      try {
+        const localUri = await downloadImageToFile(journalImageFileUrl(sImg.id), sImg.content_type)
+        await insertSyncedJournalImage(sImg, localUri)
+      } catch (e) { console.warn('image download failed:', e) }
+    }
+    const removed = await pruneStaleJournalImages(new Set(serverImgs.map(i => i.id)))
+    for (const u of removed) await deleteImageFile(u)
+  }
 
   useFocusEffect(
     useCallback(() => {
-      loadToday().then(() => { loadStreak(); syncJournal() })
-    }, [loadToday, loadStreak, syncJournal])
+      loadToday().then(() => { loadStreak(); loadImages(); syncJournal() })
+    }, [loadToday, loadStreak, loadImages, syncJournal])
   )
 
   async function handleSave() {
@@ -102,6 +146,32 @@ export default function JournalScreen() {
     setTimeout(() => setSaved(false), 2000)
     await loadToday()
     await loadStreak()
+    syncJournal()
+  }
+
+  async function handlePickImage() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!perm.granted) return
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    })
+    if (result.canceled) return
+    let pos = images.length
+    for (const asset of result.assets) {
+      const contentType = asset.mimeType || 'image/jpeg'
+      const localUri = await saveImageFromUri(asset.uri, contentType)
+      await insertLocalJournalImage(TODAY, localUri, contentType, pos++)
+    }
+    await loadImages()
+    syncJournal()
+  }
+
+  async function handleDeleteImage(img) {
+    const uriToRemove = await deleteLocalJournalImage(img.id)
+    if (uriToRemove) await deleteImageFile(uriToRemove)
+    await loadImages()
     syncJournal()
   }
 
@@ -182,7 +252,40 @@ export default function JournalScreen() {
             />
           </View>
         </View>
+
+        {/* Galería de imágenes del día */}
+        <View style={{ marginTop: 24 }}>
+          <View style={s.photosHeader}>
+            <Text style={s.photosTitle}>{tr('journal.photos')}</Text>
+            <TouchableOpacity style={s.addPhotoBtn} onPress={handlePickImage}>
+              <Ionicons name="image-outline" size={15} color={t.accent} />
+              <Text style={s.addPhotoText}>{tr('journal.addPhoto')}</Text>
+            </TouchableOpacity>
+          </View>
+          {images.length === 0 ? (
+            <Text style={s.hint}>{tr('journal.noPhotos')}</Text>
+          ) : (
+            <View style={s.grid}>
+              {images.map(img => (
+                <View key={img.id} style={s.thumbWrap}>
+                  <TouchableOpacity activeOpacity={0.85} onPress={() => setLightbox(img.local_uri)}>
+                    <Image source={{ uri: img.local_uri }} style={s.thumb} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.thumbDelete} onPress={() => handleDeleteImage(img)} hitSlop={8}>
+                    <Text style={s.thumbDeleteText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
+
+      <Modal visible={!!lightbox} transparent animationType="fade" onRequestClose={() => setLightbox(null)}>
+        <TouchableOpacity style={s.lightbox} activeOpacity={1} onPress={() => setLightbox(null)}>
+          {lightbox && <Image source={{ uri: lightbox }} style={s.lightboxImg} resizeMode="contain" />}
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
     </FadeInView>
   )
@@ -203,6 +306,17 @@ const makeStyles = (t) => StyleSheet.create({
   streakText:  { color: t.text2, fontSize: 12 },
   textarea:    { backgroundColor: t.surface, borderWidth: t.cartoon ? 2 : 1, borderColor: t.cartoon ? t.text : t.border, borderRadius: 10, color: t.text, padding: 14, fontSize: 15, lineHeight: 24, minHeight: 300 },
   footer:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  photosHeader:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  photosTitle: { color: t.text2, fontSize: 14, fontWeight: '600' },
+  addPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: t.border2, backgroundColor: t.surface2 },
+  addPhotoText:{ color: t.accent, fontSize: 13, fontWeight: '600' },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  thumbWrap:   { position: 'relative' },
+  thumb:       { width: 96, height: 96, borderRadius: 8, borderWidth: 1, borderColor: t.border2, backgroundColor: t.surface2 },
+  thumbDelete: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  thumbDeleteText: { color: '#fff', fontSize: 15, lineHeight: 17, fontWeight: '700' },
+  lightbox:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  lightboxImg: { width: '100%', height: '100%' },
   btnPrimary:  { backgroundColor: t.accent, borderRadius: 6, paddingHorizontal: 16, paddingVertical: 9, borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   btnPrimaryText: { color: t.cartoon ? t.bg : t.text, fontSize: 14, fontWeight: '600', fontFamily: t.fontTitle },
   btnCancel:   { backgroundColor: t.border, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },

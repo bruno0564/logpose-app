@@ -412,6 +412,9 @@ function StatsView({ exercises }) {
                       {exSets.map(ws => (
                         <div key={ws.id} style={{ display: 'flex', gap: '1rem', color: 'var(--text-3)', fontSize: '0.78rem', paddingLeft: '0.5rem' }}>
                           <span>{tr('gym.serieLabel', { n: ws.set_number })}</span>
+                          {ws.side && ws.side !== 'both' && (
+                            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{ws.side === 'left' ? tr('gym.sideLeft') : tr('gym.sideRight')}</span>
+                          )}
                           <span>{ws.weight} kg</span>
                           <span>{ws.reps} reps</span>
                         </div>
@@ -566,11 +569,13 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
   const [newName, setNewName] = useState('')
   const [newMuscle, setNewMuscle] = useState('')
   const [newSubgroup, setNewSubgroup] = useState('')
+  const [newUnilateral, setNewUnilateral] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [editingExId, setEditingExId] = useState(null)
   const [editExName, setEditExName] = useState('')
   const [editExMuscle, setEditExMuscle] = useState('')
   const [editExSubgroup, setEditExSubgroup] = useState('')
+  const [editExUnilateral, setEditExUnilateral] = useState(false)
 
   const muscleGroups = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort()
   const suggestions = muscleGroups.filter(g =>
@@ -600,12 +605,13 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
   async function handleCreate(e) {
     e.preventDefault()
     if (!newName.trim()) return
-    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null)
+    const id = await insertLocalExercise(newName.trim(), newMuscle.trim() || null, newSubgroup || null, newUnilateral)
     const pos = routineExercises.filter(re => re.day_of_week === day).length
     await insertRoutineExercise(routine.id, id, day, pos)
     setNewName('')
     setNewMuscle('')
     setNewSubgroup('')
+    setNewUnilateral(false)
     onAdded()
   }
 
@@ -633,20 +639,31 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                         onSubmit={async e => {
                           e.preventDefault()
                           if (!editExName.trim()) return
-                          await updateLocalExercise(ex.id, editExName.trim(), editExMuscle || null, editExSubgroup || null)
+                          await updateLocalExercise(ex.id, editExName.trim(), editExMuscle || null, editExSubgroup || null, editExUnilateral)
                           setEditingExId(null)
                           onAdded()
                         }}
-                        style={{ display: 'flex', gap: '0.3rem' }}
+                        style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}
                       >
-                        <input
-                          autoFocus
-                          value={editExName}
-                          onChange={e => setEditExName(e.target.value)}
-                          style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.82rem', outline: 'none' }}
-                        />
-                        <button type="submit" className="btn-primary" style={{ padding: '0.2rem 0.5rem' }}><IconCheck size={12} /></button>
-                        <button type="button" className="btn-cancel" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setEditingExId(null)}><IconClose size={12} /></button>
+                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+                          <input
+                            autoFocus
+                            value={editExName}
+                            onChange={e => setEditExName(e.target.value)}
+                            style={{ flex: 1, minWidth: 0, padding: '0.3rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.82rem', outline: 'none' }}
+                          />
+                          <button type="submit" className="btn-primary" style={{ padding: '0.2rem 0.5rem' }}><IconCheck size={12} /></button>
+                          <button type="button" className="btn-cancel" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setEditingExId(null)}><IconClose size={12} /></button>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', color: 'var(--text-3)', fontSize: '0.76rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={editExUnilateral}
+                            onChange={e => setEditExUnilateral(e.target.checked)}
+                            style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+                          />
+                          {tr('gym.unilateral')}
+                        </label>
                       </form>
                     </div>
                   )
@@ -657,7 +674,7 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                     <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
                       <button
                         className="btn-icon"
-                        onClick={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || '') }}
+                        onClick={() => { setEditingExId(ex.id); setEditExName(ex.name); setEditExMuscle(ex.muscle_group || ''); setEditExSubgroup(ex.muscle_subgroup || ''); setEditExUnilateral(!!ex.is_unilateral) }}
                       >
                         <IconEdit size={13} />
                       </button>
@@ -739,6 +756,15 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
                   ))}
                 </div>
               )}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={newUnilateral}
+                  onChange={e => setNewUnilateral(e.target.checked)}
+                  style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
+                />
+                {tr('gym.unilateral')}
+              </label>
               <button type="submit" className="btn-primary" style={{ marginTop: '0.1rem' }}>{tr('gym.createAndAdd')}</button>
             </form>
           </div>
@@ -753,19 +779,20 @@ function ExercisePickerModal({ day, routine, exercises, routineExercises, onClos
 function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const { t: tr } = useLang()
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  // Un ejercicio unilateral guarda peso/reps por lado; uno bilateral, un solo valor.
+  const emptySet = (un) => un
+    ? { reps_l: '', weight_l: '', reps_r: '', weight_r: '' }
+    : { reps: '', weight: '' }
   const [sets, setSets] = useState(() => {
     const init = {}
     dayExercises.forEach(ex => {
-      init[ex.local_exercise_id] = [
-        { weight: '', reps: '' },
-        { weight: '', reps: '' },
-        { weight: '', reps: '' },
-      ]
+      init[ex.local_exercise_id] = [emptySet(ex.is_unilateral), emptySet(ex.is_unilateral), emptySet(ex.is_unilateral)]
     })
     return init
   })
   const [saving, setSaving] = useState(false)
   const days = tr('common.days')
+  const numInput = { padding: '0.35rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', width: '100%', boxSizing: 'border-box' }
 
   function updateSet(exerciseId, setIdx, field, value) {
     setSets(prev => ({
@@ -782,8 +809,16 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
         const exSets = sets[ex.local_exercise_id] || []
         for (let i = 0; i < exSets.length; i++) {
           const s = exSets[i]
-          if (s.weight && s.reps) {
-            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(s.weight), parseInt(s.reps), null)
+          if (ex.is_unilateral) {
+            // Dos filas por serie (una por lado), cada una con su peso/reps.
+            if (s.weight_l && s.reps_l) {
+              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(s.weight_l), parseInt(s.reps_l), null, 'left')
+            }
+            if (s.weight_r && s.reps_r) {
+              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(s.weight_r), parseInt(s.reps_r), null, 'right')
+            }
+          } else if (s.weight && s.reps) {
+            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(s.weight), parseInt(s.reps), null, 'both')
           }
         }
       }
@@ -825,6 +860,9 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
                 <span style={{ color: 'var(--text-3)', fontWeight: 400, fontSize: '0.72rem', marginRight: '0.4rem' }}>[{ex.muscle_group}]</span>
               )}
               {ex.exercise_name}
+              {ex.is_unilateral ? (
+                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.66rem', marginLeft: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tr('gym.unilateralTag')}</span>
+              ) : null}
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem' }}>
@@ -833,27 +871,30 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
               <span style={{ color: 'var(--text-3)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tr('gym.kg')}</span>
             </div>
 
-            {(sets[ex.local_exercise_id] || []).map((s, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{tr('gym.serieLabel', { n: i + 1 })}</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="—"
-                  value={s.reps}
-                  onChange={e => updateSet(ex.local_exercise_id, i, 'reps', e.target.value)}
-                  style={{ padding: '0.35rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="—"
-                  value={s.weight}
-                  onChange={e => updateSet(ex.local_exercise_id, i, 'weight', e.target.value)}
-                  style={{ padding: '0.35rem 0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                />
-              </div>
-            ))}
+            {ex.is_unilateral
+              ? (sets[ex.local_exercise_id] || []).map((s, i) => (
+                <div key={i} style={{ marginBottom: '0.55rem' }}>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.72rem' }}>{tr('gym.serieLabel', { n: i + 1 })}</span>
+                  {[['left', 'reps_l', 'weight_l', tr('gym.sideLeft')], ['right', 'reps_r', 'weight_r', tr('gym.sideRight')]].map(([sideKey, repsField, weightField, label]) => (
+                    <div key={sideKey} style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-2)', fontSize: '0.76rem', fontWeight: 600 }}>{label}</span>
+                      <input type="number" inputMode="numeric" placeholder="—" value={s[repsField]}
+                        onChange={e => updateSet(ex.local_exercise_id, i, repsField, e.target.value)} style={numInput} />
+                      <input type="number" inputMode="decimal" placeholder="—" value={s[weightField]}
+                        onChange={e => updateSet(ex.local_exercise_id, i, weightField, e.target.value)} style={numInput} />
+                    </div>
+                  ))}
+                </div>
+              ))
+              : (sets[ex.local_exercise_id] || []).map((s, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '3.5rem 1fr 1fr', gap: '0.5rem', marginBottom: '0.4rem', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>{tr('gym.serieLabel', { n: i + 1 })}</span>
+                  <input type="number" inputMode="numeric" placeholder="—" value={s.reps}
+                    onChange={e => updateSet(ex.local_exercise_id, i, 'reps', e.target.value)} style={numInput} />
+                  <input type="number" inputMode="decimal" placeholder="—" value={s.weight}
+                    onChange={e => updateSet(ex.local_exercise_id, i, 'weight', e.target.value)} style={numInput} />
+                </div>
+              ))}
           </div>
         ))}
 

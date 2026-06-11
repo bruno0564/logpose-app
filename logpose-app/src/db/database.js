@@ -65,6 +65,8 @@ export async function openDB() {
     pending_delete   INTEGER NOT NULL DEFAULT 0
   )`)
   try { await instance.execute('ALTER TABLE exercises ADD COLUMN muscle_subgroup TEXT') } catch {}
+  // Ejercicios unilaterales (un lado cada vez). Migración para tablas ya creadas.
+  try { await instance.execute('ALTER TABLE exercises ADD COLUMN is_unilateral INTEGER NOT NULL DEFAULT 0') } catch {}
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS routine_exercises (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +102,8 @@ export async function openDB() {
     synced            INTEGER NOT NULL DEFAULT 0,
     pending_delete    INTEGER NOT NULL DEFAULT 0
   )`)
+  // Lado trabajado en cada serie: 'both' (bilateral) | 'left' | 'right'.
+  try { await instance.execute("ALTER TABLE workout_sets ADD COLUMN side TEXT NOT NULL DEFAULT 'both'") } catch {}
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS calendar_events (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,6 +143,20 @@ export async function openDB() {
     server_id      INTEGER,
     date           TEXT    NOT NULL UNIQUE,
     content        TEXT    NOT NULL DEFAULT '',
+    synced         INTEGER NOT NULL DEFAULT 0,
+    pending_delete INTEGER NOT NULL DEFAULT 0
+  )`)
+
+  // Imágenes del journal: los BYTES viven como fichero en disco (appLocalData);
+  // aquí solo guardamos los metadatos + la ruta local relativa.
+  await instance.execute(`CREATE TABLE IF NOT EXISTS journal_images (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id      INTEGER,
+    date           TEXT    NOT NULL,
+    local_path     TEXT    NOT NULL,
+    content_type   TEXT    NOT NULL DEFAULT 'image/jpeg',
+    position       INTEGER NOT NULL DEFAULT 0,
+    caption        TEXT,
     synced         INTEGER NOT NULL DEFAULT 0,
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
@@ -668,20 +686,20 @@ export async function getExercises() {
   return db.select('SELECT * FROM exercises WHERE pending_delete = 0 ORDER BY muscle_group, name')
 }
 
-export async function insertLocalExercise(name, muscleGroup, muscleSubgroup) {
+export async function insertLocalExercise(name, muscleGroup, muscleSubgroup, isUnilateral = false) {
   const db = await openDB()
   const result = await db.execute(
-    'INSERT INTO exercises (name, muscle_group, muscle_subgroup, synced) VALUES (?, ?, ?, 0)',
-    [name.trim(), muscleGroup || null, muscleSubgroup || null]
+    'INSERT INTO exercises (name, muscle_group, muscle_subgroup, is_unilateral, synced) VALUES (?, ?, ?, ?, 0)',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null, isUnilateral ? 1 : 0]
   )
   return result.lastInsertId
 }
 
-export async function updateLocalExercise(id, name, muscleGroup, muscleSubgroup) {
+export async function updateLocalExercise(id, name, muscleGroup, muscleSubgroup, isUnilateral = false) {
   const db = await openDB()
   await db.execute(
-    'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 0 WHERE id = ?',
-    [name.trim(), muscleGroup || null, muscleSubgroup || null, id]
+    'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, is_unilateral = ?, synced = 0 WHERE id = ?',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null, isUnilateral ? 1 : 0, id]
   )
 }
 
@@ -718,13 +736,13 @@ export async function upsertExerciseFromServer(serverEx) {
   const rows = await db.select('SELECT id FROM exercises WHERE server_id = ?', [serverEx.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.id]
+      'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, is_unilateral = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.is_unilateral ? 1 : 0, serverEx.id]
     )
   } else {
     await db.execute(
-      'INSERT INTO exercises (server_id, name, muscle_group, muscle_subgroup, synced) VALUES (?, ?, ?, ?, 1)',
-      [serverEx.id, serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null]
+      'INSERT INTO exercises (server_id, name, muscle_group, muscle_subgroup, is_unilateral, synced) VALUES (?, ?, ?, ?, ?, 1)',
+      [serverEx.id, serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.is_unilateral ? 1 : 0]
     )
   }
 }
@@ -735,7 +753,7 @@ export async function getAllRoutineExercises(localRoutineId) {
   const db = await openDB()
   return db.select(`
     SELECT re.id, re.local_exercise_id, re.day_of_week, re.position,
-           e.name as exercise_name, e.muscle_group
+           e.name as exercise_name, e.muscle_group, e.is_unilateral
     FROM routine_exercises re
     JOIN exercises e ON e.id = re.local_exercise_id
     WHERE re.local_routine_id = ? AND re.pending_delete = 0
@@ -996,22 +1014,22 @@ export async function upsertSetFromServer(serverSet) {
   const existing = await db.select('SELECT id FROM workout_sets WHERE server_id = ?', [serverSet.id])
   if (existing.length > 0) {
     await db.execute(
-      'UPDATE workout_sets SET local_session_id=?, local_exercise_id=?, set_number=?, weight=?, reps=?, note=?, synced=1, pending_delete=0 WHERE server_id=?',
-      [localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.id]
+      'UPDATE workout_sets SET local_session_id=?, local_exercise_id=?, set_number=?, weight=?, reps=?, note=?, side=?, synced=1, pending_delete=0 WHERE server_id=?',
+      [localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.side ?? 'both', serverSet.id]
     )
   } else {
     await db.execute(
-      'INSERT INTO workout_sets (server_id, local_session_id, local_exercise_id, set_number, weight, reps, note, synced) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
-      [serverSet.id, localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note]
+      'INSERT INTO workout_sets (server_id, local_session_id, local_exercise_id, set_number, weight, reps, note, side, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      [serverSet.id, localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.side ?? 'both']
     )
   }
 }
 
-export async function insertWorkoutSet(localSessionId, localExerciseId, setNumber, weight, reps, note) {
+export async function insertWorkoutSet(localSessionId, localExerciseId, setNumber, weight, reps, note, side = 'both') {
   const db = await openDB()
   const result = await db.execute(
-    'INSERT INTO workout_sets (local_session_id, local_exercise_id, set_number, weight, reps, note, synced) VALUES (?, ?, ?, ?, ?, ?, 0)',
-    [localSessionId, localExerciseId, setNumber, weight, reps, note || null]
+    'INSERT INTO workout_sets (local_session_id, local_exercise_id, set_number, weight, reps, note, side, synced) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+    [localSessionId, localExerciseId, setNumber, weight, reps, note || null, side]
   )
   return result.lastInsertId
 }
@@ -1227,6 +1245,95 @@ export async function pruneStaleJournalEntries(serverIds) {
   for (const row of rows) {
     if (!serverIds.has(row.server_id)) await db.execute('DELETE FROM journal_entries WHERE id = ?', [row.id])
   }
+}
+
+// ── Journal Images ──────────────────────────────────────────────────────────
+// Los bytes están en disco (imageStore.js); aquí solo el metadato + ruta local.
+// Las funciones que borran filas devuelven los local_path afectados para que la
+// pantalla elimine también el fichero del disco.
+
+export async function getJournalImagesForDate(date) {
+  const db = await openDB()
+  return db.select(
+    'SELECT * FROM journal_images WHERE date = ? AND pending_delete = 0 ORDER BY position, id',
+    [date]
+  )
+}
+
+export async function insertLocalJournalImage(date, localPath, contentType, position = 0, caption = null) {
+  const db = await openDB()
+  const result = await db.execute(
+    'INSERT INTO journal_images (date, local_path, content_type, position, caption, synced) VALUES (?, ?, ?, ?, ?, 0)',
+    [date, localPath, contentType, position, caption]
+  )
+  return result.lastInsertId
+}
+
+// Borrado iniciado por el usuario. Devuelve el local_path a borrar del disco si
+// la fila se elimina en duro (sin server_id); si tiene server_id se marca
+// pending_delete y el fichero se conserva hasta que el sync confirme el borrado.
+export async function deleteLocalJournalImage(id) {
+  const db = await openDB()
+  const rows = await db.select('SELECT server_id, local_path FROM journal_images WHERE id = ?', [id])
+  if (!rows[0]) return null
+  if (rows[0].server_id) {
+    await db.execute('UPDATE journal_images SET pending_delete = 1 WHERE id = ?', [id])
+    return null
+  }
+  await db.execute('DELETE FROM journal_images WHERE id = ?', [id])
+  return rows[0].local_path
+}
+
+export async function getUnsyncedJournalImages() {
+  const db = await openDB()
+  return db.select('SELECT * FROM journal_images WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteJournalImages() {
+  const db = await openDB()
+  return db.select('SELECT * FROM journal_images WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markJournalImageSynced(id, serverId) {
+  const db = await openDB()
+  await db.execute('UPDATE journal_images SET synced = 1, server_id = ? WHERE id = ?', [serverId, id])
+}
+
+export async function purgeLocalJournalImage(id) {
+  const db = await openDB()
+  const rows = await db.select('SELECT local_path FROM journal_images WHERE id = ?', [id])
+  await db.execute('DELETE FROM journal_images WHERE id = ?', [id])
+  return rows[0]?.local_path ?? null
+}
+
+export async function localJournalImageByServerId(serverId) {
+  const db = await openDB()
+  const rows = await db.select('SELECT * FROM journal_images WHERE server_id = ?', [serverId])
+  return rows[0] ?? null
+}
+
+// Inserta el metadato de una imagen que ya hemos descargado del servidor.
+export async function insertSyncedJournalImage(serverImg, localPath) {
+  const db = await openDB()
+  await db.execute(
+    'INSERT INTO journal_images (server_id, date, local_path, content_type, position, caption, synced) VALUES (?, ?, ?, ?, ?, ?, 1)',
+    [serverImg.id, serverImg.date, localPath, serverImg.content_type, serverImg.position ?? 0, serverImg.caption ?? null]
+  )
+}
+
+// Borra localmente las imágenes ya sincronizadas que ya no existen en el servidor.
+// Devuelve los local_path para que la pantalla borre los ficheros.
+export async function pruneStaleJournalImages(validServerIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id, local_path FROM journal_images WHERE server_id IS NOT NULL AND pending_delete = 0')
+  const removed = []
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.execute('DELETE FROM journal_images WHERE id = ?', [row.id])
+      removed.push(row.local_path)
+    }
+  }
+  return removed
 }
 
 // ── Habits ────────────────────────────────────────────────────────────────────

@@ -10,6 +10,8 @@
     "sql:allow-load",
     "sql:allow-execute",
     "sql:allow-select",
-    "sql:allow-close"
+    "sql:allow-close",
+    "fs:allow-applocaldata-read-recursive",
+    "fs:allow-applocaldata-write-recursive"
   ]
 }

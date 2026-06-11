@@ -109,6 +109,9 @@ export async function openDB() {
 
   try { await db.runAsync('ALTER TABLE routines ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0') } catch {}
   try { await db.runAsync('ALTER TABLE exercises ADD COLUMN muscle_subgroup TEXT') } catch {}
+  // Ejercicios unilaterales (un lado cada vez) y lado trabajado por serie.
+  try { await db.runAsync('ALTER TABLE exercises ADD COLUMN is_unilateral INTEGER NOT NULL DEFAULT 0') } catch {}
+  try { await db.runAsync("ALTER TABLE workout_sets ADD COLUMN side TEXT NOT NULL DEFAULT 'both'") } catch {}
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS task_lists (
@@ -146,6 +149,17 @@ export async function openDB() {
       server_id      INTEGER,
       date           TEXT    NOT NULL UNIQUE,
       content        TEXT    NOT NULL DEFAULT '',
+      synced         INTEGER NOT NULL DEFAULT 0,
+      pending_delete INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS journal_images (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      server_id      INTEGER,
+      date           TEXT    NOT NULL,
+      local_uri      TEXT    NOT NULL,
+      content_type   TEXT    NOT NULL DEFAULT 'image/jpeg',
+      position       INTEGER NOT NULL DEFAULT 0,
+      caption        TEXT,
       synced         INTEGER NOT NULL DEFAULT 0,
       pending_delete INTEGER NOT NULL DEFAULT 0
     );
@@ -440,20 +454,20 @@ export async function getExercises() {
   return db.getAllAsync('SELECT * FROM exercises WHERE pending_delete = 0 ORDER BY muscle_group, name')
 }
 
-export async function insertLocalExercise(name, muscleGroup, muscleSubgroup) {
+export async function insertLocalExercise(name, muscleGroup, muscleSubgroup, isUnilateral = false) {
   const db = await openDB()
   const result = await db.runAsync(
-    'INSERT INTO exercises (name, muscle_group, muscle_subgroup, synced) VALUES (?, ?, ?, 0)',
-    [name.trim(), muscleGroup || null, muscleSubgroup || null]
+    'INSERT INTO exercises (name, muscle_group, muscle_subgroup, is_unilateral, synced) VALUES (?, ?, ?, ?, 0)',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null, isUnilateral ? 1 : 0]
   )
   return result.lastInsertRowId
 }
 
-export async function updateLocalExercise(id, name, muscleGroup, muscleSubgroup) {
+export async function updateLocalExercise(id, name, muscleGroup, muscleSubgroup, isUnilateral = false) {
   const db = await openDB()
   await db.runAsync(
-    'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 0 WHERE id = ?',
-    [name.trim(), muscleGroup || null, muscleSubgroup || null, id]
+    'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, is_unilateral = ?, synced = 0 WHERE id = ?',
+    [name.trim(), muscleGroup || null, muscleSubgroup || null, isUnilateral ? 1 : 0, id]
   )
 }
 
@@ -490,13 +504,13 @@ export async function upsertExerciseFromServer(serverEx) {
   const existing = await db.getFirstAsync('SELECT id FROM exercises WHERE server_id = ?', [serverEx.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.id]
+      'UPDATE exercises SET name = ?, muscle_group = ?, muscle_subgroup = ?, is_unilateral = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.is_unilateral ? 1 : 0, serverEx.id]
     )
   } else {
     await db.runAsync(
-      'INSERT INTO exercises (server_id, name, muscle_group, muscle_subgroup, synced) VALUES (?, ?, ?, ?, 1)',
-      [serverEx.id, serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null]
+      'INSERT INTO exercises (server_id, name, muscle_group, muscle_subgroup, is_unilateral, synced) VALUES (?, ?, ?, ?, ?, 1)',
+      [serverEx.id, serverEx.name, serverEx.muscle_group, serverEx.muscle_subgroup ?? null, serverEx.is_unilateral ? 1 : 0]
     )
   }
 }
@@ -507,7 +521,7 @@ export async function getAllRoutineExercises(localRoutineId) {
   const db = await openDB()
   return db.getAllAsync(`
     SELECT re.id, re.local_exercise_id, re.day_of_week, re.position,
-           e.name as exercise_name, e.muscle_group
+           e.name as exercise_name, e.muscle_group, e.is_unilateral
     FROM routine_exercises re
     JOIN exercises e ON e.id = re.local_exercise_id
     WHERE re.local_routine_id = ? AND re.pending_delete = 0
@@ -775,22 +789,22 @@ export async function upsertSetFromServer(serverSet) {
   const existing = await db.getFirstAsync('SELECT id FROM workout_sets WHERE server_id = ?', [serverSet.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE workout_sets SET local_session_id=?, local_exercise_id=?, set_number=?, weight=?, reps=?, note=?, synced=1, pending_delete=0 WHERE server_id=?',
-      [localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.id]
+      'UPDATE workout_sets SET local_session_id=?, local_exercise_id=?, set_number=?, weight=?, reps=?, note=?, side=?, synced=1, pending_delete=0 WHERE server_id=?',
+      [localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.side ?? 'both', serverSet.id]
     )
   } else {
     await db.runAsync(
-      'INSERT INTO workout_sets (server_id, local_session_id, local_exercise_id, set_number, weight, reps, note, synced) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
-      [serverSet.id, localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note]
+      'INSERT INTO workout_sets (server_id, local_session_id, local_exercise_id, set_number, weight, reps, note, side, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      [serverSet.id, localSessionId, localExerciseId, serverSet.set_number, serverSet.weight, serverSet.reps, serverSet.note, serverSet.side ?? 'both']
     )
   }
 }
 
-export async function insertWorkoutSet(localSessionId, localExerciseId, setNumber, weight, reps, note) {
+export async function insertWorkoutSet(localSessionId, localExerciseId, setNumber, weight, reps, note, side = 'both') {
   const db = await openDB()
   const result = await db.runAsync(
-    'INSERT INTO workout_sets (local_session_id, local_exercise_id, set_number, weight, reps, note, synced) VALUES (?, ?, ?, ?, ?, ?, 0)',
-    [localSessionId, localExerciseId, setNumber, weight, reps, note || null]
+    'INSERT INTO workout_sets (local_session_id, local_exercise_id, set_number, weight, reps, note, side, synced) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+    [localSessionId, localExerciseId, setNumber, weight, reps, note || null, side]
   )
   return result.lastInsertRowId
 }
@@ -1231,6 +1245,88 @@ export async function pruneStaleJournalEntries(serverIds) {
   }
 }
 
+// ── Journal Images ──────────────────────────────────────────────────────────
+// Los bytes son ficheros en el almacenamiento de la app (imageStore.js); aquí
+// solo el metadato + la URI local. Las funciones que borran filas devuelven la
+// local_uri afectada para que la pantalla elimine también el fichero.
+
+export async function getJournalImagesForDate(date) {
+  const db = await openDB()
+  return db.getAllAsync(
+    'SELECT * FROM journal_images WHERE date = ? AND pending_delete = 0 ORDER BY position, id',
+    [date]
+  )
+}
+
+export async function insertLocalJournalImage(date, localUri, contentType, position = 0, caption = null) {
+  const db = await openDB()
+  const result = await db.runAsync(
+    'INSERT INTO journal_images (date, local_uri, content_type, position, caption, synced) VALUES (?, ?, ?, ?, ?, 0)',
+    [date, localUri, contentType, position, caption]
+  )
+  return result.lastInsertRowId
+}
+
+export async function deleteLocalJournalImage(id) {
+  const db = await openDB()
+  const row = await db.getFirstAsync('SELECT server_id, local_uri FROM journal_images WHERE id = ?', [id])
+  if (!row) return null
+  if (row.server_id) {
+    await db.runAsync('UPDATE journal_images SET pending_delete = 1 WHERE id = ?', [id])
+    return null
+  }
+  await db.runAsync('DELETE FROM journal_images WHERE id = ?', [id])
+  return row.local_uri
+}
+
+export async function getUnsyncedJournalImages() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM journal_images WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteJournalImages() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM journal_images WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markJournalImageSynced(id, serverId) {
+  const db = await openDB()
+  await db.runAsync('UPDATE journal_images SET synced = 1, server_id = ? WHERE id = ?', [serverId, id])
+}
+
+export async function purgeLocalJournalImage(id) {
+  const db = await openDB()
+  const row = await db.getFirstAsync('SELECT local_uri FROM journal_images WHERE id = ?', [id])
+  await db.runAsync('DELETE FROM journal_images WHERE id = ?', [id])
+  return row?.local_uri ?? null
+}
+
+export async function localJournalImageByServerId(serverId) {
+  const db = await openDB()
+  return db.getFirstAsync('SELECT * FROM journal_images WHERE server_id = ?', [serverId])
+}
+
+export async function insertSyncedJournalImage(serverImg, localUri) {
+  const db = await openDB()
+  await db.runAsync(
+    'INSERT INTO journal_images (server_id, date, local_uri, content_type, position, caption, synced) VALUES (?, ?, ?, ?, ?, ?, 1)',
+    [serverImg.id, serverImg.date, localUri, serverImg.content_type, serverImg.position ?? 0, serverImg.caption ?? null]
+  )
+}
+
+export async function pruneStaleJournalImages(validServerIds) {
+  const db = await openDB()
+  const rows = await db.getAllAsync('SELECT id, server_id, local_uri FROM journal_images WHERE server_id IS NOT NULL AND pending_delete = 0')
+  const removed = []
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.runAsync('DELETE FROM journal_images WHERE id = ?', [row.id])
+      removed.push(row.local_uri)
+    }
+  }
+  return removed
+}
+
 
 // ── Habits ────────────────────────────────────────────────────────────────────
 
@@ -1448,7 +1544,7 @@ export async function exportAllData() {
   const tables = [
     'body_weight', 'quotes', 'routines', 'exercises', 'routine_exercises',
     'workout_sessions', 'workout_sets', 'task_lists', 'task_items',
-    'calendar_events', 'journal_entries', 'habit_categories', 'habits', 'habit_logs',
+    'calendar_events', 'journal_entries', 'journal_images', 'habit_categories', 'habits', 'habit_logs',
   ]
   const out = { exportedAt: new Date().toISOString(), tables: {} }
   for (const table of tables) {

@@ -164,6 +164,7 @@ export async function postExerciseToServer(exercise) {
       name: exercise.name,
       muscle_group: exercise.muscle_group || null,
       muscle_subgroup: exercise.muscle_subgroup || null,
+      is_unilateral: !!exercise.is_unilateral,
     }),
   })
   return res.json()
@@ -186,6 +187,7 @@ export async function putExerciseToServer(serverId, exercise) {
       name: exercise.name,
       muscle_group: exercise.muscle_group || null,
       muscle_subgroup: exercise.muscle_subgroup || null,
+      is_unilateral: !!exercise.is_unilateral,
     }),
   })
   return res.json()
@@ -240,6 +242,7 @@ export async function postSetToServer(set) {
       weight: set.weight,
       reps: set.reps,
       note: set.note || null,
+      side: set.side || 'both',
     }),
   })
   return res.json()
@@ -371,6 +374,49 @@ export async function putJournalEntryToServer(serverId, entry) {
 
 export async function deleteJournalEntryFromServer(serverId) {
   await fetchWithTimeout(`${_server}/journal/${serverId}`, { method: 'DELETE' })
+}
+
+// ── Journal Images ───────────────────────────────────────────────────────────
+// Subir/borrar usan un timeout más amplio (los bytes tardan más que 3 s).
+
+const IMG_TIMEOUT_MS = 30000
+
+async function fetchImg(url, options = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), IMG_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`)
+    return res
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function fetchAllJournalImagesFromServer() {
+  const res = await fetchWithTimeout(`${_server}/journal/images/`)
+  return res.json()
+}
+
+// URL pública del fichero (para descargarlo con expo-file-system).
+export function journalImageFileUrl(serverId) {
+  return `${_server}/journal/images/${serverId}/file`
+}
+
+// Sube el fichero local como multipart. Devuelve el metadato creado (con id).
+export async function uploadJournalImageToServer({ date, position = 0, caption = null, uri, contentType, filename }) {
+  const form = new FormData()
+  form.append('date', date)
+  form.append('position', String(position))
+  if (caption != null) form.append('caption', caption)
+  // En RN, FormData acepta un objeto fichero { uri, name, type }.
+  form.append('file', { uri, name: filename || 'image.jpg', type: contentType })
+  const res = await fetchImg(`${_server}/journal/images/`, { method: 'POST', body: form })
+  return res.json()
+}
+
+export async function deleteJournalImageFromServer(serverId) {
+  await fetchImg(`${_server}/journal/images/${serverId}`, { method: 'DELETE' })
 }
 
 // ── Habits ────────────────────────────────────────────────────────────────────
