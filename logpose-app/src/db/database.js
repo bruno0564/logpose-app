@@ -2,19 +2,20 @@ import Database from '@tauri-apps/plugin-sql'
 
 let db
 
-// Envuelve una serie de sentencias en una transacción: o se aplican todas o
-// ninguna. Evita estados parciales si la app muere a media operación (p.ej.
-// borrar una rutina y dejar routine_exercises huérfanos).
+// IMPORTANTE: tauri-plugin-sql usa por debajo un POOL de conexiones de sqlx
+// (hasta 10). Una transacción repartida en varias llamadas execute()
+// (BEGIN ... statements ... COMMIT) NO garantiza que todas caigan en la misma
+// conexión: el BEGIN y el COMMIT pueden ejecutarse en conexiones distintas,
+// dejando una transacción abierta que mantiene la base de datos bloqueada
+// indefinidamente (toda escritura posterior espera el busy_timeout de 5 s y
+// falla con rows_affected=0). Por eso NO usamos BEGIN/COMMIT aquí.
+//
+// Las operaciones que envuelve borran siempre los HIJOS antes que el PADRE, así
+// que ejecutarlas en secuencia (autocommit) es seguro: una interrupción a media
+// operación como mucho deja un padre sin hijos (recuperable re-borrando), nunca
+// registros huérfanos. Mantenemos la firma para no tocar los call sites.
 async function withTx(database, fn) {
-  await database.execute('BEGIN')
-  try {
-    const result = await fn()
-    await database.execute('COMMIT')
-    return result
-  } catch (e) {
-    try { await database.execute('ROLLBACK') } catch {}
-    throw e
-  }
+  return fn()
 }
 
 export async function openDB() {
