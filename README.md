@@ -25,6 +25,7 @@ A user interface on two platforms that share the same data via sync with `logpos
 | Calendar | ✅ | ✅ | Day/week/month views, events with daily/weekly recurrence, integration with gym days |
 | Tasks | ✅ | ✅ | Task lists with items, completed state |
 | Journal | ✅ | ✅ | Daily entry, consecutive-day streak, history |
+| Habits | ✅ | ✅ | Habits grouped by colour category, per-weekday scheduling, daily check-off |
 | Quotes | ✅ | ✅ | Motivational quotes with author, a random one shown on Home |
 | Home | ✅ | ✅ | Greeting, date and quote of the day |
 | Settings | ✅ | ✅ | Visual theme (Normal / Warm / Old TV / Pixel / Cuphead), dark/light mode, language (ES/EN) |
