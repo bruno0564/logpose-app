@@ -833,25 +833,88 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
 // ── Train View ────────────────────────────────────────────────────────────────
 
+// Un ejercicio unilateral guarda peso/reps por lado; uno bilateral, un solo valor.
+const emptySet = (un) => un
+  ? { reps_l: '', weight_l: '', reps_r: '', weight_r: '' }
+  : { reps: '', weight: '' }
+
+// ¿El borrador tiene algún dato escrito? (para no preguntar por un entreno vacío)
+function draftHasData(sets) {
+  if (!sets) return false
+  return Object.values(sets).some(arr =>
+    Array.isArray(arr) && arr.some(set => Object.values(set).some(v => v !== '' && v != null)))
+}
+
 function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const [date, setDate] = useState(new Date().toLocaleDateString('sv'))
   const [showDatePicker, setShowDatePicker] = useState(false)
-  // Un ejercicio unilateral guarda peso/reps por lado; uno bilateral, un solo valor.
-  const emptySet = (un) => un
-    ? { reps_l: '', weight_l: '', reps_r: '', weight_r: '' }
-    : { reps: '', weight: '' }
-  const [sets, setSets] = useState(() => {
+  // El entreno en curso se guarda como borrador en AsyncStorage según escribes,
+  // así no se pierde si cierras la app antes de pulsar guardar.
+  const draftKey = `workoutDraft:${routine.id}:${day}`
+  const buildInitialSets = () => {
     const init = {}
     dayExercises.forEach(ex => {
       init[ex.local_exercise_id] = [emptySet(ex.is_unilateral), emptySet(ex.is_unilateral), emptySet(ex.is_unilateral)]
     })
     return init
-  })
+  }
+  const [sets, setSets] = useState(buildInitialSets)
   const [saving, setSaving] = useState(false)
+  const [resumeDraft, setResumeDraft] = useState(null)  // borrador pendiente de decisión
+  // No autoguardar hasta resolver si se retoma o se descarta un borrador existente.
+  const draftReady = useRef(false)
   const days = tr('common.days')
+
+  // Al entrar: si hay un borrador con datos, preguntar antes de retomarlo.
+  useEffect(() => {
+    let cancelled = false
+    AsyncStorage.getItem(draftKey).then(raw => {
+      if (cancelled) return
+      if (raw) {
+        try {
+          const draft = JSON.parse(raw)
+          if (draftHasData(draft.sets)) { setResumeDraft(draft); return }
+        } catch {}
+      }
+      draftReady.current = true
+    }).catch(() => { draftReady.current = true })
+    return () => { cancelled = true }
+  }, [draftKey])
+
+  // Autoguardado del borrador en cada cambio (una vez resuelta la decisión inicial).
+  useEffect(() => {
+    if (!draftReady.current) return
+    AsyncStorage.setItem(draftKey, JSON.stringify({ date, sets })).catch(() => {})
+  }, [sets, date, draftKey])
+
+  // Fusiona el borrador con la estructura actual de ejercicios (robusto ante cambios).
+  function mergeDraftSets(draftSets) {
+    const base = buildInitialSets()
+    if (!draftSets) return base
+    Object.keys(base).forEach(exId => {
+      if (draftSets[exId]) {
+        base[exId] = base[exId].map((empty, i) => ({ ...empty, ...(draftSets[exId][i] || {}) }))
+      }
+    })
+    return base
+  }
+
+  function resumeWorkout() {
+    setDate(resumeDraft.date || new Date().toLocaleDateString('sv'))
+    setSets(mergeDraftSets(resumeDraft.sets))
+    draftReady.current = true
+    setResumeDraft(null)
+  }
+
+  function discardDraft() {
+    AsyncStorage.removeItem(draftKey).catch(() => {})
+    setSets(buildInitialSets())
+    draftReady.current = true
+    setResumeDraft(null)
+  }
 
   function updateSet(exerciseId, setIdx, field, value) {
     setSets(prev => ({
@@ -880,6 +943,7 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
           }
         }
       }
+      await AsyncStorage.removeItem(draftKey).catch(() => {})
       onBack()
       onSynced?.()
     } finally {
@@ -889,6 +953,24 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Modal visible={!!resumeDraft} transparent animationType="fade" onRequestClose={resumeWorkout}>
+        <View style={s.overlay}>
+          <View style={s.modal}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>{tr('gym.resumeTitle')}</Text>
+            </View>
+            <Text style={{ color: t.text2, fontSize: 14, padding: 16, paddingTop: 8 }}>{tr('gym.resumeMessage')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, padding: 16, paddingTop: 0, justifyContent: 'flex-end' }}>
+              <TouchableOpacity style={s.btnCancel} onPress={discardDraft}>
+                <Text style={s.btnCancelText}>{tr('gym.discardBtn')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.btnPrimary} onPress={resumeWorkout}>
+                <Text style={s.btnPrimaryText}>{tr('gym.resumeBtn')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={onBack} style={{ marginBottom: 12 }}>
           <Text style={s.backBtn}>{tr('common.back')}</Text>
