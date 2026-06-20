@@ -80,6 +80,7 @@ export async function openDB() {
       local_exercise_id INTEGER NOT NULL REFERENCES exercises(id),
       day_of_week       INTEGER NOT NULL,
       position          INTEGER NOT NULL DEFAULT 0,
+      target_sets       INTEGER NOT NULL DEFAULT 3,
       synced            INTEGER NOT NULL DEFAULT 0,
       pending_delete    INTEGER NOT NULL DEFAULT 0
     );
@@ -112,6 +113,8 @@ export async function openDB() {
   // Ejercicios unilaterales (un lado cada vez) y lado trabajado por serie.
   try { await db.runAsync('ALTER TABLE exercises ADD COLUMN is_unilateral INTEGER NOT NULL DEFAULT 0') } catch {}
   try { await db.runAsync("ALTER TABLE workout_sets ADD COLUMN side TEXT NOT NULL DEFAULT 'both'") } catch {}
+  // Nº de series objetivo por ejercicio en la rutina (sobrecarga progresiva).
+  try { await db.runAsync('ALTER TABLE routine_exercises ADD COLUMN target_sets INTEGER NOT NULL DEFAULT 3') } catch {}
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS task_lists (
@@ -520,7 +523,7 @@ export async function upsertExerciseFromServer(serverEx) {
 export async function getAllRoutineExercises(localRoutineId) {
   const db = await openDB()
   return db.getAllAsync(`
-    SELECT re.id, re.local_exercise_id, re.day_of_week, re.position,
+    SELECT re.id, re.local_exercise_id, re.day_of_week, re.position, re.target_sets,
            e.name as exercise_name, e.muscle_group, e.is_unilateral
     FROM routine_exercises re
     JOIN exercises e ON e.id = re.local_exercise_id
@@ -529,11 +532,11 @@ export async function getAllRoutineExercises(localRoutineId) {
   `, [localRoutineId])
 }
 
-export async function insertRoutineExercise(localRoutineId, localExerciseId, dayOfWeek, position) {
+export async function insertRoutineExercise(localRoutineId, localExerciseId, dayOfWeek, position, targetSets = 3) {
   const db = await openDB()
   const result = await db.runAsync(
-    'INSERT INTO routine_exercises (local_routine_id, local_exercise_id, day_of_week, position, synced) VALUES (?, ?, ?, ?, 0)',
-    [localRoutineId, localExerciseId, dayOfWeek, position]
+    'INSERT INTO routine_exercises (local_routine_id, local_exercise_id, day_of_week, position, target_sets, synced) VALUES (?, ?, ?, ?, ?, 0)',
+    [localRoutineId, localExerciseId, dayOfWeek, position, targetSets]
   )
   return result.lastInsertRowId
 }
@@ -551,6 +554,11 @@ export async function deleteRoutineExercise(id) {
 export async function updateRoutineExercisePosition(id, position) {
   const db = await openDB()
   await db.runAsync('UPDATE routine_exercises SET position = ?, synced = 0 WHERE id = ?', [position, id])
+}
+
+export async function updateRoutineExerciseTargetSets(id, targetSets) {
+  const db = await openDB()
+  await db.runAsync('UPDATE routine_exercises SET target_sets = ?, synced = 0 WHERE id = ?', [targetSets, id])
 }
 
 export async function getUnsyncedRoutineExercises() {
@@ -594,13 +602,13 @@ export async function upsertRoutineExerciseFromServer(serverRE) {
   const existing = await db.getFirstAsync('SELECT id FROM routine_exercises WHERE server_id = ?', [serverRE.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE routine_exercises SET local_routine_id=?, local_exercise_id=?, day_of_week=?, position=?, synced=1, pending_delete=0 WHERE server_id=?',
-      [localRoutineId, localExerciseId, serverRE.day_of_week, serverRE.position, serverRE.id]
+      'UPDATE routine_exercises SET local_routine_id=?, local_exercise_id=?, day_of_week=?, position=?, target_sets=?, synced=1, pending_delete=0 WHERE server_id=?',
+      [localRoutineId, localExerciseId, serverRE.day_of_week, serverRE.position, serverRE.target_sets ?? 3, serverRE.id]
     )
   } else {
     await db.runAsync(
-      'INSERT INTO routine_exercises (server_id, local_routine_id, local_exercise_id, day_of_week, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
-      [serverRE.id, localRoutineId, localExerciseId, serverRE.day_of_week, serverRE.position]
+      'INSERT INTO routine_exercises (server_id, local_routine_id, local_exercise_id, day_of_week, position, target_sets, synced) VALUES (?, ?, ?, ?, ?, ?, 1)',
+      [serverRE.id, localRoutineId, localExerciseId, serverRE.day_of_week, serverRE.position, serverRE.target_sets ?? 3]
     )
   }
 }
@@ -723,6 +731,33 @@ export async function getExerciseProgression(localExerciseId) {
     GROUP BY s.date
     ORDER BY s.date ASC
   `, [localExerciseId])
+}
+
+// Series del entreno previo más reciente que incluya este ejercicio (sobrecarga
+// progresiva: "lo que hiciste la última vez"). Con `beforeDate` se ignoran las
+// sesiones de esa fecha o posteriores, para ver el anterior y no el de hoy.
+export async function getLastPerformance(localExerciseId, beforeDate = null) {
+  const db = await openDB()
+  const params = [localExerciseId]
+  let dateFilter = ''
+  if (beforeDate) { dateFilter = 'AND s.date < ?'; params.push(beforeDate) }
+  const session = await db.getFirstAsync(`
+    SELECT s.id, s.date
+    FROM workout_sessions s
+    JOIN workout_sets ws ON ws.local_session_id = s.id
+    WHERE ws.local_exercise_id = ? AND ws.pending_delete = 0 AND s.pending_delete = 0
+      ${dateFilter}
+    ORDER BY s.date DESC, s.id DESC
+    LIMIT 1
+  `, params)
+  if (!session) return null
+  const sets = await db.getAllAsync(`
+    SELECT set_number, weight, reps, note, side
+    FROM workout_sets
+    WHERE local_session_id = ? AND local_exercise_id = ? AND pending_delete = 0
+    ORDER BY set_number, side
+  `, [session.id, localExerciseId])
+  return { session_id: session.id, date: session.date, sets }
 }
 
 export async function getSetsForSession(localSessionId) {
