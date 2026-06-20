@@ -140,6 +140,7 @@ export async function postRoutineExerciseToServer(re) {
       exercise_id: re.server_exercise_id,
       day_of_week: re.day_of_week,
       position: re.position,
+      target_sets: re.target_sets ?? 3,
     }),
   })
   return res.json()
@@ -149,7 +150,7 @@ export async function putRoutineExerciseToServer(serverId, re) {
   const res = await fetchWithTimeout(`${_server}/gym/routine-exercises/${serverId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ day_of_week: re.day_of_week, position: re.position }),
+    body: JSON.stringify({ day_of_week: re.day_of_week, position: re.position, target_sets: re.target_sets ?? 3 }),
   })
   return res.json()
 }

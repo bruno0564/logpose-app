@@ -20,11 +20,11 @@ import {
   getExercises, insertLocalExercise, updateLocalExercise, deleteLocalExercise,
   getUnsyncedExercises, getPendingDeleteExercises, markExerciseSynced, upsertExerciseFromServer, purgeLocalExercise, pruneStaleExercises,
   getAllRoutineExercises,
-  insertRoutineExercise, deleteRoutineExercise, updateRoutineExercisePosition,
+  insertRoutineExercise, deleteRoutineExercise, updateRoutineExercisePosition, updateRoutineExerciseTargetSets,
   getUnsyncedRoutineExercises, getPendingDeleteRoutineExercises, markRoutineExerciseSynced, purgeLocalRoutineExercise, upsertRoutineExerciseFromServer, pruneStaleRoutineExercises,
   insertWorkoutSession, insertWorkoutSet,
   getActiveRoutine, setActiveRoutine, restoreActiveRoutineByServerId,
-  getAllSessions, getSetsForSession, getExerciseProgression,
+  getAllSessions, getSetsForSession, getExerciseProgression, getLastPerformance,
   getUnsyncedSessions, getPendingDeleteSessions, markSessionSynced, purgeLocalSession, upsertSessionFromServer, pruneStaleSessions,
   getUnsyncedSets, getPendingDeleteSets, markSetSynced, purgeLocalSet, upsertSetFromServer, pruneStaleSets,
 } from '../db/database'
@@ -505,7 +505,7 @@ function StatsView({ exercises }) {
 
 function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTrain, onExercisesChange, onExercisesListChange, onSync }) {
   const { theme: t } = useTheme()
-  const { t: tr } = useLang()
+  const { t: tr, tp } = useLang()
   const s = makeStyles(t)
   const [pickerDay, setPickerDay] = useState(null)
   const [editing, setEditing] = useState(false)
@@ -522,6 +522,15 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
     for (let i = 0; i < arr.length; i++) {
       if (arr[i].position !== i) await updateRoutineExercisePosition(arr[i].id, i)
     }
+    await onExercisesChange()
+    onSync()
+  }
+
+  // Cambia el nº de series objetivo de un ejercicio (sobrecarga progresiva).
+  async function changeTargetSets(re, delta) {
+    const next = Math.min(20, Math.max(1, (re.target_sets ?? 3) + delta))
+    if (next === re.target_sets) return
+    await updateRoutineExerciseTargetSets(re.id, next)
     await onExercisesChange()
     onSync()
   }
@@ -579,8 +588,17 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                   <Text style={[s.exerciseName, { flex: 1 }]} numberOfLines={1}>
                     {re.muscle_group ? `[${re.muscle_group}] ` : ''}{re.exercise_name}
                   </Text>
-                  {editing && (
+                  {editing ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={s.setStepper}>
+                        <TouchableOpacity onPress={() => changeTargetSets(re, -1)} hitSlop={8}>
+                          <Text style={s.setStepperBtn}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={s.setStepperVal}>{re.target_sets ?? 3}</Text>
+                        <TouchableOpacity onPress={() => changeTargetSets(re, +1)} hitSlop={8}>
+                          <Text style={s.setStepperBtn}>+</Text>
+                        </TouchableOpacity>
+                      </View>
                       <TouchableOpacity disabled={i === 0} onPress={() => moveExercise(dayExs, i, -1)} hitSlop={8}>
                         <Ionicons name="chevron-up" size={18} color={i === 0 ? t.text3 : t.text2} style={{ opacity: i === 0 ? 0.3 : 1 }} />
                       </TouchableOpacity>
@@ -591,6 +609,8 @@ function RoutineDetailView({ routine, routineExercises, exercises, onBack, onTra
                         <Text style={s.deleteSmall}>×</Text>
                       </TouchableOpacity>
                     </View>
+                  ) : (
+                    <Text style={s.restText}>{tp('gym.sets', re.target_sets ?? 3)}</Text>
                   )}
                 </View>
               ))
@@ -835,8 +855,26 @@ function ExercisePickerModal({ visible, day, routine, exercises, routineExercise
 
 // Un ejercicio unilateral guarda peso/reps por lado; uno bilateral, un solo valor.
 const emptySet = (un) => un
-  ? { reps_l: '', weight_l: '', reps_r: '', weight_r: '' }
-  : { reps: '', weight: '' }
+  ? { reps_l: '', weight_l: '', reps_r: '', weight_r: '', note: '' }
+  : { reps: '', weight: '', note: '' }
+
+// "2026-06-13" → "13/06"
+const fmtShortDate = (iso) => { const p = (iso || '').split('-'); return p.length === 3 ? `${p[2]}/${p[1]}` : iso }
+
+// Resumen legible del entreno previo: "40×8 · 40×8 · 42×6" (uni: "I 20×10/D 20×10 · …").
+function summarizeLastPerf(lp, isUnilateral) {
+  if (!lp || !lp.sets?.length) return ''
+  if (isUnilateral) {
+    const nums = [...new Set(lp.sets.map(s => s.set_number))].sort((a, b) => a - b)
+    return nums.map(n => {
+      const byNum = lp.sets.filter(s => s.set_number === n)
+      const l = byNum.find(s => s.side === 'left')
+      const r = byNum.find(s => s.side === 'right')
+      return [l && `I ${l.weight}×${l.reps}`, r && `D ${r.weight}×${r.reps}`].filter(Boolean).join('/')
+    }).join(' · ')
+  }
+  return lp.sets.map(s => `${s.weight}×${s.reps}`).join(' · ')
+}
 
 // ¿El borrador tiene algún dato escrito? (para no preguntar por un entreno vacío)
 function draftHasData(sets) {
@@ -857,11 +895,17 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
   const buildInitialSets = () => {
     const init = {}
     dayExercises.forEach(ex => {
-      init[ex.local_exercise_id] = [emptySet(ex.is_unilateral), emptySet(ex.is_unilateral), emptySet(ex.is_unilateral)]
+      const n = Math.max(1, ex.target_sets ?? 3)
+      init[ex.local_exercise_id] = Array.from({ length: n }, () => emptySet(ex.is_unilateral))
     })
     return init
   }
   const [sets, setSets] = useState(buildInitialSets)
+  // "Lo que hiciste la última vez" por ejercicio (sobrecarga progresiva).
+  const [lastPerf, setLastPerf] = useState({})
+  // Notas de serie desplegadas: clave `${exId}-${i}`.
+  const [openNotes, setOpenNotes] = useState({})
+  const toggleNote = (exId, i) => setOpenNotes(p => ({ ...p, [`${exId}-${i}`]: !p[`${exId}-${i}`] }))
   const [saving, setSaving] = useState(false)
   const [resumeDraft, setResumeDraft] = useState(null)  // borrador pendiente de decisión
   // No autoguardar hasta resolver si se retoma o se descarta un borrador existente.
@@ -889,6 +933,27 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
     if (!draftReady.current) return
     AsyncStorage.setItem(draftKey, JSON.stringify({ date, sets })).catch(() => {})
   }, [sets, date, draftKey])
+
+  // Carga el entreno previo de cada ejercicio para mostrarlo como referencia.
+  // Se indexa por nº de serie y lado para poder pintar placeholders en los inputs.
+  useEffect(() => {
+    let cancelled = false
+    const today = new Date().toLocaleDateString('sv')
+    Promise.all(dayExercises.map(async ex => {
+      const lp = await getLastPerformance(ex.local_exercise_id, today)
+      if (!lp) return [ex.local_exercise_id, null]
+      const bySet = {}
+      lp.sets.forEach(st => {
+        bySet[st.set_number] = bySet[st.set_number] || {}
+        bySet[st.set_number][st.side || 'both'] = { weight: st.weight, reps: st.reps }
+      })
+      return [ex.local_exercise_id, { date: lp.date, sets: lp.sets, bySet }]
+    })).then(entries => {
+      if (cancelled) return
+      setLastPerf(Object.fromEntries(entries))
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [routine.id, day])
 
   // Fusiona el borrador con la estructura actual de ejercicios (robusto ante cambios).
   function mergeDraftSets(draftSets) {
@@ -931,15 +996,16 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
         const exSets = sets[ex.local_exercise_id] || []
         for (let i = 0; i < exSets.length; i++) {
           const sd = exSets[i]
+          const note = sd.note?.trim() || null
           if (ex.is_unilateral) {
             if (sd.weight_l && sd.reps_l) {
-              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight_l), parseInt(sd.reps_l), null, 'left')
+              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight_l), parseInt(sd.reps_l), note, 'left')
             }
             if (sd.weight_r && sd.reps_r) {
-              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight_r), parseInt(sd.reps_r), null, 'right')
+              await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight_r), parseInt(sd.reps_r), note, 'right')
             }
           } else if (sd.weight && sd.reps) {
-            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight), parseInt(sd.reps), null, 'both')
+            await insertWorkoutSet(sessionId, ex.local_exercise_id, i + 1, parseFloat(sd.weight), parseInt(sd.reps), note, 'both')
           }
         }
       }
@@ -996,61 +1062,93 @@ function TrainView({ routine, day, dayExercises, onBack, onSynced }) {
           />
         </View>
 
-        {dayExercises.map(ex => (
+        {dayExercises.map(ex => {
+          const lp = lastPerf[ex.local_exercise_id]
+          return (
           <View key={ex.local_exercise_id} style={[s.card, { marginBottom: 12 }]}>
             <Text style={s.dayName}>
               {ex.muscle_group ? `[${ex.muscle_group}] ` : ''}{ex.exercise_name}
               {ex.is_unilateral ? <Text style={{ color: t.accent, fontSize: 11, fontWeight: '700' }}>{'  '}{tr('gym.unilateralTag')}</Text> : null}
             </Text>
+            <Text style={s.lastPerf}>
+              {lp ? `${tr('gym.lastTime', { date: fmtShortDate(lp.date) })} ${summarizeLastPerf(lp, ex.is_unilateral)}` : tr('gym.noLastTime')}
+            </Text>
 
-            <View style={{ flexDirection: 'row', marginTop: 10, marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', marginTop: 2, marginBottom: 4 }}>
               <View style={{ width: 60 }} />
               <Text style={[s.colHeader, { flex: 1 }]}>{tr('gym.reps')}</Text>
               <Text style={[s.colHeader, { flex: 1 }]}>{tr('gym.kg')}</Text>
             </View>
 
             {ex.is_unilateral
-              ? (sets[ex.local_exercise_id] || []).map((setData, i) => (
+              ? (sets[ex.local_exercise_id] || []).map((setData, i) => {
+                const noteOpen = openNotes[`${ex.local_exercise_id}-${i}`] || !!setData.note
+                return (
                 <View key={i} style={{ marginBottom: 8 }}>
-                  <Text style={[s.restText, { fontSize: 12, marginBottom: 2 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
-                  {[['reps_l', 'weight_l', tr('gym.sideLeft')], ['reps_r', 'weight_r', tr('gym.sideRight')]].map(([repsField, weightField, label]) => (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <Text style={[s.restText, { fontSize: 12 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
+                    <TouchableOpacity onPress={() => toggleNote(ex.local_exercise_id, i)} hitSlop={8}>
+                      <Ionicons name={noteOpen ? 'chatbubble' : 'chatbubble-outline'} size={14} color={noteOpen ? t.accent : t.text3} />
+                    </TouchableOpacity>
+                  </View>
+                  {[['reps_l', 'weight_l', tr('gym.sideLeft'), lp?.bySet?.[i + 1]?.left], ['reps_r', 'weight_r', tr('gym.sideRight'), lp?.bySet?.[i + 1]?.right]].map(([repsField, weightField, label, prev]) => (
                     <View key={repsField} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                       <Text style={[s.restText, { width: 60, fontWeight: '600', color: t.text2 }]}>{label}</Text>
                       <TextInput
                         style={[s.input, { flex: 1, marginRight: 6 }]}
-                        keyboardType="number-pad" placeholder="—" placeholderTextColor={t.text3}
+                        keyboardType="number-pad" placeholder={prev ? String(prev.reps) : '—'} placeholderTextColor={t.text3}
                         value={setData[repsField]}
                         onChangeText={v => updateSet(ex.local_exercise_id, i, repsField, v)}
                       />
                       <TextInput
                         style={[s.input, { flex: 1 }]}
-                        keyboardType="decimal-pad" placeholder="—" placeholderTextColor={t.text3}
+                        keyboardType="decimal-pad" placeholder={prev ? String(prev.weight) : '—'} placeholderTextColor={t.text3}
                         value={setData[weightField]}
                         onChangeText={v => updateSet(ex.local_exercise_id, i, weightField, v)}
                       />
                     </View>
                   ))}
+                  {noteOpen && (
+                    <TextInput
+                      style={s.noteInput} placeholder={tr('gym.notePlaceholder')} placeholderTextColor={t.text3}
+                      value={setData.note} onChangeText={v => updateSet(ex.local_exercise_id, i, 'note', v)}
+                    />
+                  )}
                 </View>
-              ))
-              : (sets[ex.local_exercise_id] || []).map((setData, i) => (
-                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Text style={[s.restText, { width: 60 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
-                  <TextInput
-                    style={[s.input, { flex: 1, marginRight: 6 }]}
-                    keyboardType="number-pad" placeholder="—" placeholderTextColor={t.text3}
-                    value={setData.reps}
-                    onChangeText={v => updateSet(ex.local_exercise_id, i, 'reps', v)}
-                  />
-                  <TextInput
-                    style={[s.input, { flex: 1 }]}
-                    keyboardType="decimal-pad" placeholder="—" placeholderTextColor={t.text3}
-                    value={setData.weight}
-                    onChangeText={v => updateSet(ex.local_exercise_id, i, 'weight', v)}
-                  />
+              )})
+              : (sets[ex.local_exercise_id] || []).map((setData, i) => {
+                const prev = lp?.bySet?.[i + 1]?.both
+                const noteOpen = openNotes[`${ex.local_exercise_id}-${i}`] || !!setData.note
+                return (
+                <View key={i} style={{ marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[s.restText, { width: 60 }]}>{tr('gym.serieLabel', { n: i + 1 })}</Text>
+                    <TextInput
+                      style={[s.input, { flex: 1, marginRight: 6 }]}
+                      keyboardType="number-pad" placeholder={prev ? String(prev.reps) : '—'} placeholderTextColor={t.text3}
+                      value={setData.reps}
+                      onChangeText={v => updateSet(ex.local_exercise_id, i, 'reps', v)}
+                    />
+                    <TextInput
+                      style={[s.input, { flex: 1, marginRight: 6 }]}
+                      keyboardType="decimal-pad" placeholder={prev ? String(prev.weight) : '—'} placeholderTextColor={t.text3}
+                      value={setData.weight}
+                      onChangeText={v => updateSet(ex.local_exercise_id, i, 'weight', v)}
+                    />
+                    <TouchableOpacity onPress={() => toggleNote(ex.local_exercise_id, i)} hitSlop={8} style={{ width: 22, alignItems: 'flex-end' }}>
+                      <Ionicons name={noteOpen ? 'chatbubble' : 'chatbubble-outline'} size={16} color={noteOpen ? t.accent : t.text3} />
+                    </TouchableOpacity>
+                  </View>
+                  {noteOpen && (
+                    <TextInput
+                      style={s.noteInput} placeholder={tr('gym.notePlaceholder')} placeholderTextColor={t.text3}
+                      value={setData.note} onChangeText={v => updateSet(ex.local_exercise_id, i, 'note', v)}
+                    />
+                  )}
                 </View>
-              ))}
+              )})}
           </View>
-        ))}
+        )})}
 
         {dayExercises.length === 0 && (
           <Text style={s.hint}>{tr('gym.noExercisesDay')}</Text>
@@ -1141,6 +1239,12 @@ const makeStyles = (t) => StyleSheet.create({
   uniToggleOn:     { backgroundColor: t.accent, borderColor: t.accent },
   uniToggleText:   { color: t.text3, fontSize: 10, fontWeight: '700' },
   uniToggleTextOn: { color: t.cartoon ? t.bg : t.text },
+  setStepper:      { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: t.border2, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  setStepperBtn:   { color: t.accent, fontSize: 18, fontWeight: '700', width: 16, textAlign: 'center' },
+  setStepperVal:   { color: t.text2, fontSize: 13, fontWeight: '600', minWidth: 16, textAlign: 'center' },
+  lastPerf:        { color: t.text3, fontSize: 11, marginTop: 2, marginBottom: 6, fontStyle: 'italic' },
+  noteInput:       { backgroundColor: t.inputBg, borderWidth: t.cartoon ? 2 : 1, borderColor: t.cartoon ? t.text : t.border2, borderRadius: 6, color: t.text, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, marginTop: 4 },
+  noteToggle:      { color: t.text3, fontSize: 11, marginTop: 2 },
   btnOutline:      { borderWidth: 1, borderColor: t.border2, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
   btnOutlineText:  { color: t.text2, fontSize: 16, lineHeight: 18 },
   overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
