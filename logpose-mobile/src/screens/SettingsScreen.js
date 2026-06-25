@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { View, Switch, TouchableOpacity, StyleSheet, Share } from 'react-native'
+import { useState, useEffect, useRef } from 'react'
+import { View, Switch, TouchableOpacity, StyleSheet, Share, Animated } from 'react-native'
 import Text from '../components/Text'
 import TextInput from '../components/TextInput'
 import { Ionicons } from '@expo/vector-icons'
@@ -7,13 +7,15 @@ import PressableScale from '../components/PressableScale'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import { getServerUrl, updateServerUrl, pingServer } from '../api/client'
-import { exportAllData, getHabits } from '../db/database'
+import { exportAllData, getHabits, getCalendarEvents } from '../db/database'
 import {
   isNotificationsEnabled, setNotificationsEnabled,
-  requestNotificationPermission, syncHabitReminders,
+  requestNotificationPermission, syncHabitReminders, syncCalendarReminders,
 } from '../notifications'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
+
+const LANG_BTN_W = 44   // ancho fijo de cada botón EN/ES (para el deslizante)
 
 const STYLES = [
   { id: 'normal',  label: 'Normal',  bg: '#111111', surface: '#1e1e1e', accent: '#818cf8', text: '#f0f0f0' },
@@ -33,6 +35,16 @@ export default function SettingsScreen() {
   const [notifsOn, setNotifsOn] = useState(false)
   const [notifsDenied, setNotifsDenied] = useState(false)
 
+  // Indicador deslizante del selector de idioma (EN ↔ ES).
+  const langAnim = useRef(new Animated.Value(lang === 'es' ? 1 : 0)).current
+  useEffect(() => {
+    Animated.timing(langAnim, {
+      toValue: lang === 'es' ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start()
+  }, [lang])
+
   useEffect(() => {
     setUrlDisplay(getServerUrl())
     isNotificationsEnabled().then(setNotifsOn)
@@ -49,6 +61,7 @@ export default function SettingsScreen() {
     await setNotificationsEnabled(value)
     setNotifsOn(value)
     await syncHabitReminders(await getHabits())
+    await syncCalendarReminders(await getCalendarEvents())
   }
 
   function openEdit() {
@@ -145,16 +158,15 @@ export default function SettingsScreen() {
             <Text style={s.rowSub}>{tr('settings.languageDesc')}</Text>
           </View>
           <View style={s.langPicker}>
-            <TouchableOpacity
-              style={[s.langBtn, lang === 'en' && s.langBtnActive]}
-              onPress={() => setLang('en')}
-            >
+            <Animated.View
+              style={[s.langThumb, {
+                transform: [{ translateX: langAnim.interpolate({ inputRange: [0, 1], outputRange: [0, LANG_BTN_W] }) }],
+              }]}
+            />
+            <TouchableOpacity style={s.langBtn} onPress={() => setLang('en')}>
               <Text style={[s.langBtnText, lang === 'en' && s.langBtnTextActive]}>EN</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.langBtn, lang === 'es' && s.langBtnActive]}
-              onPress={() => setLang('es')}
-            >
+            <TouchableOpacity style={s.langBtn} onPress={() => setLang('es')}>
               <Text style={[s.langBtnText, lang === 'es' && s.langBtnTextActive]}>ES</Text>
             </TouchableOpacity>
           </View>
@@ -254,9 +266,9 @@ const makeStyles = (t) => StyleSheet.create({
   rowLabel:        { color: t.text, fontSize: 15, fontWeight: '500' },
   rowSub:          { color: t.text3, fontSize: 12, marginTop: 2 },
   divider:         { height: 1, backgroundColor: t.border, marginHorizontal: 16 },
-  langPicker:      { flexDirection: 'row', backgroundColor: t.surface2, borderRadius: 8, padding: 3, gap: 3 },
-  langBtn:         { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
-  langBtnActive:   { backgroundColor: t.accent },
+  langPicker:      { flexDirection: 'row', backgroundColor: t.surface2, borderRadius: 8, padding: 3, position: 'relative' },
+  langThumb:       { position: 'absolute', top: 3, left: 3, bottom: 3, width: LANG_BTN_W, borderRadius: 6, backgroundColor: t.accent },
+  langBtn:         { width: LANG_BTN_W, paddingVertical: 6, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   langBtnText:     { color: t.text3, fontSize: 13, fontWeight: '600' },
   langBtnTextActive: { color: t.cartoon ? t.bg : t.text },
   stylePicker:     { flexDirection: 'row', gap: 10, width: '100%' },

@@ -335,6 +335,7 @@ export async function postCalendarEventToServer(event) {
       start_time: event.start_time || null, end_time: event.end_time || null,
       recurrence: event.recurrence, days_of_week: event.days_of_week || null,
       notes: event.notes || null, color: event.color || null,
+      reminder_minutes: event.reminder_minutes ?? null,
     }),
   })
   return res.json()
@@ -349,6 +350,7 @@ export async function putCalendarEventToServer(serverId, event) {
       start_time: event.start_time || null, end_time: event.end_time || null,
       recurrence: event.recurrence, days_of_week: event.days_of_week || null,
       notes: event.notes || null, color: event.color || null,
+      reminder_minutes: event.reminder_minutes ?? null,
     }),
   })
   return res.json()
@@ -465,7 +467,7 @@ export async function postHabitToServer(habit, categoryServerId) {
   const res = await fetchWithTimeout(`${SERVER}/habits/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ category_id: categoryServerId, name: habit.name, days_of_week: habit.days_of_week, position: habit.position }),
+    body: JSON.stringify({ category_id: categoryServerId, name: habit.name, days_of_week: habit.days_of_week, position: habit.position, reminder_time: habit.reminder_time || null }),
   })
   return res.json()
 }
@@ -473,7 +475,7 @@ export async function putHabitToServer(serverId, habit) {
   const res = await fetchWithTimeout(`${SERVER}/habits/${serverId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: habit.name, days_of_week: habit.days_of_week, position: habit.position }),
+    body: JSON.stringify({ name: habit.name, days_of_week: habit.days_of_week, position: habit.position, reminder_time: habit.reminder_time || null }),
   })
   return res.json()
 }

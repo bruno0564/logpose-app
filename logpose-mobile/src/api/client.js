@@ -371,6 +371,7 @@ export async function postCalendarEventToServer(event) {
       start_time: event.start_time || null, end_time: event.end_time || null,
       recurrence: event.recurrence, days_of_week: event.days_of_week || null,
       notes: event.notes || null, color: event.color || null,
+      reminder_minutes: event.reminder_minutes ?? null,
     }),
   })
   return res.json()
@@ -385,6 +386,7 @@ export async function putCalendarEventToServer(serverId, event) {
       start_time: event.start_time || null, end_time: event.end_time || null,
       recurrence: event.recurrence, days_of_week: event.days_of_week || null,
       notes: event.notes || null, color: event.color || null,
+      reminder_minutes: event.reminder_minutes ?? null,
     }),
   })
   return res.json()

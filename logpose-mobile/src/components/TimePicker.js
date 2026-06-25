@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Modal, View, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import Text from './Text'
 import { useTheme } from '../ThemeContext'
@@ -6,14 +6,16 @@ import { useLang } from '../LangContext'
 
 /**
  * Selector de hora propio, con el estilo de la app (en vez del reloj nativo de
- * Android, que no se puede reestilar). Dos columnas desplazables: horas (00–23)
- * y minutos (00–59); al confirmar devuelve 'HH:MM'.
+ * Android, que no se puede reestilar). Dos columnas tipo rueda: horas (00–23) y
+ * minutos (00–59). Se elige desplazando (engancha a cada fila) o tocando un
+ * número; al confirmar devuelve 'HH:MM'.
  *
  * Props: visible, value ('HH:MM' | ''), onSelect(timeStr), onClose()
  */
 const pad = n => String(n).padStart(2, '0')
 const ROW_H = 44
 const COL_H = 200
+const PAD_V = COL_H / 2 - ROW_H / 2   // relleno para que el primer/último valor centre
 
 function parseValue(value) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(value || '')
@@ -22,40 +24,60 @@ function parseValue(value) {
   return [now.getHours(), now.getMinutes()]
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => i)
+const MINUTES = Array.from({ length: 60 }, (_, i) => i)
+
 export default function TimePicker({ visible, value, onSelect, onClose }) {
   const { theme: t } = useTheme()
   const { t: tr } = useLang()
+  const s = makeStyles(t)
   const [hour, setHour] = useState(0)
   const [minute, setMinute] = useState(0)
+  const hoursRef = useRef(null)
+  const minutesRef = useRef(null)
 
+  // Al abrir, colocamos las columnas sobre el valor recibido (sin animar).
   useEffect(() => {
-    if (visible) {
-      const [h, m] = parseValue(value)
-      setHour(h); setMinute(m)
-    }
+    if (!visible) return
+    const [h, m] = parseValue(value)
+    setHour(h); setMinute(m)
+    requestAnimationFrame(() => {
+      hoursRef.current?.scrollTo({ y: h * ROW_H, animated: false })
+      minutesRef.current?.scrollTo({ y: m * ROW_H, animated: false })
+    })
   }, [visible])
 
-  const s = makeStyles(t)
-  const hours = Array.from({ length: 24 }, (_, i) => i)
-  const minutes = Array.from({ length: 60 }, (_, i) => i)
-  // Centrar el valor seleccionado dentro de la columna
-  const offsetFor = idx => ({ x: 0, y: Math.max(0, idx * ROW_H - (COL_H / 2 - ROW_H / 2)) })
+  // La fila que queda centrada es la seleccionada. Actualizamos en vivo mientras
+  // se arrastra (onScroll) para que el resaltado siga al dedo sin esperar a que
+  // pare; el setter funcional evita renders de más cuando no cambia el número.
+  function centerSetter(setter, max) {
+    return e => {
+      const idx = Math.max(0, Math.min(max, Math.round(e.nativeEvent.contentOffset.y / ROW_H)))
+      setter(prev => (prev === idx ? prev : idx))
+    }
+  }
 
-  const Column = ({ data, selected, onPick }) => (
+  function pick(ref, setter) {
+    return n => { setter(n); ref.current?.scrollTo({ y: n * ROW_H, animated: true }) }
+  }
+
+  const Column = (data, selected, ref, onPick, onCenter) => (
     <ScrollView
+      ref={ref}
       style={s.col}
       showsVerticalScrollIndicator={false}
-      contentOffset={offsetFor(selected)}
-      contentContainerStyle={{ paddingVertical: COL_H / 2 - ROW_H / 2 }}
+      snapToInterval={ROW_H}
+      decelerationRate="fast"
+      scrollEventThrottle={16}
+      onScroll={onCenter}
+      onMomentumScrollEnd={onCenter}
+      contentContainerStyle={{ paddingVertical: PAD_V }}
     >
-      {data.map(n => {
-        const sel = n === selected
-        return (
-          <TouchableOpacity key={n} style={s.row} onPress={() => onPick(n)} activeOpacity={0.7}>
-            <Text style={[s.rowText, sel && s.rowTextSel]}>{pad(n)}</Text>
-          </TouchableOpacity>
-        )
-      })}
+      {data.map(n => (
+        <TouchableOpacity key={n} style={s.row} onPress={() => onPick(n)} activeOpacity={0.7}>
+          <Text style={[s.rowText, n === selected && s.rowTextSel]}>{pad(n)}</Text>
+        </TouchableOpacity>
+      ))}
     </ScrollView>
   )
 
@@ -66,9 +88,9 @@ export default function TimePicker({ visible, value, onSelect, onClose }) {
           <Text style={s.preview}>{pad(hour)}:{pad(minute)}</Text>
 
           <View style={s.cols}>
-            <Column data={hours} selected={hour} onPick={setHour} />
+            {Column(HOURS, hour, hoursRef, pick(hoursRef, setHour), centerSetter(setHour, 23))}
             <Text style={s.colon}>:</Text>
-            <Column data={minutes} selected={minute} onPick={setMinute} />
+            {Column(MINUTES, minute, minutesRef, pick(minutesRef, setMinute), centerSetter(setMinute, 59))}
           </View>
 
           <TouchableOpacity

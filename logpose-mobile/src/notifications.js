@@ -104,8 +104,92 @@ async function cancelAllHabitReminders() {
 // todo desde cero (cancelar + volver a crear) para mantenerlo simple y correcto.
 export async function syncHabitReminders(habits) {
   await cancelAllHabitReminders()
-  if (!(await isNotificationsEnabled())) return
-  if ((await Notifications.getPermissionsAsync()).status !== 'granted') return
+  if (!(await remindersActive())) return
   const body = await reminderBody()
   for (const h of habits) await scheduleHabitReminders(h, body)
+}
+
+// ── Eventos de calendario ───────────────────────────────────────────────────
+
+// ¿Están activas las notificaciones? (interruptor maestro + permiso del SO).
+async function remindersActive() {
+  if (!(await isNotificationsEnabled())) return false
+  return (await Notifications.getPermissionsAsync()).status === 'granted'
+}
+
+async function eventBody() {
+  const lang = await AsyncStorage.getItem('lang')
+  return lang === 'es' ? 'Tu evento está a punto de empezar' : 'Your event is about to start'
+}
+
+// Resta la antelación a una hora 'HH:MM' y devuelve la hora resultante junto al
+// desfase de días (negativo si el aviso cae en un día anterior, p.ej. 1 día antes
+// o una antelación que cruza la medianoche).
+function applyLead(hour, minute, leadMinutes) {
+  let total = hour * 60 + minute - leadMinutes
+  let dayShift = 0
+  while (total < 0) { total += 1440; dayShift -= 1 }
+  return { dayShift, hour: Math.floor(total / 60), minute: total % 60 }
+}
+
+// Programa el/los avisos de un evento según su recurrencia. Necesita hora de
+// inicio y una antelación (reminder_minutes); si no, no hace nada.
+async function scheduleEventReminders(event, body) {
+  if (event.reminder_minutes == null || !event.start_time) return
+  const [h0, m0] = event.start_time.split(':').map(Number)
+  const { dayShift, hour, minute } = applyLead(h0, m0, event.reminder_minutes)
+  const content = {
+    title: event.title,
+    body,
+    data: { type: 'calendar', eventId: event.id },
+    ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL } : {}),
+  }
+
+  if (event.recurrence === 'none') {
+    if (!event.date) return
+    const [y, mo, d] = event.date.split('-').map(Number)
+    const when = new Date(y, mo - 1, d, h0, m0)
+    when.setMinutes(when.getMinutes() - event.reminder_minutes)
+    if (when <= new Date()) return  // ya pasó
+    await Notifications.scheduleNotificationAsync({
+      content,
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when },
+    })
+  } else if (event.recurrence === 'daily') {
+    await Notifications.scheduleNotificationAsync({
+      content,
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+    })
+  } else if (event.recurrence === 'weekly') {
+    for (const dow of parseDays(event.days_of_week)) {
+      const shifted = ((dow + dayShift) % 7 + 7) % 7
+      await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: toExpoWeekday(shifted),
+          hour,
+          minute,
+        },
+      })
+    }
+  }
+}
+
+async function cancelAllEventReminders() {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync()
+  for (const n of scheduled) {
+    if (n.content?.data?.type === 'calendar') {
+      await Notifications.cancelScheduledNotificationAsync(n.identifier)
+    }
+  }
+}
+
+// Reconcilia los avisos de eventos. Se llama al cargar/editar el calendario y al
+// cambiar el interruptor de Ajustes.
+export async function syncCalendarReminders(events) {
+  await cancelAllEventReminders()
+  if (!(await remindersActive())) return
+  const body = await eventBody()
+  for (const e of events) await scheduleEventReminders(e, body)
 }

@@ -126,6 +126,8 @@ export async function openDB() {
   try { await db.runAsync('ALTER TABLE routine_exercises ADD COLUMN target_sets INTEGER NOT NULL DEFAULT 3') } catch {}
   // Hora de recordatorio 'HH:MM' del hábito (null = sin recordatorio).
   try { await db.runAsync('ALTER TABLE habits ADD COLUMN reminder_time TEXT') } catch {}
+  // Antelación del aviso de un evento, en minutos antes del inicio (null = sin aviso).
+  try { await db.runAsync('ALTER TABLE calendar_events ADD COLUMN reminder_minutes INTEGER') } catch {}
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS task_lists (
@@ -155,6 +157,7 @@ export async function openDB() {
       days_of_week   TEXT,
       notes          TEXT,
       color          TEXT,
+      reminder_minutes INTEGER,
       synced         INTEGER NOT NULL DEFAULT 0,
       pending_delete INTEGER NOT NULL DEFAULT 0
     );
@@ -1195,8 +1198,8 @@ export async function getCalendarEvents() {
 export async function insertCalendarEvent(ev) {
   const db = await openDB()
   const result = await db.runAsync(
-    'INSERT INTO calendar_events (title, date, start_time, end_time, recurrence, days_of_week, notes, color, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)',
-    [ev.title, ev.date || null, ev.start_time || null, ev.end_time || null, ev.recurrence || 'none', ev.days_of_week || null, ev.notes || null, ev.color || null]
+    'INSERT INTO calendar_events (title, date, start_time, end_time, recurrence, days_of_week, notes, color, reminder_minutes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
+    [ev.title, ev.date || null, ev.start_time || null, ev.end_time || null, ev.recurrence || 'none', ev.days_of_week || null, ev.notes || null, ev.color || null, ev.reminder_minutes ?? null]
   )
   return result.lastInsertRowId
 }
@@ -1204,8 +1207,8 @@ export async function insertCalendarEvent(ev) {
 export async function updateCalendarEvent(id, ev) {
   const db = await openDB()
   await db.runAsync(
-    'UPDATE calendar_events SET title = ?, date = ?, start_time = ?, end_time = ?, recurrence = ?, days_of_week = ?, notes = ?, color = ?, synced = 0 WHERE id = ?',
-    [ev.title, ev.date || null, ev.start_time || null, ev.end_time || null, ev.recurrence || 'none', ev.days_of_week || null, ev.notes || null, ev.color || null, id]
+    'UPDATE calendar_events SET title = ?, date = ?, start_time = ?, end_time = ?, recurrence = ?, days_of_week = ?, notes = ?, color = ?, reminder_minutes = ?, synced = 0 WHERE id = ?',
+    [ev.title, ev.date || null, ev.start_time || null, ev.end_time || null, ev.recurrence || 'none', ev.days_of_week || null, ev.notes || null, ev.color || null, ev.reminder_minutes ?? null, id]
   )
 }
 
@@ -1242,13 +1245,13 @@ export async function upsertCalendarEventFromServer(serverEv) {
   const existing = await db.getFirstAsync('SELECT id FROM calendar_events WHERE server_id = ?', [serverEv.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE calendar_events SET title = ?, date = ?, start_time = ?, end_time = ?, recurrence = ?, days_of_week = ?, notes = ?, color = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [serverEv.title, serverEv.date, serverEv.start_time, serverEv.end_time, serverEv.recurrence, serverEv.days_of_week, serverEv.notes, serverEv.color, serverEv.id]
+      'UPDATE calendar_events SET title = ?, date = ?, start_time = ?, end_time = ?, recurrence = ?, days_of_week = ?, notes = ?, color = ?, reminder_minutes = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverEv.title, serverEv.date, serverEv.start_time, serverEv.end_time, serverEv.recurrence, serverEv.days_of_week, serverEv.notes, serverEv.color, serverEv.reminder_minutes ?? null, serverEv.id]
     )
   } else {
     await db.runAsync(
-      'INSERT INTO calendar_events (server_id, title, date, start_time, end_time, recurrence, days_of_week, notes, color, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
-      [serverEv.id, serverEv.title, serverEv.date, serverEv.start_time, serverEv.end_time, serverEv.recurrence, serverEv.days_of_week, serverEv.notes, serverEv.color]
+      'INSERT INTO calendar_events (server_id, title, date, start_time, end_time, recurrence, days_of_week, notes, color, reminder_minutes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      [serverEv.id, serverEv.title, serverEv.date, serverEv.start_time, serverEv.end_time, serverEv.recurrence, serverEv.days_of_week, serverEv.notes, serverEv.color, serverEv.reminder_minutes ?? null]
     )
   }
 }

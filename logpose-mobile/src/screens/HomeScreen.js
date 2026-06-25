@@ -10,7 +10,9 @@ import {
   markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote, pruneStaleQuotes,
   getCountdowns, getUnsyncedCountdowns, getPendingDeleteCountdowns,
   markCountdownSynced, upsertCountdownFromServer, purgeLocalCountdown, pruneStaleCountdowns,
+  getCalendarEvents,
 } from '../db/database'
+import { eventsForDate, toDateStr, dowOf } from '../calendar'
 import {
   isServerReachable,
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
@@ -28,6 +30,7 @@ export default function HomeScreen() {
   const s = makeStyles(t)
   const [current, setCurrent] = useState(null)
   const [countdowns, setCountdowns] = useState([])
+  const [events, setEvents] = useState([])
 
   function greeting() {
     const h = new Date().getHours()
@@ -46,6 +49,7 @@ export default function HomeScreen() {
     const qs = await getQuotes()
     if (qs.length > 0) setCurrent(qs[Math.floor(Math.random() * qs.length)])
     setCountdowns(await getCountdowns())
+    setEvents(await getCalendarEvents())
   }, [])
 
   const sync = useCallback(async () => {
@@ -99,6 +103,9 @@ export default function HomeScreen() {
     .sort((a, b) => countdownSortKey(a.target_date, a.is_recurring) - countdownSortKey(b.target_date, b.is_recurring))
     .slice(0, 5)
 
+  const now = new Date()
+  const todayEvents = eventsForDate(events, toDateStr(now), dowOf(now))
+
   useFocusEffect(
     useCallback(() => {
       load().then(() => sync())
@@ -112,6 +119,19 @@ export default function HomeScreen() {
           <Text style={s.greeting}>{greeting()}</Text>
           <Text style={s.date}>{formatDate()}</Text>
         </View>
+
+        {todayEvents.length > 0 && (
+          <View style={s.todaySection}>
+            <Text style={s.sectionTitle}>{tr('home.todayEvents')}</Text>
+            {todayEvents.map(ev => (
+              <CartoonCard key={ev.id} style={s.eventCard} radius={12}>
+                <View style={[s.eventBar, { backgroundColor: ev.color || '#7c3aed' }]} />
+                <Text style={s.eventTime}>{ev.start_time || '—'}</Text>
+                <Text style={s.eventTitle} numberOfLines={1}>{ev.title}</Text>
+              </CartoonCard>
+            ))}
+          </View>
+        )}
 
         {upcoming.length > 0 && (
           <View style={s.countdowns}>
@@ -145,6 +165,12 @@ const makeStyles = (t) => StyleSheet.create({
   header:      { marginBottom: 28 },
   greeting:    { color: t.cartoon ? t.accent : t.text, fontSize: 28, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   date:        { color: t.text3, fontSize: 13, marginTop: 4, textTransform: 'capitalize' },
+  todaySection: { marginBottom: 20, gap: 8 },
+  sectionTitle: { color: t.text3, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  eventCard:   { backgroundColor: t.surface, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  eventBar:    { width: 4, height: 26, borderRadius: 2 },
+  eventTime:   { color: t.text3, fontSize: 13, fontWeight: '600', width: 44, fontVariant: ['tabular-nums'] },
+  eventTitle:  { color: t.text, fontSize: 14, flex: 1 },
   countdowns:  { gap: 8, marginBottom: 20 },
   countdownCard: { backgroundColor: t.surface, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   countdownTitle: { color: t.text2, fontSize: 14, flex: 1 },

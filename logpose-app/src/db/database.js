@@ -127,9 +127,13 @@ export async function openDB() {
     days_of_week   TEXT,
     notes          TEXT,
     color          TEXT,
+    reminder_minutes INTEGER,
     synced         INTEGER NOT NULL DEFAULT 0,
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
+  // El escritorio no programa avisos (solo el móvil), pero guarda y reenvía
+  // reminder_minutes para no borrar lo que se configuró en el móvil al sincronizar.
+  try { await instance.execute('ALTER TABLE calendar_events ADD COLUMN reminder_minutes INTEGER') } catch {}
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS task_lists (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -188,11 +192,15 @@ export async function openDB() {
     name                 TEXT    NOT NULL,
     days_of_week         TEXT    NOT NULL DEFAULT '0,1,2,3,4,5,6',
     position             INTEGER NOT NULL DEFAULT 0,
+    reminder_time        TEXT,
     synced               INTEGER NOT NULL DEFAULT 0,
     pending_delete       INTEGER NOT NULL DEFAULT 0
   )`)
   try { await instance.execute("ALTER TABLE habits ADD COLUMN days_of_week TEXT NOT NULL DEFAULT '0,1,2,3,4,5,6'") } catch {}
   try { await instance.execute('ALTER TABLE habits DROP COLUMN goal') } catch {}
+  // El escritorio no programa avisos (solo el móvil), pero guarda y reenvía
+  // reminder_time para no borrarlo al sincronizar lo que se puso en el móvil.
+  try { await instance.execute('ALTER TABLE habits ADD COLUMN reminder_time TEXT') } catch {}
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS habit_logs (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1201,17 +1209,18 @@ export async function upsertCalendarEventFromServer(serverEvent) {
   if (rows.length > 0) {
     await db.execute(
       `UPDATE calendar_events SET title=?, date=?, start_time=?, end_time=?, recurrence=?,
-       days_of_week=?, notes=?, color=?, synced=1, pending_delete=0 WHERE server_id=?`,
+       days_of_week=?, notes=?, color=?, reminder_minutes=?, synced=1, pending_delete=0 WHERE server_id=?`,
       [serverEvent.title, serverEvent.date, serverEvent.start_time, serverEvent.end_time,
-       serverEvent.recurrence, serverEvent.days_of_week, serverEvent.notes, serverEvent.color, serverEvent.id]
+       serverEvent.recurrence, serverEvent.days_of_week, serverEvent.notes, serverEvent.color,
+       serverEvent.reminder_minutes ?? null, serverEvent.id]
     )
   } else {
     await db.execute(
       `INSERT INTO calendar_events (server_id, title, date, start_time, end_time, recurrence,
-       days_of_week, notes, color, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+       days_of_week, notes, color, reminder_minutes, synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [serverEvent.id, serverEvent.title, serverEvent.date, serverEvent.start_time,
        serverEvent.end_time, serverEvent.recurrence, serverEvent.days_of_week,
-       serverEvent.notes, serverEvent.color]
+       serverEvent.notes, serverEvent.color, serverEvent.reminder_minutes ?? null]
     )
   }
 }
@@ -1609,13 +1618,13 @@ export async function upsertHabitFromServer(habit, localCategoryId) {
   const rows = await db.select('SELECT * FROM habits WHERE server_id = ?', [habit.id])
   if (rows.length > 0) {
     await db.execute(
-      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [habit.name, habit.days_of_week, habit.position, habit.id]
+      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, reminder_time = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [habit.name, habit.days_of_week, habit.position, habit.reminder_time ?? null, habit.id]
     )
   } else {
     await db.execute(
-      'INSERT INTO habits (server_id, local_category_id, name, days_of_week, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
-      [habit.id, localCategoryId, habit.name, habit.days_of_week, habit.position]
+      'INSERT INTO habits (server_id, local_category_id, name, days_of_week, position, reminder_time, synced) VALUES (?, ?, ?, ?, ?, ?, 1)',
+      [habit.id, localCategoryId, habit.name, habit.days_of_week, habit.position, habit.reminder_time ?? null]
     )
   }
 }

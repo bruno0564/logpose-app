@@ -148,15 +148,19 @@ function Countdowns() {
               />
             </div>
             <div className="field field--check">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem' }}>
-                <input
-                  type="checkbox"
-                  checked={form.is_recurring}
-                  onChange={e => setForm(f => ({ ...f, is_recurring: e.target.checked }))}
-                  style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
-                />
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem' }}
+                onClick={() => setForm(f => ({ ...f, is_recurring: !f.is_recurring }))}
+              >
+                <button
+                  type="button"
+                  className={`theme-toggle ${form.is_recurring ? 'theme-toggle--on' : ''}`}
+                  aria-label={tr('countdowns.recurring')}
+                >
+                  <span className="theme-toggle-thumb" />
+                </button>
                 {tr('countdowns.recurring')}
-              </label>
+              </div>
             </div>
             <div className="field field--action">
               <button type="submit" className="btn-primary">{tr('common.add')}</button>
@@ -222,15 +226,19 @@ function Countdowns() {
                 />
               </div>
               <div className="field">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={editItem.is_recurring}
-                    onChange={e => setEditItem(v => ({ ...v, is_recurring: e.target.checked }))}
-                    style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
-                  />
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.8rem' }}
+                  onClick={() => setEditItem(v => ({ ...v, is_recurring: !v.is_recurring }))}
+                >
+                  <button
+                    type="button"
+                    className={`theme-toggle ${editItem.is_recurring ? 'theme-toggle--on' : ''}`}
+                    aria-label={tr('countdowns.recurring')}
+                  >
+                    <span className="theme-toggle-thumb" />
+                  </button>
                   {tr('countdowns.recurring')}
-                </label>
+                </div>
               </div>
               <button type="submit" className="btn-primary">{tr('common.save')}</button>
             </form>

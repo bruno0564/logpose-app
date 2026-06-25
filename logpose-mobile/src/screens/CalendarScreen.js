@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import {
   View, TouchableOpacity, ScrollView, Modal,
@@ -26,24 +26,13 @@ import {
 } from '../api/client'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
+import { syncCalendarReminders } from '../notifications'
+import { toDateStr, eventsForDate, upcomingEventDays } from '../calendar'
+
+// Opciones de antelación del aviso (minutos antes del inicio). null = sin aviso.
+const REMINDER_OPTIONS = [null, 0, 10, 30, 60, 1440]
 
 const COLORS = ['#7c3aed', '#2563eb', '#16a34a', '#ea580c', '#dc2626']
-
-function toDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function eventsForDate(events, dateStr, dow) {
-  return events.filter(e => {
-    if (e.recurrence === 'none') return e.date === dateStr
-    if (e.recurrence === 'daily') return true
-    if (e.recurrence === 'weekly') {
-      const days = e.days_of_week ? e.days_of_week.split(',').map(Number) : []
-      return days.includes(dow)
-    }
-    return false
-  })
-}
 
 function buildCells(year, month) {
   const firstWeekday = new Date(year, month, 1).getDay()
@@ -83,7 +72,7 @@ function ConfirmModal({ visible, title, onConfirm, onCancel }) {
   )
 }
 
-const BLANK = { title: '', recurrence: 'none', date: '', start_time: '', end_time: '', days_of_week: '', notes: '', color: '#7c3aed' }
+const BLANK = { title: '', recurrence: 'none', date: '', start_time: '', end_time: '', days_of_week: '', notes: '', color: '#7c3aed', reminder_minutes: null }
 
 export default function CalendarScreen() {
   const { theme: t } = useTheme()
@@ -98,6 +87,7 @@ export default function CalendarScreen() {
   const [editingEvent, setEditingEvent] = useState(null)
   const [form, setForm] = useState(BLANK)
   const [confirmTarget, setConfirmTarget] = useState(null)
+  const [calView, setCalView] = useState('month')   // 'month' | 'agenda'
 
   const loadEvents = useCallback(async () => {
     setEvents(await getCalendarEvents())
@@ -136,6 +126,10 @@ export default function CalendarScreen() {
     }, [loadEvents, sync])
   )
 
+  // Reconcilia los avisos locales cada vez que cambian los eventos (no hace nada
+  // si las notificaciones están desactivadas o sin permiso).
+  useEffect(() => { syncCalendarReminders(events) }, [events])
+
   function openCreate(dateStr) {
     setEditingEvent(null)
     setForm({ ...BLANK, date: dateStr || '' })
@@ -149,6 +143,7 @@ export default function CalendarScreen() {
       date: ev.date || '', start_time: ev.start_time || '',
       end_time: ev.end_time || '', days_of_week: ev.days_of_week || '',
       notes: ev.notes || '', color: ev.color || '#7c3aed',
+      reminder_minutes: ev.reminder_minutes ?? null,
     })
     setModalVisible(true)
   }
@@ -162,6 +157,8 @@ export default function CalendarScreen() {
       notes: form.notes.trim() || null,
       date: form.recurrence === 'none' ? form.date : null,
       days_of_week: form.recurrence === 'weekly' ? form.days_of_week : null,
+      // El aviso es relativo a la hora de inicio: sin hora, no hay recordatorio.
+      reminder_minutes: form.start_time ? form.reminder_minutes : null,
     }
     if (editingEvent) {
       await updateCalendarEvent(editingEvent.id, data)
@@ -274,11 +271,22 @@ export default function CalendarScreen() {
     <FadeInView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{tr('calendar.title')}</Text>
-        <PressableScale style={s.addBtn} onPress={() => openCreate(toDateStr(today))}>
-          <Text style={s.addBtnText}>+</Text>
-        </PressableScale>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            style={s.viewToggle}
+            onPress={() => setCalView(v => (v === 'month' ? 'agenda' : 'month'))}
+          >
+            <Ionicons name={calView === 'month' ? 'list' : 'calendar'} size={18} color={t.accent} />
+          </TouchableOpacity>
+          <PressableScale style={s.addBtn} onPress={() => openCreate(toDateStr(today))}>
+            <Text style={s.addBtnText}>+</Text>
+          </PressableScale>
+        </View>
       </View>
 
+      {calView === 'agenda' ? (
+        <AgendaView events={events} today={today} locale={locale} tr={tr} s={s} t={t} onEventPress={openEdit} />
+      ) : (
       <View style={s.card}>
         <View style={s.monthRow}>
           <TouchableOpacity onPress={prev} style={s.arrowBtn}>
@@ -321,6 +329,7 @@ export default function CalendarScreen() {
           })}
         </View>
       </View>
+      )}
 
       <EventModal
         visible={modalVisible}
@@ -340,6 +349,37 @@ export default function CalendarScreen() {
   )
 }
 
+// ── Agenda view ───────────────────────────────────────────────────────────────
+// Lista cronológica de lo que viene (próximos 60 días con eventos), como
+// alternativa a la cuadrícula del mes.
+function AgendaView({ events, today, locale, tr, s, t, onEventPress }) {
+  const days = upcomingEventDays(events, today, 60)
+  if (days.length === 0) {
+    return <Text style={s.agendaEmpty}>{tr('calendar.agendaEmpty')}</Text>
+  }
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      {days.map(group => {
+        const label = group.isToday
+          ? tr('calendar.today')
+          : group.date.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short' })
+        return (
+          <View key={group.dateStr} style={s.agendaDay}>
+            <Text style={s.agendaDate}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text>
+            {group.events.map(ev => (
+              <TouchableOpacity key={ev.id} style={s.agendaRow} onPress={() => onEventPress(ev)}>
+                <View style={[s.agendaBar, { backgroundColor: ev.color || '#7c3aed' }]} />
+                <Text style={s.agendaTime}>{ev.start_time || '—'}</Text>
+                <Text style={s.agendaTitle} numberOfLines={1}>{ev.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )
+      })}
+    </ScrollView>
+  )
+}
+
 // ── Event modal ───────────────────────────────────────────────────────────────
 
 function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
@@ -347,6 +387,14 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
   const { t: tr } = useLang()
   const s = makeStyles(t)
   const daysShort = tr('common.daysShort')
+
+  function reminderLabel(mins) {
+    if (mins == null) return tr('calendar.remNone')
+    if (mins === 0)   return tr('calendar.remAt')
+    if (mins === 60)  return tr('calendar.remHour')
+    if (mins === 1440) return tr('calendar.remDay')
+    return tr('calendar.remMin', { n: mins })
+  }
 
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showStartPicker, setShowStartPicker] = useState(false)
@@ -464,6 +512,25 @@ function EventModal({ visible, form, setForm, editingEvent, onSave, onClose }) {
             onSelect={(time) => setForm(f => ({ ...f, end_time: time }))}
           />
 
+          {form.start_time !== '' && (
+            <>
+              <Text style={s.fieldLabel}>{tr('calendar.reminder')}</Text>
+              <View style={s.reminderRow}>
+                {REMINDER_OPTIONS.map((opt, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[s.reminderPill, form.reminder_minutes === opt && s.reminderPillActive]}
+                    onPress={() => setForm(f => ({ ...f, reminder_minutes: opt }))}
+                  >
+                    <Text style={[s.reminderPillText, form.reminder_minutes === opt && s.reminderPillTextActive]}>
+                      {reminderLabel(opt)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
           <View style={s.colorRow}>
             {COLORS.map(c => (
               <TouchableOpacity
@@ -503,6 +570,14 @@ const makeStyles = (t) => StyleSheet.create({
   title:            { color: t.cartoon ? t.accent : t.text, fontSize: 22, fontWeight: '700', flex: 1, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   addBtn:           { backgroundColor: t.accent, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: t.cartoon ? t.cardBorderWidth : 0, borderColor: t.text },
   addBtnText:       { color: t.cartoon ? t.bg : t.text, fontSize: 24, lineHeight: 28, fontWeight: '300' },
+  viewToggle:       { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface2, borderWidth: t.cartoon ? 2 : 1, borderColor: t.border2 },
+  agendaEmpty:      { color: t.text3, fontSize: 14, textAlign: 'center', marginTop: 40, paddingHorizontal: 24 },
+  agendaDay:        { marginHorizontal: 16, marginBottom: 18 },
+  agendaDate:       { color: t.text2, fontSize: 13, fontWeight: '700', textTransform: 'capitalize', marginBottom: 8 },
+  agendaRow:        { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.surface2, borderRadius: 10, padding: 12, marginBottom: 6, borderWidth: t.cartoon ? 2 : 0, borderColor: t.cardBorderColor },
+  agendaBar:        { width: 4, height: 28, borderRadius: 2 },
+  agendaTime:       { color: t.text3, fontSize: 13, fontWeight: '600', width: 44, fontVariant: ['tabular-nums'] },
+  agendaTitle:      { color: t.text, fontSize: 14, flex: 1 },
   backBtn:          { padding: 4 },
   backArrow:        { color: t.accent, fontSize: 32, lineHeight: 36 },
   dayTitle:         { color: t.text, fontSize: 18, fontWeight: '700' },
@@ -538,6 +613,12 @@ const makeStyles = (t) => StyleSheet.create({
   recBtnActive:     { backgroundColor: t.accent },
   recBtnText:       { color: t.text3, fontSize: 13, fontWeight: '600' },
   recBtnTextActive: { color: t.text },
+  fieldLabel:       { color: t.text3, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  reminderRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  reminderPill:     { borderRadius: 8, paddingVertical: 7, paddingHorizontal: 11, backgroundColor: t.border2 },
+  reminderPillActive: { backgroundColor: t.accent },
+  reminderPillText: { color: t.text3, fontSize: 12, fontWeight: '600' },
+  reminderPillTextActive: { color: t.text },
   daySelector:      { flexDirection: 'row', gap: 6, marginBottom: 10 },
   dayToggle:        { flex: 1, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: t.border2 },
   dayToggleActive:  { backgroundColor: t.accent },

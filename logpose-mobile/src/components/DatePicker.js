@@ -100,8 +100,11 @@ function makeStyles(t) {
     weekday:    { width: `${100 / 7}%`, textAlign: 'center', color: t.text3, fontSize: 11, fontWeight: '700' },
     grid:       { flexDirection: 'row', flexWrap: 'wrap' },
     cell:       { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-    dayInner:   { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-    todayInner: { borderWidth: 1, borderColor: t.accent },
+    // El borde existe siempre (transparente) y solo cambia de color en "hoy".
+    // Añadir/quitar borderWidth dinámicamente sobre una vista con borderRadius
+    // hace que Android repinte el borde cuadrado al volver a un mes; así se evita.
+    dayInner:   { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+    todayInner: { borderColor: t.accent },
     selInner:   { backgroundColor: t.accent },
     dayText:    { color: t.text2, fontSize: 14 },
     selText:    { color: '#fff', fontWeight: '700' },
