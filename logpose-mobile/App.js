@@ -22,6 +22,7 @@ import SettingsScreen  from './src/screens/SettingsScreen'
 import MoreScreen      from './src/screens/MoreScreen'
 import HabitsScreen    from './src/screens/HabitsScreen'
 import { isServerReachable, initServerUrl } from './src/api/client'
+import { configureNotifications } from './src/notifications'
 
 const Tab = createBottomTabNavigator()
 
@@ -65,6 +66,7 @@ function AppContent() {
       check()
       interval = setInterval(check, 30000)
     })
+    configureNotifications()
     return () => clearInterval(interval)
   }, [])
 

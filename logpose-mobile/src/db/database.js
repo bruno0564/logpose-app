@@ -124,6 +124,8 @@ export async function openDB() {
   try { await db.runAsync("ALTER TABLE workout_sets ADD COLUMN side TEXT NOT NULL DEFAULT 'both'") } catch {}
   // Nº de series objetivo por ejercicio en la rutina (sobrecarga progresiva).
   try { await db.runAsync('ALTER TABLE routine_exercises ADD COLUMN target_sets INTEGER NOT NULL DEFAULT 3') } catch {}
+  // Hora de recordatorio 'HH:MM' del hábito (null = sin recordatorio).
+  try { await db.runAsync('ALTER TABLE habits ADD COLUMN reminder_time TEXT') } catch {}
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS task_lists (
@@ -190,6 +192,7 @@ export async function openDB() {
       name              TEXT    NOT NULL,
       days_of_week      TEXT    NOT NULL DEFAULT '0,1,2,3,4,5,6',
       position          INTEGER NOT NULL DEFAULT 0,
+      reminder_time     TEXT,
       synced            INTEGER NOT NULL DEFAULT 0,
       pending_delete    INTEGER NOT NULL DEFAULT 0
     );
@@ -1511,16 +1514,16 @@ export async function getHabits() {
 export async function insertHabit(data) {
   const db = await openDB()
   await db.runAsync(
-    'INSERT INTO habits (local_category_id, name, days_of_week, position, synced) VALUES (?, ?, ?, ?, 0)',
-    [data.local_category_id, data.name, data.days_of_week ?? '0,1,2,3,4,5,6', data.position ?? 0]
+    'INSERT INTO habits (local_category_id, name, days_of_week, position, reminder_time, synced) VALUES (?, ?, ?, ?, ?, 0)',
+    [data.local_category_id, data.name, data.days_of_week ?? '0,1,2,3,4,5,6', data.position ?? 0, data.reminder_time ?? null]
   )
 }
 
 export async function updateHabit(id, data) {
   const db = await openDB()
   await db.runAsync(
-    'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 0 WHERE id = ?',
-    [data.name, data.days_of_week ?? '0,1,2,3,4,5,6', data.position ?? 0, id]
+    'UPDATE habits SET name = ?, days_of_week = ?, position = ?, reminder_time = ?, synced = 0 WHERE id = ?',
+    [data.name, data.days_of_week ?? '0,1,2,3,4,5,6', data.position ?? 0, data.reminder_time ?? null, id]
   )
 }
 
@@ -1615,13 +1618,13 @@ export async function upsertHabitFromServer(habit, localCategoryId) {
   const existing = await db.getFirstAsync('SELECT id FROM habits WHERE server_id = ?', [habit.id])
   if (existing) {
     await db.runAsync(
-      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
-      [habit.name, habit.days_of_week, habit.position, habit.id]
+      'UPDATE habits SET name = ?, days_of_week = ?, position = ?, reminder_time = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [habit.name, habit.days_of_week, habit.position, habit.reminder_time ?? null, habit.id]
     )
   } else {
     await db.runAsync(
-      'INSERT INTO habits (server_id, local_category_id, name, days_of_week, position, synced) VALUES (?, ?, ?, ?, ?, 1)',
-      [habit.id, localCategoryId, habit.name, habit.days_of_week, habit.position]
+      'INSERT INTO habits (server_id, local_category_id, name, days_of_week, position, reminder_time, synced) VALUES (?, ?, ?, ?, ?, ?, 1)',
+      [habit.id, localCategoryId, habit.name, habit.days_of_week, habit.position, habit.reminder_time ?? null]
     )
   }
 }

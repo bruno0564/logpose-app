@@ -14,7 +14,9 @@ import { useLang } from '../LangContext'
 import FadeInView from '../components/FadeInView'
 import CartoonEntrance from '../components/CartoonEntrance'
 import HabitCheck from '../components/HabitCheck'
+import TimePicker from '../components/TimePicker'
 import { titleShadow } from '../cartoonStyles'
+import { syncHabitReminders } from '../notifications'
 import {
   getHabitCategories, insertHabitCategory, updateHabitCategory, deleteLocalHabitCategory,
   getHabits, insertHabit, updateHabit, deleteLocalHabit,
@@ -71,6 +73,7 @@ export default function HabitsScreen() {
   const [modal, setModal]         = useState(null)
   const [form, setForm]           = useState({})
   const [confirmDelete, setConfirmDelete] = useState(null)  // {type:'cat'|'habit', data}
+  const [timePickerOpen, setTimePickerOpen] = useState(false)
   const [viewMode, setViewMode]   = useState('week')   // 'week' | 'month'
   const [weekCenter, setWeekCenter] = useState(4)       // día central de la ventana de 7
 
@@ -159,6 +162,11 @@ export default function HabitsScreen() {
 
   useFocusEffect(useCallback(() => { load().then(() => sync()) }, [monthStr]))
 
+  // Reconcilia los recordatorios locales cada vez que cambian los hábitos
+  // (alta/edición/borrado o sync). No hace nada si las notificaciones están
+  // desactivadas o sin permiso (lo comprueba syncHabitReminders).
+  useEffect(() => { syncHabitReminders(habits) }, [habits])
+
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const activeCat     = categories.find(c => c.id === activeCatId)
@@ -232,8 +240,8 @@ export default function HabitsScreen() {
     setConfirmDelete({ type: 'cat', data: modal.data })
   }
 
-  function openCreateHabit() { setForm({ name: '', dow: [0,1,2,3,4,5,6] }); setModal({ type: 'habit', mode: 'create' }) }
-  function openEditHabit(habit) { setForm({ name: habit.name, dow: parseDow(habit.days_of_week) }); setModal({ type: 'habit', mode: 'edit', data: habit }) }
+  function openCreateHabit() { setForm({ name: '', dow: [0,1,2,3,4,5,6], reminder_time: null }); setModal({ type: 'habit', mode: 'create' }) }
+  function openEditHabit(habit) { setForm({ name: habit.name, dow: parseDow(habit.days_of_week), reminder_time: habit.reminder_time || null }); setModal({ type: 'habit', mode: 'edit', data: habit }) }
   function toggleFormDay(d) {
     setForm(f => ({ ...f, dow: f.dow.includes(d) ? f.dow.filter(x => x !== d) : [...f.dow, d].sort((a,b) => a-b) }))
   }
@@ -242,9 +250,9 @@ export default function HabitsScreen() {
     const dowStr = form.dow.sort((a,b) => a-b).join(',')
     if (modal.mode === 'create') {
       const catHabits = habits.filter(h => h.local_category_id === activeCatId)
-      await insertHabit({ local_category_id: activeCatId, name: form.name.trim(), days_of_week: dowStr, position: catHabits.length })
+      await insertHabit({ local_category_id: activeCatId, name: form.name.trim(), days_of_week: dowStr, position: catHabits.length, reminder_time: form.reminder_time })
     } else {
-      await updateHabit(modal.data.id, { name: form.name.trim(), days_of_week: dowStr, position: modal.data.position })
+      await updateHabit(modal.data.id, { name: form.name.trim(), days_of_week: dowStr, position: modal.data.position, reminder_time: form.reminder_time })
     }
     setModal(null); await load(); sync()
   }
@@ -522,6 +530,22 @@ export default function HabitsScreen() {
             {form.dow?.length === 0 && (
               <Text style={{ color: '#f87171', fontSize: 12, marginTop: 4 }}>{tr('habits.atLeastOneDay')}</Text>
             )}
+
+            <Text style={[s.fieldLabel, { marginTop: 16 }]}>{tr('habits.reminder')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <TouchableOpacity style={s.reminderBtn} onPress={() => setTimePickerOpen(true)}>
+                <Ionicons name="alarm-outline" size={16} color={form.reminder_time ? t.accent : t.text3} />
+                <Text style={[s.reminderBtnText, { color: form.reminder_time ? t.text : t.text3 }]}>
+                  {form.reminder_time || tr('habits.noReminder')}
+                </Text>
+              </TouchableOpacity>
+              {form.reminder_time && (
+                <TouchableOpacity style={s.reminderClear} onPress={() => setForm(f => ({ ...f, reminder_time: null }))}>
+                  <Ionicons name="close" size={16} color={t.text3} />
+                </TouchableOpacity>
+              )}
+            </View>
+
             <View style={s.modalActions}>
               {modal?.mode === 'edit' && (
                 <TouchableOpacity style={s.btnDanger} onPress={handleDeleteHabit}>
@@ -537,6 +561,12 @@ export default function HabitsScreen() {
             </View>
           </View>
         </View>
+        <TimePicker
+          visible={timePickerOpen}
+          value={form.reminder_time || ''}
+          onSelect={time => setForm(f => ({ ...f, reminder_time: time }))}
+          onClose={() => setTimePickerOpen(false)}
+        />
       </Modal>
 
       {/* Confirmación de borrado (estilo de la app, en vez de Alert nativo) */}
@@ -667,6 +697,16 @@ function makeStyles(t) {
       borderWidth: 1, borderColor: t.border2,
     },
     dowBtnText:     { fontSize: 12, fontWeight: '700', color: t.text3 },
+    reminderBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: t.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 11,
+      borderWidth: 1, borderColor: t.border2,
+    },
+    reminderBtnText: { fontSize: 14, fontWeight: '600' },
+    reminderClear: {
+      width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+      backgroundColor: t.surface2, borderWidth: 1, borderColor: t.border2,
+    },
     modalActions:   { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 20 },
     btnPrimary:     { backgroundColor: t.accent, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
     btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 13 },

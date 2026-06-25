@@ -7,7 +7,11 @@ import PressableScale from '../components/PressableScale'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 import { getServerUrl, updateServerUrl, pingServer } from '../api/client'
-import { exportAllData } from '../db/database'
+import { exportAllData, getHabits } from '../db/database'
+import {
+  isNotificationsEnabled, setNotificationsEnabled,
+  requestNotificationPermission, syncHabitReminders,
+} from '../notifications'
 import FadeInView from '../components/FadeInView'
 import { titleShadow } from '../cartoonStyles'
 
@@ -26,10 +30,26 @@ export default function SettingsScreen() {
   const [draft, setDraft] = useState('')
   const [exporting, setExporting] = useState(false)
   const [testState, setTestState] = useState('idle')   // idle | testing | ok | fail
+  const [notifsOn, setNotifsOn] = useState(false)
+  const [notifsDenied, setNotifsDenied] = useState(false)
 
   useEffect(() => {
     setUrlDisplay(getServerUrl())
+    isNotificationsEnabled().then(setNotifsOn)
   }, [])
+
+  // Al activar: pedimos permiso y, si se concede, (re)programamos los hábitos.
+  // Al desactivar: guardamos la preferencia y cancelamos todos los avisos.
+  async function toggleNotifications(value) {
+    if (value) {
+      const granted = await requestNotificationPermission()
+      if (!granted) { setNotifsDenied(true); return }
+      setNotifsDenied(false)
+    }
+    await setNotificationsEnabled(value)
+    setNotifsOn(value)
+    await syncHabitReminders(await getHabits())
+  }
 
   function openEdit() {
     setDraft(urlDisplay)
@@ -138,6 +158,23 @@ export default function SettingsScreen() {
               <Text style={[s.langBtnText, lang === 'es' && s.langBtnTextActive]}>ES</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={s.divider} />
+
+        <View style={s.row}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={s.rowLabel}>{tr('settings.notifications')}</Text>
+            <Text style={s.rowSub}>
+              {notifsDenied ? tr('settings.notificationsDenied') : tr('settings.notificationsDesc')}
+            </Text>
+          </View>
+          <Switch
+            value={notifsOn}
+            onValueChange={toggleNotifications}
+            trackColor={{ false: t.border2, true: t.accent }}
+            thumbColor={t.text}
+          />
         </View>
 
         <View style={s.divider} />
