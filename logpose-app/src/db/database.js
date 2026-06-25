@@ -44,6 +44,16 @@ export async function openDB() {
     pending_delete INTEGER NOT NULL DEFAULT 0
   )`)
 
+  await instance.execute(`CREATE TABLE IF NOT EXISTS countdowns (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id      INTEGER,
+    title          TEXT    NOT NULL,
+    target_date    TEXT    NOT NULL,
+    is_recurring   INTEGER NOT NULL DEFAULT 0,
+    synced         INTEGER NOT NULL DEFAULT 0,
+    pending_delete INTEGER NOT NULL DEFAULT 0
+  )`)
+
 
   await instance.execute(`CREATE TABLE IF NOT EXISTS routines (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -377,6 +387,84 @@ export async function pruneStaleQuotes(validServerIds) {
   }
 }
 
+
+// ── Countdowns ───────────────────────────────────────────────────────────────────
+
+export async function getCountdowns() {
+  const db = await openDB()
+  return db.select('SELECT * FROM countdowns WHERE pending_delete = 0 ORDER BY id ASC')
+}
+
+export async function insertLocalCountdown(title, targetDate, isRecurring) {
+  const db = await openDB()
+  const result = await db.execute(
+    'INSERT INTO countdowns (title, target_date, is_recurring, synced) VALUES (?, ?, ?, 0)',
+    [title, targetDate, isRecurring ? 1 : 0]
+  )
+  return result.lastInsertId
+}
+
+export async function updateLocalCountdown(id, title, targetDate, isRecurring) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE countdowns SET title = ?, target_date = ?, is_recurring = ?, synced = 0 WHERE id = ?',
+    [title, targetDate, isRecurring ? 1 : 0, id]
+  )
+}
+
+export async function markCountdownSynced(localId, serverId) {
+  const db = await openDB()
+  await db.execute(
+    'UPDATE countdowns SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function markCountdownPendingDelete(localId) {
+  const db = await openDB()
+  await db.execute('UPDATE countdowns SET pending_delete = 1 WHERE id = ?', [localId])
+}
+
+export async function purgeLocalCountdown(localId) {
+  const db = await openDB()
+  await db.execute('DELETE FROM countdowns WHERE id = ?', [localId])
+}
+
+export async function upsertCountdownFromServer(serverCountdown) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id FROM countdowns WHERE server_id = ?', [serverCountdown.id])
+  if (rows.length > 0) {
+    await db.execute(
+      'UPDATE countdowns SET title = ?, target_date = ?, is_recurring = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverCountdown.title, serverCountdown.target_date, serverCountdown.is_recurring ? 1 : 0, serverCountdown.id]
+    )
+  } else {
+    await db.execute(
+      'INSERT INTO countdowns (server_id, title, target_date, is_recurring, synced) VALUES (?, ?, ?, ?, 1)',
+      [serverCountdown.id, serverCountdown.title, serverCountdown.target_date, serverCountdown.is_recurring ? 1 : 0]
+    )
+  }
+}
+
+export async function getUnsyncedCountdowns() {
+  const db = await openDB()
+  return db.select('SELECT * FROM countdowns WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteCountdowns() {
+  const db = await openDB()
+  return db.select('SELECT * FROM countdowns WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function pruneStaleCountdowns(validServerIds) {
+  const db = await openDB()
+  const rows = await db.select('SELECT id, server_id FROM countdowns WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.execute('DELETE FROM countdowns WHERE id = ?', [row.id])
+    }
+  }
+}
 
 
 // ── Routines ───────────────────────────────────────────────────────────────────

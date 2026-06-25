@@ -33,6 +33,15 @@ export async function openDB() {
       synced         INTEGER NOT NULL DEFAULT 0,
       pending_delete INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS countdowns (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      server_id      INTEGER,
+      title          TEXT    NOT NULL,
+      target_date    TEXT    NOT NULL,
+      is_recurring   INTEGER NOT NULL DEFAULT 0,
+      synced         INTEGER NOT NULL DEFAULT 0,
+      pending_delete INTEGER NOT NULL DEFAULT 0
+    );
   `)
   // migración: añadir columnas nuevas a quotes si no existen
   for (const col of [
@@ -266,6 +275,89 @@ export async function pruneStaleQuotes(validServerIds) {
   for (const row of rows) {
     if (!validServerIds.has(row.server_id)) {
       await db.runAsync('DELETE FROM quotes WHERE id = ?', [row.id])
+    }
+  }
+}
+
+// ── Countdowns ───────────────────────────────────────────────────────────────
+
+export async function getCountdowns() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM countdowns WHERE pending_delete = 0 ORDER BY id ASC')
+}
+
+export async function insertLocalCountdown(title, targetDate, isRecurring) {
+  const db = await openDB()
+  const result = await db.runAsync(
+    'INSERT INTO countdowns (title, target_date, is_recurring, synced) VALUES (?, ?, ?, 0)',
+    [title, targetDate, isRecurring ? 1 : 0]
+  )
+  return result.lastInsertRowId
+}
+
+export async function updateLocalCountdown(id, title, targetDate, isRecurring) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE countdowns SET title = ?, target_date = ?, is_recurring = ?, synced = 0 WHERE id = ?',
+    [title, targetDate, isRecurring ? 1 : 0, id]
+  )
+}
+
+export async function deleteLocalCountdown(id) {
+  const db = await openDB()
+  const row = await db.getFirstAsync('SELECT server_id FROM countdowns WHERE id = ?', [id])
+  if (row?.server_id) {
+    await db.runAsync('UPDATE countdowns SET pending_delete = 1 WHERE id = ?', [id])
+  } else {
+    await db.runAsync('DELETE FROM countdowns WHERE id = ?', [id])
+  }
+}
+
+export async function getUnsyncedCountdowns() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM countdowns WHERE synced = 0 AND pending_delete = 0')
+}
+
+export async function getPendingDeleteCountdowns() {
+  const db = await openDB()
+  return db.getAllAsync('SELECT * FROM countdowns WHERE pending_delete = 1 AND server_id IS NOT NULL')
+}
+
+export async function markCountdownSynced(localId, serverId) {
+  const db = await openDB()
+  await db.runAsync(
+    'UPDATE countdowns SET synced = 1, server_id = ? WHERE id = ?',
+    [serverId, localId]
+  )
+}
+
+export async function purgeLocalCountdown(id) {
+  const db = await openDB()
+  await db.runAsync('DELETE FROM countdowns WHERE id = ?', [id])
+}
+
+export async function upsertCountdownFromServer(serverCountdown) {
+  const db = await openDB()
+  const existing = await db.getFirstAsync('SELECT id FROM countdowns WHERE server_id = ?', [serverCountdown.id])
+  if (existing) {
+    await db.runAsync(
+      'UPDATE countdowns SET title = ?, target_date = ?, is_recurring = ?, synced = 1, pending_delete = 0 WHERE server_id = ?',
+      [serverCountdown.title, serverCountdown.target_date, serverCountdown.is_recurring ? 1 : 0, serverCountdown.id]
+    )
+  } else {
+    await db.runAsync(
+      'INSERT INTO countdowns (server_id, title, target_date, is_recurring, synced) VALUES (?, ?, ?, ?, 1)',
+      [serverCountdown.id, serverCountdown.title, serverCountdown.target_date, serverCountdown.is_recurring ? 1 : 0]
+    )
+  }
+}
+
+export async function pruneStaleCountdowns(validServerIds) {
+  const db = await openDB()
+  const rows = await db.getAllAsync('SELECT id, server_id FROM countdowns WHERE server_id IS NOT NULL AND pending_delete = 0')
+  for (const row of rows) {
+    if (!validServerIds.has(row.server_id)) {
+      await db.runAsync('DELETE FROM countdowns WHERE id = ?', [row.id])
     }
   }
 }
@@ -1585,7 +1677,7 @@ export async function pruneStaleHabitLogs(serverIds, month) {
 export async function exportAllData() {
   const db = await openDB()
   const tables = [
-    'body_weight', 'quotes', 'routines', 'exercises', 'routine_exercises',
+    'body_weight', 'quotes', 'countdowns', 'routines', 'exercises', 'routine_exercises',
     'workout_sessions', 'workout_sets', 'task_lists', 'task_items',
     'calendar_events', 'journal_entries', 'journal_images', 'habit_categories', 'habits', 'habit_logs',
   ]

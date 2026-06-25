@@ -147,6 +147,17 @@ export function IconHabit({ size = 15, strokeWidth = 1.75 }) {
   )
 }
 
+export function IconCountdown({ size = 15, strokeWidth = 1.75 }) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={strokeWidth}>
+      <circle cx="12" cy="13" r="8" />
+      <polyline points="12 9 12 13 14.5 14.5" />
+      <line x1="9" y1="2" x2="15" y2="2" />
+      <line x1="12" y1="2" x2="12" y2="5" />
+    </svg>
+  )
+}
+
 export function IconSettings({ size = 15, strokeWidth = 1.75 }) {
   return (
     <svg {...base} width={size} height={size} strokeWidth={strokeWidth}>

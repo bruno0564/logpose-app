@@ -7,17 +7,18 @@ import Tasks from './Tasks.jsx'
 import Quotes from './Quotes.jsx'
 import Journal from './Journal.jsx'
 import Habits from './Habits.jsx'
+import Countdowns from './Countdowns.jsx'
 import Settings from './Settings.jsx'
 import { LangProvider, useLang } from './LangContext.jsx'
 import {
   IconHome, IconWeight, IconGym, IconCalendar,
-  IconList, IconQuote, IconJournal, IconHabit, IconSettings,
+  IconList, IconQuote, IconJournal, IconHabit, IconCountdown, IconSettings,
 } from './Icons.jsx'
 import { ToastProvider } from './Toast.jsx'
 
 const API = 'http://localhost:8000'
 
-const NAV_IDS = ['home', 'body-weight', 'gym', 'calendar', 'habits', 'todo', 'quotes', 'journal']
+const NAV_IDS = ['home', 'body-weight', 'gym', 'calendar', 'habits', 'todo', 'quotes', 'countdowns', 'journal']
 
 const NAV_ICONS = {
   'home':        <IconHome />,
@@ -27,6 +28,7 @@ const NAV_ICONS = {
   'habits':      <IconHabit />,
   'todo':        <IconList />,
   'quotes':      <IconQuote />,
+  'countdowns':  <IconCountdown />,
   'journal':     <IconJournal />,
 }
 
@@ -41,6 +43,7 @@ function Sidebar({ active, onNav, online }) {
     'habits':      'Habits',
     'todo':        tr('nav.todo'),
     'quotes':      tr('nav.quotes'),
+    'countdowns':  tr('nav.countdowns'),
     'journal':     tr('nav.journal'),
   }
 
@@ -125,6 +128,7 @@ function AppContent() {
         {page === 'habits'      && <Habits />}
         {page === 'todo'        && <Tasks />}
         {page === 'quotes'      && <Quotes />}
+        {page === 'countdowns'  && <Countdowns />}
         {page === 'journal'     && <Journal />}
         {page === 'settings'    && <Settings dark={dark} onToggle={() => setDark(d => !d)} appStyle={appStyle} onStyleChange={setAppStyle} />}
       </main>

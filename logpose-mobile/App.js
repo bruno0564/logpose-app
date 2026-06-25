@@ -16,6 +16,7 @@ import GymScreen       from './src/screens/GymScreen'
 import CalendarScreen  from './src/screens/CalendarScreen'
 import TasksScreen     from './src/screens/TasksScreen'
 import QuotesScreen    from './src/screens/QuotesScreen'
+import CountdownsScreen from './src/screens/CountdownsScreen'
 import JournalScreen   from './src/screens/JournalScreen'
 import SettingsScreen  from './src/screens/SettingsScreen'
 import MoreScreen      from './src/screens/MoreScreen'
@@ -128,6 +129,7 @@ function AppContent() {
           <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
           <Tab.Screen name="Tasks"    component={TasksScreen}    options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
           <Tab.Screen name="Quotes"   component={QuotesScreen}   options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
+          <Tab.Screen name="Countdowns" component={CountdownsScreen} options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
           <Tab.Screen name="Habits"   component={HabitsScreen}   options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
           <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
         </Tab.Navigator>

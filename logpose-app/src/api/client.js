@@ -80,6 +80,43 @@ export async function deleteQuoteFromServer(serverId) {
   await fetchWithTimeout(`${SERVER}/quotes/${serverId}`, { method: 'DELETE' })
 }
 
+// ── Countdowns ──────────────────────────────────────────────────────────────
+
+function countdownPayload(entry) {
+  return {
+    title: entry.title,
+    target_date: entry.target_date,
+    is_recurring: !!entry.is_recurring,
+  }
+}
+
+export async function fetchAllCountdownsFromServer() {
+  const res = await fetchWithTimeout(`${SERVER}/countdowns/`)
+  return res.json()
+}
+
+export async function postCountdownToServer(entry) {
+  const res = await fetchWithTimeout(`${SERVER}/countdowns/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(countdownPayload(entry)),
+  })
+  return res.json()
+}
+
+export async function putCountdownToServer(serverId, entry) {
+  const res = await fetchWithTimeout(`${SERVER}/countdowns/${serverId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(countdownPayload(entry)),
+  })
+  return res.json()
+}
+
+export async function deleteCountdownFromServer(serverId) {
+  await fetchWithTimeout(`${SERVER}/countdowns/${serverId}`, { method: 'DELETE' })
+}
+
 // ── Routines ──────────────────────────────────────────────────────────────────
 
 export async function fetchAllRoutinesFromServer() {

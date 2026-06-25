@@ -21,6 +21,7 @@ const ITEMS = [
   { screen: 'Calendar', icon: 'calendar',            color: '#3b82f6', labelKey: 'nav.calendar', descKey: 'more.calendarDesc' },
   { screen: 'Tasks',    icon: 'checkmark-done',      color: '#22c55e', labelKey: 'nav.todo',     descKey: 'more.tasksDesc'    },
   { screen: 'Quotes',   icon: 'chatbubble-ellipses', color: '#f59e0b', labelKey: 'nav.quotes',   descKey: 'more.quotesDesc'   },
+  { screen: 'Countdowns', icon: 'timer',             color: '#06b6d4', labelKey: 'nav.countdowns', descKey: 'more.countdownsDesc' },
   { screen: 'Habits',   icon: 'checkmark-circle',    color: '#ec4899', labelKey: 'nav.habits',   descKey: 'more.habitsDesc'   },
   { screen: 'Settings', icon: 'settings',            color: '#8b5cf6', labelKey: 'nav.settings', descKey: 'more.settingsDesc' },
 ]

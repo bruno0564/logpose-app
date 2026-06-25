@@ -8,11 +8,15 @@ import { titleShadow } from '../cartoonStyles'
 import {
   getQuotes, getUnsyncedQuotes, getPendingDeleteQuotes,
   markQuoteSynced, upsertQuoteFromServer, purgeLocalQuote, pruneStaleQuotes,
+  getCountdowns, getUnsyncedCountdowns, getPendingDeleteCountdowns,
+  markCountdownSynced, upsertCountdownFromServer, purgeLocalCountdown, pruneStaleCountdowns,
 } from '../db/database'
 import {
   isServerReachable,
   fetchAllQuotesFromServer, postQuoteToServer, putQuoteToServer, deleteQuoteFromServer,
+  fetchAllCountdownsFromServer, postCountdownToServer, putCountdownToServer, deleteCountdownFromServer,
 } from '../api/client'
+import { countdownState, countdownLabel, countdownSortKey } from '../countdown'
 import { useTheme } from '../ThemeContext'
 import { useLang } from '../LangContext'
 
@@ -20,9 +24,10 @@ let syncingHome = false
 
 export default function HomeScreen() {
   const { theme: t } = useTheme()
-  const { t: tr, locale } = useLang()
+  const { t: tr, tp, locale } = useLang()
   const s = makeStyles(t)
   const [current, setCurrent] = useState(null)
+  const [countdowns, setCountdowns] = useState([])
 
   function greeting() {
     const h = new Date().getHours()
@@ -40,6 +45,7 @@ export default function HomeScreen() {
   const load = useCallback(async () => {
     const qs = await getQuotes()
     if (qs.length > 0) setCurrent(qs[Math.floor(Math.random() * qs.length)])
+    setCountdowns(await getCountdowns())
   }, [])
 
   const sync = useCallback(async () => {
@@ -47,6 +53,7 @@ export default function HomeScreen() {
     syncingHome = true
     try {
       if (!await isServerReachable()) return
+      // Quotes
       for (const q of await getUnsyncedQuotes()) {
         if (q.server_id) {
           await putQuoteToServer(q.server_id, q)
@@ -63,11 +70,34 @@ export default function HomeScreen() {
       const serverQuotes = await fetchAllQuotesFromServer()
       for (const q of serverQuotes) await upsertQuoteFromServer(q)
       await pruneStaleQuotes(new Set(serverQuotes.map(q => q.id)))
+
+      // Countdowns
+      for (const c of await getUnsyncedCountdowns()) {
+        if (c.server_id) {
+          await putCountdownToServer(c.server_id, c)
+          await markCountdownSynced(c.id, c.server_id)
+        } else {
+          const created = await postCountdownToServer(c)
+          await markCountdownSynced(c.id, created.id)
+        }
+      }
+      for (const c of await getPendingDeleteCountdowns()) {
+        await deleteCountdownFromServer(c.server_id)
+        await purgeLocalCountdown(c.id)
+      }
+      const serverCountdowns = await fetchAllCountdownsFromServer()
+      for (const c of serverCountdowns) await upsertCountdownFromServer(c)
+      await pruneStaleCountdowns(new Set(serverCountdowns.map(c => c.id)))
     } catch (e) { console.warn('home sync failed:', e) } finally {
       syncingHome = false
       await load()
     }
   }, [load])
+
+  const upcoming = [...countdowns]
+    .filter(c => countdownState(c.target_date, c.is_recurring).direction !== 'past')
+    .sort((a, b) => countdownSortKey(a.target_date, a.is_recurring) - countdownSortKey(b.target_date, b.is_recurring))
+    .slice(0, 5)
 
   useFocusEffect(
     useCallback(() => {
@@ -82,6 +112,21 @@ export default function HomeScreen() {
           <Text style={s.greeting}>{greeting()}</Text>
           <Text style={s.date}>{formatDate()}</Text>
         </View>
+
+        {upcoming.length > 0 && (
+          <View style={s.countdowns}>
+            {upcoming.map(c => {
+              const st = countdownState(c.target_date, c.is_recurring)
+              const valueColor = st.direction === 'today' ? t.success : t.accent
+              return (
+                <CartoonCard key={c.id} style={s.countdownCard} radius={t.cartoon ? 12 : 12}>
+                  <Text style={s.countdownTitle} numberOfLines={1}>{c.title}</Text>
+                  <Text style={[s.countdownValue, { color: valueColor }]}>{countdownLabel(st, tr, tp)}</Text>
+                </CartoonCard>
+              )
+            })}
+          </View>
+        )}
 
         {current && (
           <CartoonCard style={s.quoteCard} radius={t.cartoon ? 14 : 16}>
@@ -100,6 +145,10 @@ const makeStyles = (t) => StyleSheet.create({
   header:      { marginBottom: 28 },
   greeting:    { color: t.cartoon ? t.accent : t.text, fontSize: 28, fontWeight: '700', letterSpacing: t.cartoon ? 0.5 : -0.5, fontFamily: t.fontTitle, textTransform: t.cartoon ? 'uppercase' : 'none', ...titleShadow(t) },
   date:        { color: t.text3, fontSize: 13, marginTop: 4, textTransform: 'capitalize' },
+  countdowns:  { gap: 8, marginBottom: 20 },
+  countdownCard: { backgroundColor: t.surface, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  countdownTitle: { color: t.text2, fontSize: 14, flex: 1 },
+  countdownValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   quoteCard:   { backgroundColor: t.surface, padding: 24 },
   quoteText:   { color: t.text, fontSize: 17, fontStyle: t.cartoon ? 'normal' : 'italic', lineHeight: 28 },
   quoteAuthor: { color: t.text3, fontSize: 12, marginTop: 12, textAlign: 'right' },
